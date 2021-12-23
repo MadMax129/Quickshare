@@ -40,7 +40,7 @@ OBJS = $(addsuffix .o, $(basename $(notdir $(SOURCES))))
 LINUX_GL_LIBS = -lGL
 
 CXXFLAGS = -I$(IMGUI_DIR) -I$(IMGUI_DIR)/backends -I$(INCLUDES)
-CXXFLAGS += -g -Wall -Wformat
+CXXFLAGS += -g -Wall -Wformat -std=c++17
 LIBS = 
 
 ifeq ($(OS), Windows_NT)

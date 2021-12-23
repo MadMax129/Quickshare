@@ -4,6 +4,7 @@
 #include <thread>
 #include <queue>
 #include <mutex>
+#include <atomic>
 #include <condition_variable>
 #include "message.h"
 
@@ -29,6 +30,8 @@ public:
     bool init_socket();
     bool send_intro(char* username);
     void start_recv();
+    void start_connection();
+    int has_connected();
 
     MsgQueue msg_queue;
 
@@ -40,7 +43,9 @@ private:
     SOCKET _udp_socket;
     sockaddr_in _server_addr;
     std::thread server_read;
-    
+    std::atomic<int> _connected;
+
+    void try_connect();
     void recv_thread();
 };
 

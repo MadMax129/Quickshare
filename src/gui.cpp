@@ -15,7 +15,7 @@ Context::Context(ClientSock* client)
 {
     window = NULL;
     glsl_version = NULL;
-    state = S_REGISTER;
+    app_state = S_REGISTER;
     clisock = client;
     memset(username, 0, USERNAME_MAX_LIMIT);
     // msg_array = new Chat_Msg*[64];
@@ -68,6 +68,15 @@ void Context::init_imgui()
 
 void Context::login_menu() 
 {
+    enum {
+        L_DEFAULT,
+        L_CLICKED_ENTER,
+        L_CONNCETING,
+        L_FAILED_TO_CONNECT,
+        L_CONNECTED
+    } static local_state;
+    static bool started_connection = false;
+
     ImGui::Begin("Login", NULL, ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoCollapse);
     ImGui::SetWindowSize(ImVec2(300, 200));
     // ImGui::SetNextWindowSize(ImVec2(300, 200));
@@ -81,16 +90,57 @@ void Context::login_menu()
     ImGui::InputText(anim, username, USERNAME_MAX_LIMIT);
 
     if (ImGui::Button("Enter")) 
+        local_state = L_CLICKED_ENTER;
+
+    switch (local_state)
     {
-        if (strlen(username) != 0) {
-            if (!clisock->send_intro(username)) {
-                LOGGER("FAILED TO SEND INTRO %s", username);
+        case L_CLICKED_ENTER: {
+            if (strlen(username) != 0)
+                local_state = L_CONNCETING;
+            else
+                local_state = L_DEFAULT;
+            break;
+        }
+
+        case L_CONNCETING: {
+            if (!started_connection) {
+                clisock->start_connection();
+                started_connection = true;
+            }
+
+            if (clisock->has_connected() == -1) {
+                ImGui::NewLine();
+                ImGui::TextColored(ImVec4(0.0f, 1.0f, 0.0f, 1.0f), "Connecting...");
+            }
+            else if (clisock->has_connected() == 0) {
+                local_state = L_FAILED_TO_CONNECT;
+                started_connection = false;
             }
             else {
-                state = S_MAIN_MENU;
-                clisock->start_recv();
+                local_state = L_CONNECTED;
             }
+
+            break;
         }
+
+        case L_FAILED_TO_CONNECT: {
+            ImGui::NewLine();
+            ImGui::TextColored(ImVec4(1.0f, 0.0f, 0.0f, 1.0f), "Failed to connect...");
+            break;
+        }
+
+        case L_CONNECTED: {
+            if (!clisock->send_intro(username)) {
+                local_state = L_FAILED_TO_CONNECT;
+            }
+            else {
+                clisock->start_recv();
+                app_state = S_MAIN_MENU;
+            }
+            break;
+        }
+        
+        default: break;
     }
 
     ImGui::End();
@@ -155,7 +205,7 @@ void Context::main_loop()
         glfwPollEvents();
         IMGUI_NEW_FRAME();
 
-        switch (state)
+        switch (app_state)
         {
             case S_REGISTER: 
                 login_menu();

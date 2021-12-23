@@ -6,6 +6,7 @@ enum Message_Type {
     M_ERROR = 0,
     M_NEW_CLIENT,
     M_GLOBAL_CHAT,
+    M_USER_COUNT,
 };
 
 struct Intro {

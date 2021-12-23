@@ -23,13 +23,13 @@ public:
     void init_imgui();
     void main_loop();
 
-    enum State {
+    enum App_State {
         S_REGISTER,
         S_MAIN_MENU
     };
 
 private:
-    State state;
+    App_State app_state;
     GLFWwindow* window;
     char* glsl_version;
     ImVec4 clear_color;

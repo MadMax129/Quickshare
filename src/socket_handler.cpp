@@ -62,12 +62,30 @@ bool ClientSock::init_socket()
     return true;
 }
 
-bool ClientSock::send_intro(char* username)
+void ClientSock::try_connect()
 {
     if (connect(_tcp_socket, (struct sockaddr*)&_server_addr,
                             sizeof(_server_addr)) == SOCKET_ERROR)
-        return false;
+        _connected = 0;
+    else
+        _connected = 1;
+}
 
+int ClientSock::has_connected()
+{
+    int copy = _connected;
+    return copy;
+}
+
+void ClientSock::start_connection()
+{
+    _connected = -1;
+    std::thread conn(ClientSock::try_connect, this);
+    conn.detach();
+}
+
+bool ClientSock::send_intro(char* username)
+{
     memset(&global_msg, 0, sizeof(global_msg));
     global_msg.m_type = M_NEW_CLIENT;
     memcpy(global_msg.data.intro.username, username, USERNAME_MAX_LIMIT);
