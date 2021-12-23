@@ -1,0 +1,23 @@
+{
+    "files.associations": {
+        "gl.h": "c",
+        "glu.h": "c",
+        "glew.h": "c",
+        "nuklear_glfw_gl3.h": "c",
+        "glfw3.h": "c",
+        "nuklear.h": "c",
+        "cstdio": "c",
+        "array": "cpp",
+        "hash_map": "cpp",
+        "string_view": "cpp",
+        "initializer_list": "cpp",
+        "utility": "cpp",
+        "deque": "cpp",
+        "string": "cpp",
+        "vector": "cpp",
+        "condition_variable": "cpp",
+        "thread": "cpp",
+        "*.tcc": "cpp",
+        "list": "cpp"
+    }
+}
