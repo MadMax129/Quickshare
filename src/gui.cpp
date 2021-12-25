@@ -18,6 +18,9 @@ Context::Context(ClientSock* client)
     app_state = S_REGISTER;
     clisock = client;
     memset(username, 0, USERNAME_MAX_LIMIT);
+
+    
+    // tes
     // msg_array = new Chat_Msg*[64];
     // msg_count = 0;
 }
@@ -68,14 +71,7 @@ void Context::init_imgui()
 
 void Context::login_menu() 
 {
-    enum {
-        L_DEFAULT,
-        L_CLICKED_ENTER,
-        L_CONNCETING,
-        L_FAILED_TO_CONNECT,
-        L_CONNECTED
-    } static local_state;
-    static bool started_connection = false;
+    static Login_Menu menu;
 
     ImGui::Begin("Login", NULL, ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoCollapse);
     ImGui::SetWindowSize(ImVec2(300, 200));
@@ -90,22 +86,22 @@ void Context::login_menu()
     ImGui::InputText(anim, username, USERNAME_MAX_LIMIT);
 
     if (ImGui::Button("Enter")) 
-        local_state = L_CLICKED_ENTER;
+        menu.local_state = menu.L_CLICKED_ENTER;
 
-    switch (local_state)
+    switch (menu.local_state)
     {
-        case L_CLICKED_ENTER: {
+        case menu.L_CLICKED_ENTER: {
             if (strlen(username) != 0)
-                local_state = L_CONNCETING;
+                menu.local_state = menu.L_CONNCETING;
             else
-                local_state = L_DEFAULT;
+                menu.local_state = menu.L_DEFAULT;
             break;
         }
 
-        case L_CONNCETING: {
-            if (!started_connection) {
+        case menu.L_CONNCETING: {
+            if (!menu.started_connection) {
                 clisock->start_connection();
-                started_connection = true;
+                menu.started_connection = true;
             }
 
             if (clisock->has_connected() == -1) {
@@ -113,25 +109,25 @@ void Context::login_menu()
                 ImGui::TextColored(ImVec4(0.0f, 1.0f, 0.0f, 1.0f), "Connecting...");
             }
             else if (clisock->has_connected() == 0) {
-                local_state = L_FAILED_TO_CONNECT;
-                started_connection = false;
+                menu.local_state = menu.L_FAILED_TO_CONNECT;
+                menu.started_connection = false;
             }
             else {
-                local_state = L_CONNECTED;
+                menu.local_state = menu.L_CONNECTED;
             }
 
             break;
         }
 
-        case L_FAILED_TO_CONNECT: {
+        case menu.L_FAILED_TO_CONNECT: {
             ImGui::NewLine();
             ImGui::TextColored(ImVec4(1.0f, 0.0f, 0.0f, 1.0f), "Failed to connect...");
             break;
         }
 
-        case L_CONNECTED: {
+        case menu.L_CONNECTED: {
             if (!clisock->send_intro(username)) {
-                local_state = L_FAILED_TO_CONNECT;
+                menu.local_state = menu.L_FAILED_TO_CONNECT;
             }
             else {
                 clisock->start_recv();

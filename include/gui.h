@@ -15,6 +15,25 @@
 //     // add id and username
 // };
 
+struct Login_Menu {
+    enum {
+        L_DEFAULT,
+        L_CLICKED_ENTER,
+        L_CONNCETING,
+        L_FAILED_TO_CONNECT,
+        L_CONNECTED
+    } local_state;
+    bool started_connection;
+};
+
+struct Chat_Menu {
+    // store chat messages 
+};
+
+struct List_Menu {
+    // store active users
+};
+
 struct Context {
 public:
     Context(ClientSock* client);
@@ -43,6 +62,7 @@ private:
     void main_menu();
     void chat_menu();
 };
+
 
 #define IMGUI_NEW_FRAME() \
     ImGui_ImplOpenGL3_NewFrame(); \
