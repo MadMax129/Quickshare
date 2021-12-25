@@ -11,18 +11,12 @@ static void glfw_error_callback(int error, const char* description)
     fprintf(stderr, "Glfw Error %d: %s\n", error, description);
 }
 
-Context::Context(ClientSock* client)
+Context::Context(Client_Sock* client) : l_menu(this)
 {
     window = NULL;
     glsl_version = NULL;
     app_state = S_REGISTER;
     clisock = client;
-    memset(username, 0, USERNAME_MAX_LIMIT);
-
-    
-    // tes
-    // msg_array = new Chat_Msg*[64];
-    // msg_count = 0;
 }
 
 Context::~Context()
@@ -69,79 +63,6 @@ void Context::init_imgui()
     // chat = Chat();
 }
 
-void Context::login_menu() 
-{
-    static Login_Menu menu;
-
-    ImGui::Begin("Login", NULL, ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoCollapse);
-    ImGui::SetWindowSize(ImVec2(300, 200));
-    // ImGui::SetNextWindowSize(ImVec2(300, 200));
-
-    ImGui::TextColored(ImVec4(1.0f, 1.0f, 0.0f, 1.0f), "Welcome to Quickshare!");
-    ImGui::SameLine();
-    ImGui::Text("Please enter a username.");
-
-    char anim[11];
-    sprintf(anim, "%c###ufield", "|/-\\"[(int)(ImGui::GetTime() / 0.25f) & 3]);
-    ImGui::InputText(anim, username, USERNAME_MAX_LIMIT);
-
-    if (ImGui::Button("Enter")) 
-        menu.local_state = menu.L_CLICKED_ENTER;
-
-    switch (menu.local_state)
-    {
-        case menu.L_CLICKED_ENTER: {
-            if (strlen(username) != 0)
-                menu.local_state = menu.L_CONNCETING;
-            else
-                menu.local_state = menu.L_DEFAULT;
-            break;
-        }
-
-        case menu.L_CONNCETING: {
-            if (!menu.started_connection) {
-                clisock->start_connection();
-                menu.started_connection = true;
-            }
-
-            if (clisock->has_connected() == -1) {
-                ImGui::NewLine();
-                ImGui::TextColored(ImVec4(0.0f, 1.0f, 0.0f, 1.0f), "Connecting...");
-            }
-            else if (clisock->has_connected() == 0) {
-                menu.local_state = menu.L_FAILED_TO_CONNECT;
-                menu.started_connection = false;
-            }
-            else {
-                menu.local_state = menu.L_CONNECTED;
-            }
-
-            break;
-        }
-
-        case menu.L_FAILED_TO_CONNECT: {
-            ImGui::NewLine();
-            ImGui::TextColored(ImVec4(1.0f, 0.0f, 0.0f, 1.0f), "Failed to connect...");
-            break;
-        }
-
-        case menu.L_CONNECTED: {
-            if (!clisock->send_intro(username)) {
-                menu.local_state = menu.L_FAILED_TO_CONNECT;
-            }
-            else {
-                clisock->start_recv();
-                app_state = S_MAIN_MENU;
-            }
-            break;
-        }
-        
-        default: break;
-    }
-
-    ImGui::End();
-}
-
 void Context::chat_menu() 
 {
     ImGui::Begin("Global Chat", NULL);
@@ -151,8 +72,8 @@ void Context::chat_menu()
 
     static bool got = false;
     static Tcp_Msg* m;
-    if (clisock->msg_queue.size() > 0)
-       m = clisock->msg_queue.pop(), got = true;
+    // if (clisock->msg_queue.size() > 0)
+    //    m = clisock->msg_queue.pop(), got = true;
 
     // ImGui::Text(text);
     if (got) {
@@ -190,8 +111,37 @@ void Context::main_menu()
         }
         ImGui::EndTable();
     }
-    // ImGui::Text("Application average %.3f ms/frame (%.1f FPS)", 1000.0f / ImGui::GetIO().Framerate, ImGui::GetIO().Framerate);
+
     ImGui::End();
+}
+
+void Context::error_menu()
+{
+    ImGui::Begin("Error", NULL, ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoCollapse);
+    ImGui::SetWindowSize(ImVec2(300,100));
+
+    ImGui::TextColored(ImVec4(1.0f, 0.0, 0.0, 1.0f), "Error occured with connection to server...");
+
+    // Attempt to reconnect to server
+    if (ImGui::Button("Return")) {
+        // Check if socket connection can be opened, continue back to login menu
+        if (clisock->init_socket()) {
+            change_state(S_REGISTER);
+            clisock->connected = -1;
+        }
+    }
+
+    ImGui::End();
+}
+
+void Context::change_state(App_State state)
+{
+    // When changing state reset menu parameters
+    assert(app_state != state);
+    if (state == S_REGISTER)
+        l_menu.reset();
+
+    app_state = state;
 }
 
 void Context::main_loop() 
@@ -201,10 +151,18 @@ void Context::main_loop()
         glfwPollEvents();
         IMGUI_NEW_FRAME();
 
+        // Check if connection was lost with server
+        if (app_state == S_MAIN_MENU && clisock->connected == 0) 
+            change_state(S_ERROR);
+
         switch (app_state)
         {
-            case S_REGISTER: 
-                login_menu();
+            case S_ERROR:
+                error_menu();
+                break;
+
+            case S_REGISTER:
+                l_menu.draw();
                 break;
 
             case S_MAIN_MENU:
@@ -214,8 +172,6 @@ void Context::main_loop()
         }
 
         ImGui::ShowDemoWindow();
-        // ImGuiStyle& style = ImGui::GetStyle();
-        // style.FrameRounding = 4.0f;
 
         // Rendering
         ImGui::Render();
@@ -225,7 +181,6 @@ void Context::main_loop()
         glClearColor(clear_color.x * clear_color.w, clear_color.y * clear_color.w, clear_color.z * clear_color.w, clear_color.w);
         glClear(GL_COLOR_BUFFER_BIT);
         ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
-
         glfwSwapBuffers(window);
     }
 

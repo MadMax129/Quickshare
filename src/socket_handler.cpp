@@ -1,21 +1,21 @@
 #include "networking.h"
 #include <windows.h>
 #include "quickshare.h"
+#include <assert.h>
 
 static Tcp_Msg global_msg;
 
-ClientSock::ClientSock(const char *ip, const unsigned short port) :
+Client_Sock::Client_Sock(const char *ip, const unsigned short port) :
     _port(port), _ip(ip) {}
 
-ClientSock::~ClientSock() 
+Client_Sock::~Client_Sock() 
 {
     WSACleanup();
     closesocket(_tcp_socket);
-    closesocket(_udp_socket);
-    server_read.join();
+    // closesocket(_udp_socket);
 }
 
-void ClientSock::recv_thread()
+void Client_Sock::recv_thread()
 {
     memset(&global_msg, 0, sizeof(global_msg));
     for (;;)
@@ -25,34 +25,38 @@ void ClientSock::recv_thread()
         switch (result)
         {
             case 0:
-                LOGGER("Server disconneted...\n");
-                exit(1);
-                break;
-            
             case SOCKET_ERROR:
+                LOGGER("Server recv error\n");
+                connected = 0;
+                WSACleanup();
+                closesocket(_tcp_socket);
                 return;
 
             default:
-                msg_queue.push(global_msg);
+                msg_queue.push(&global_msg);
                 break;
         }
     }
 }
 
-void ClientSock::start_recv()
+void Client_Sock::start_recv()
 {
-    server_read = std::thread(&ClientSock::recv_thread, this);
+    server_read = std::thread(&Client_Sock::recv_thread, this);
+    server_read.detach();
 }
 
-bool ClientSock::init_socket() 
+bool Client_Sock::init_socket() 
 {
     if (WSAStartup(MAKEWORD(2,2), &_wsa_data) != 0)
         return false;
 
     _tcp_socket = socket(AF_INET, SOCK_STREAM, 0);
-    _udp_socket = socket(AF_INET, SOCK_DGRAM, 0);
+    // _udp_socket = socket(AF_INET, SOCK_DGRAM, 0);
 
-    if (_tcp_socket == INVALID_SOCKET || _udp_socket == INVALID_SOCKET)
+    // if (_tcp_socket == INVALID_SOCKET || _udp_socket == INVALID_SOCKET)
+        // return false;
+
+    if (_tcp_socket == INVALID_SOCKET)
         return false;
 
     _server_addr.sin_family = AF_INET;
@@ -62,29 +66,29 @@ bool ClientSock::init_socket()
     return true;
 }
 
-void ClientSock::try_connect()
+void Client_Sock::try_connect()
 {
     if (connect(_tcp_socket, (struct sockaddr*)&_server_addr,
                             sizeof(_server_addr)) == SOCKET_ERROR)
-        _connected = 0;
+        connected = 0;
     else
-        _connected = 1;
+        connected = 1;
 }
 
-int ClientSock::has_connected()
+int Client_Sock::has_connected()
 {
-    int copy = _connected;
+    int copy = connected;
     return copy;
 }
 
-void ClientSock::start_connection()
+void Client_Sock::start_connection()
 {
-    _connected = -1;
-    std::thread conn(ClientSock::try_connect, this);
+    connected = -1;
+    std::thread conn(Client_Sock::try_connect, this);
     conn.detach();
 }
 
-bool ClientSock::send_intro(char* username)
+bool Client_Sock::send_intro(char* username)
 {
     memset(&global_msg, 0, sizeof(global_msg));
     global_msg.m_type = M_NEW_CLIENT;
@@ -95,32 +99,58 @@ bool ClientSock::send_intro(char* username)
     return true;
 }
 
-MsgQueue::MsgQueue() {}
-MsgQueue::~MsgQueue() {}
-
-Tcp_Msg* MsgQueue::pop()
+Msg_Queue::Msg_Queue() 
 {
-    _mutex.lock();
-    Tcp_Msg* result = new Tcp_Msg;
-    memset(result, 0, sizeof(Tcp_Msg));
-    memcpy(result, &_queue.front(), sizeof(Tcp_Msg));
-    _queue.pop();
-    _mutex.unlock();
-    return result;
+    front = 0;
+    back = -1;
+    size = 0;
+    queue = new Tcp_Msg[MAX_QUEUE_SIZE];
+    memset(queue, 0, sizeof(Tcp_Msg[MAX_QUEUE_SIZE]));
 }
 
-void MsgQueue::push(Tcp_Msg item)
+Msg_Queue::~Msg_Queue() 
 {
-    _mutex.lock();
-    _queue.push(item);
-    _mutex.unlock();
+    free(queue);
 }
 
-unsigned int MsgQueue::size() 
+Tcp_Msg* Msg_Queue::pop()
 {
-    _mutex.lock();
-    unsigned int size = _queue.size();
-    _mutex.unlock();
+    mutex.lock();
+    Tcp_Msg* copy = &queue[front++];
 
-    return size;
+    if (front == MAX_QUEUE_SIZE)
+        front = 0;
+
+    size--;
+    mutex.unlock();
+    return copy;
+}
+
+Tcp_Msg* Msg_Queue::peek()
+{
+    mutex.lock();
+    Tcp_Msg* copy = &queue[front];
+    mutex.unlock();
+    return copy;
+}
+
+void Msg_Queue::push(Tcp_Msg* item)
+{
+    mutex.lock();
+    assert(size != MAX_QUEUE_SIZE);
+
+    if (back == MAX_QUEUE_SIZE-1)
+        back = -1;
+
+    memcpy(&queue[++back], item, sizeof(Tcp_Msg));
+    size++;
+    mutex.unlock();
+}
+
+int Msg_Queue::get_size() 
+{
+    mutex.lock();
+    int s = size;
+    mutex.unlock();
+    return s;
 }

@@ -4,7 +4,7 @@
 
 int main(int argc, const char *argv[]) {
     
-    ClientSock client("192.168.1.31", 5000);
+    Client_Sock client("192.168.1.31", 5000);
     if (!client.init_socket()) {
         LOGGER("Failed to init socket\n");
         exit(1);

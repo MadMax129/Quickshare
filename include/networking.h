@@ -2,30 +2,33 @@
 
 #include <WS2tcpip.h>
 #include <thread>
-#include <queue>
 #include <mutex>
 #include <atomic>
 #include <condition_variable>
 #include "message.h"
 
-struct MsgQueue {
+#define MAX_QUEUE_SIZE 16
+
+struct Msg_Queue {
 public:
-    MsgQueue();
-    ~MsgQueue();
+    Msg_Queue();
+    ~Msg_Queue();
 
     Tcp_Msg* pop();
-    void push(Tcp_Msg item);
-    unsigned int size();
+    Tcp_Msg* peek();
+    void push(Tcp_Msg* item);
+    int get_size();
     
 private:
-    std::queue<Tcp_Msg> _queue;
-    std::mutex _mutex;
+    int front, back, size;
+    Tcp_Msg* queue;
+    std::mutex mutex;
 };
 
-struct ClientSock {
+struct Client_Sock {
 public: 
-    explicit ClientSock(const char* ip, const unsigned short port);
-    ~ClientSock();
+    explicit Client_Sock(const char* ip, const unsigned short port);
+    ~Client_Sock();
 
     bool init_socket();
     bool send_intro(char* username);
@@ -33,7 +36,8 @@ public:
     void start_connection();
     int has_connected();
 
-    MsgQueue msg_queue;
+    Msg_Queue msg_queue;
+    std::atomic<int> connected;
 
 private:
     unsigned short _port;
@@ -43,7 +47,6 @@ private:
     SOCKET _udp_socket;
     sockaddr_in _server_addr;
     std::thread server_read;
-    std::atomic<int> _connected;
 
     void try_connect();
     void recv_thread();
