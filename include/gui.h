@@ -6,14 +6,12 @@
 #include <stdio.h>
 #include <GLFW/glfw3.h>
 #include <memory.h>
+#include <vector>
 #include "networking.h"
 #include "quickshare.h"
 
 #define FONT_PATH ".././lib/imgui-1.85/misc/fonts/Roboto-Medium.ttf"
 #define FONT_SIZE 14.0f
-// struct User {
-//     // add id and username
-// };
 
 struct Context;
 
@@ -40,8 +38,18 @@ struct Chat_Menu {
     // store chat messages 
 };
 
-struct List_Menu {
-    // store active users
+struct Users_Menu {
+    
+    Users_Menu(Context* context);
+    ~Users_Menu();
+    void draw();
+
+private:
+    void update_list();
+
+    Context* ctx;
+    std::vector<Intro> users;
+    Tcp_Msg* buf;
 };
 
 struct Context {
@@ -69,9 +77,9 @@ private:
     unsigned int msg_count;
 
     Login_Menu l_menu;
-    void main_menu();
+    Users_Menu u_menu;
     void chat_menu();
-    void error_menu();
+    void error_window();
 };
 
 

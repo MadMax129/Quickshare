@@ -11,7 +11,7 @@ static void glfw_error_callback(int error, const char* description)
     fprintf(stderr, "Glfw Error %d: %s\n", error, description);
 }
 
-Context::Context(Client_Sock* client) : l_menu(this)
+Context::Context(Client_Sock* client) : l_menu(this), u_menu(this)
 {
     window = NULL;
     glsl_version = NULL;
@@ -51,6 +51,8 @@ void Context::init_imgui()
     IMGUI_CHECKVERSION();
     ImGui::CreateContext();
     ImGuiIO& io = ImGui::GetIO();
+
+    // io.IniFilename = 
     //io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;     // Enable Keyboard Controls
     //io.ConfigFlags |= ImGuiConfigFlags_NavEnableGamepad;      // Enable Gamepad Controls
 
@@ -91,31 +93,7 @@ void Context::chat_menu()
     ImGui::End();
 }
 
-void Context::main_menu() 
-{
-    ImGui::Begin("Contacts", NULL, ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoCollapse);
-    ImVec2 outer_size = ImVec2(0.0f, ImGui::GetTextLineHeightWithSpacing() * 10);
-    if (ImGui::BeginTable("split2", 1, ImGuiTableFlags_NoSavedSettings | ImGuiTableFlags_ScrollY, outer_size))
-    {
-        for (int i = 0; i < 100; i++)
-        {
-            ImGui::TableNextColumn();
-            if (ImGui::TreeNode((void*)(intptr_t)i, "Contact %d", i))
-            {
-                ImGui::Text("Status: %s", "Active");
-                ImGui::SameLine();
-                if (ImGui::SmallButton("button")) {}
-                ImGui::TreePop();
-            }
-                
-        }
-        ImGui::EndTable();
-    }
-
-    ImGui::End();
-}
-
-void Context::error_menu()
+void Context::error_window()
 {
     ImGui::Begin("Error", NULL, ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoCollapse);
     ImGui::SetWindowSize(ImVec2(300,100));
@@ -158,7 +136,7 @@ void Context::main_loop()
         switch (app_state)
         {
             case S_ERROR:
-                error_menu();
+                error_window();
                 break;
 
             case S_REGISTER:
@@ -166,7 +144,7 @@ void Context::main_loop()
                 break;
 
             case S_MAIN_MENU:
-                main_menu();
+                u_menu.draw();
                 chat_menu();
                 break;
         }

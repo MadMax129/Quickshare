@@ -5,7 +5,34 @@
 #include <mutex>
 #include <atomic>
 #include <condition_variable>
-#include "message.h"
+
+#define USERNAME_MAX_LIMIT 16
+#define DATA_MAX 512
+
+enum Message_Type {
+    M_ERROR = -1,
+    M_NEW_CLIENT = 1,
+    M_GLOBAL_CHAT,
+    M_USER_ADD,
+    M_USER_REMOVE,
+};
+
+struct Intro {
+    char username[USERNAME_MAX_LIMIT];
+};
+
+struct Chat_Msg {
+    unsigned char from_user[USERNAME_MAX_LIMIT];
+    unsigned char data[DATA_MAX];
+};
+
+struct Tcp_Msg {
+    unsigned char m_type;
+    union {
+        Intro intro;
+        Chat_Msg chat;
+    } data;
+} __attribute__((packed));
 
 #define MAX_QUEUE_SIZE 16
 
@@ -14,8 +41,8 @@ public:
     Msg_Queue();
     ~Msg_Queue();
 
-    Tcp_Msg* pop();
-    Tcp_Msg* peek();
+    void pop(Tcp_Msg* buf);
+    unsigned char peek();
     void push(Tcp_Msg* item);
     int get_size();
     
@@ -35,6 +62,7 @@ public:
     void start_recv();
     void start_connection();
     int has_connected();
+    void disconnect();
 
     Msg_Queue msg_queue;
     std::atomic<int> connected;

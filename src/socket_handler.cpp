@@ -10,6 +10,11 @@ Client_Sock::Client_Sock(const char *ip, const unsigned short port) :
 
 Client_Sock::~Client_Sock() 
 {
+    disconnect();
+}
+
+void Client_Sock::disconnect()
+{
     WSACleanup();
     closesocket(_tcp_socket);
     // closesocket(_udp_socket);
@@ -17,7 +22,6 @@ Client_Sock::~Client_Sock()
 
 void Client_Sock::recv_thread()
 {
-    memset(&global_msg, 0, sizeof(global_msg));
     for (;;)
     {
         int result = recv(_tcp_socket, (char*)&global_msg, sizeof(global_msg), 0);
@@ -28,8 +32,7 @@ void Client_Sock::recv_thread()
             case SOCKET_ERROR:
                 LOGGER("Server recv error\n");
                 connected = 0;
-                WSACleanup();
-                closesocket(_tcp_socket);
+                disconnect();
                 return;
 
             default:
@@ -104,7 +107,9 @@ Msg_Queue::Msg_Queue()
     front = 0;
     back = -1;
     size = 0;
-    queue = new Tcp_Msg[MAX_QUEUE_SIZE];
+    queue = (Tcp_Msg*)malloc(sizeof(Tcp_Msg) * MAX_QUEUE_SIZE);
+    if (!queue)
+        FATAL_MEM();
     memset(queue, 0, sizeof(Tcp_Msg[MAX_QUEUE_SIZE]));
 }
 
@@ -113,23 +118,24 @@ Msg_Queue::~Msg_Queue()
     free(queue);
 }
 
-Tcp_Msg* Msg_Queue::pop()
+void Msg_Queue::pop(Tcp_Msg* buf)
 {
     mutex.lock();
-    Tcp_Msg* copy = &queue[front++];
+    assert(size >= 0);
+
+    memcpy(buf, &queue[front++], sizeof(Tcp_Msg));
 
     if (front == MAX_QUEUE_SIZE)
         front = 0;
 
     size--;
     mutex.unlock();
-    return copy;
 }
 
-Tcp_Msg* Msg_Queue::peek()
+unsigned char Msg_Queue::peek()
 {
     mutex.lock();
-    Tcp_Msg* copy = &queue[front];
+    unsigned char copy = queue[front].m_type;
     mutex.unlock();
     return copy;
 }
@@ -142,7 +148,8 @@ void Msg_Queue::push(Tcp_Msg* item)
     if (back == MAX_QUEUE_SIZE-1)
         back = -1;
 
-    memcpy(&queue[++back], item, sizeof(Tcp_Msg));
+    back++;
+    memcpy(&queue[back], item, sizeof(Tcp_Msg));
     size++;
     mutex.unlock();
 }

@@ -32,7 +32,7 @@ CXX = g++
 EXE = test.exe
 IMGUI_DIR = ../lib/imgui-1.85
 INCLUDES = ../include
-SOURCES = socket_handler.cpp login.cpp gui.cpp quickshare.cpp
+SOURCES = socket_handler.cpp user_list.cpp login.cpp gui.cpp quickshare.cpp
 SOURCES += $(IMGUI_DIR)/imgui.cpp $(IMGUI_DIR)/imgui_demo.cpp $(IMGUI_DIR)/imgui_draw.cpp $(IMGUI_DIR)/imgui_tables.cpp $(IMGUI_DIR)/imgui_widgets.cpp
 SOURCES += $(IMGUI_DIR)/backends/imgui_impl_glfw.cpp $(IMGUI_DIR)/backends/imgui_impl_opengl3.cpp
 # SOURCES += $(shell dir . /s /b | find ".cpp")
@@ -48,10 +48,6 @@ ifeq ($(OS), Windows_NT)
 	LIBS += -lglfw3 -lgdi32 -lopengl32 -limm32 -lws2_32
 	CFLAGS = $(CXXFLAGS)
 endif
-
-##---------------------------------------------------------------------
-## BUILD RULES
-##---------------------------------------------------------------------
 
 %.o:%.cpp
 	$(CXX) $(CXXFLAGS) -c -o $@ $<

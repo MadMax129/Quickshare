@@ -10,5 +10,7 @@
     do { printf("[ FATAL ] (%s, %d)\t", __FILE__, __LINE__); printf(__VA_ARGS__); exit(1); } while (0)
 #endif
 
-#define USERNAME_MAX_LIMIT 16
-#define DATA_MAX 512
+#ifndef FATAL_MEM
+#define FATAL_MEM() \
+    do { printf("[ MEMORY FAILURE ] (%s, %d)\n", __FILE__, __LINE__); exit(1); } while (0)
+#endif
