@@ -29,7 +29,7 @@ void Users_Menu::update_list()
         //     if (strcmp(e, buf->data.intro.username))
         //         printf("Erase %s\n", e);
         // }
-    }
+    } 
 }
 
 void Users_Menu::draw()

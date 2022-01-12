@@ -1,68 +1,63 @@
-# TARGET ?= quickshare
-# SRC_DIRS ?= ./src
-# CC = g++
+CXX ?= g++
+EXE ?= test.exe
+BUILD ?= build
 
-# ifeq ($(OS), Windows_NT)
-# 	RM = del
-# 	SRCS := $(shell dir .\src /s /b | find ".cpp")
-# 	OBJS := $(addsuffix .o,$(basename $(SRCS)))
-# 	DEPS := $(OBJS:.o=.d)
-# else 
-# 	RM = rm
-# endif
+IMGUI_DIR ?= ../lib/imgui-1.85
+IMGUI_SOURCES =	$(IMGUI_DIR)/imgui.cpp        \
+				$(IMGUI_DIR)/imgui_demo.cpp   \
+				$(IMGUI_DIR)/imgui_draw.cpp   \
+				$(IMGUI_DIR)/imgui_tables.cpp \
+				$(IMGUI_DIR)/imgui_widgets.cpp
 
-# INC_FLAGS := $(addprefix -I,./include)
+IMGUI_SOURCES += $(IMGUI_DIR)/backends/imgui_impl_glfw.cpp \
+				 $(IMGUI_DIR)/backends/imgui_impl_opengl3.cpp
 
-# CPPFLAGS ?= $(INC_FLAGS) -MMD -MP -O1 -std=c++17 -pedantic-errors -Wextra
-# LDLIBS = -lws2_32 -lglfw3
-
-# $(TARGET): $(OBJS)
-# 	$(CC) $(LDFLAGS) $(OBJS) -o $@ $(LOADLIBES) $(LDLIBS)
-# 	$(RM) $(OBJS) $(DEPS)
-
-# .PHONY: clean
-# clean:
-# 	$(RM) $(OBJS) $(DEPS)
-
-# -include $(DEPS)
-
-CXX = g++
-#CXX = clang++
-
-EXE = test.exe
-IMGUI_DIR = ../lib/imgui-1.85
 INCLUDES = ../include
-SOURCES = socket_handler.cpp user_list.cpp login.cpp gui.cpp quickshare.cpp
-SOURCES += $(IMGUI_DIR)/imgui.cpp $(IMGUI_DIR)/imgui_demo.cpp $(IMGUI_DIR)/imgui_draw.cpp $(IMGUI_DIR)/imgui_tables.cpp $(IMGUI_DIR)/imgui_widgets.cpp
-SOURCES += $(IMGUI_DIR)/backends/imgui_impl_glfw.cpp $(IMGUI_DIR)/backends/imgui_impl_opengl3.cpp
-# SOURCES += $(shell dir . /s /b | find ".cpp")
-OBJS = $(addsuffix .o, $(basename $(notdir $(SOURCES))))
-LINUX_GL_LIBS = -lGL
+SOURCES  =	socket_handler.cpp \
+			user_list.cpp      \
+			login.cpp          \
+			gui.cpp            \
+			quickshare.cpp
 
-CXXFLAGS = -I$(IMGUI_DIR) -I$(IMGUI_DIR)/backends -I$(INCLUDES)
-CXXFLAGS += -g -Wall -Wformat -std=c++17
-LIBS = 
+SRC_OBJS = $(addprefix $(BUILD)/, $(addsuffix .o, $(basename $(notdir $(SOURCES)))))
+IMGUI_OBJS = $(addprefix $(BUILD)/, $(addsuffix .o, $(basename $(notdir $(IMGUI_SOURCES)))))
+ALL_OBJS = $(IMGUI_OBJS) $(SRC_OBJS)
 
-ifeq ($(OS), Windows_NT)
-	ECHO_MESSAGE = "MinGW"
-	LIBS += -lglfw3 -lgdi32 -lopengl32 -limm32 -lws2_32
-	CFLAGS = $(CXXFLAGS)
+DEPS = $(addprefix build\, $(SOURCES:.cpp=.d))
+SRC_INC_DIR = -I$(INCLUDES) -I$(IMGUI_DIR) -I$(IMGUI_DIR)/backends
+CXXFLAGS += -O2 -Wall -std=c++17 -pedantic-errors
+IMGUI_LIBS = -lglfw3 -lgdi32 -lopengl32 -limm32 -lws2_32
+
+.PHONY: all clean clean_app
+
+all: directory compile
+ifneq ($(OS), Windows_NT)
+	$(error Makefile only compatible for Windows system)
 endif
+	@echo $(DEPS)
+	@echo Build Complete!
 
-%.o:%.cpp
-	$(CXX) $(CXXFLAGS) -c -o $@ $<
+compile: $(EXE)
+directory:
+	if not exist build ( mkdir build )
 
-%.o:$(IMGUI_DIR)/%.cpp
-	$(CXX) $(CXXFLAGS) -c -o $@ $<
+# Build App Source
+$(BUILD)/%.o:%.cpp
+	$(CXX) $(CXXFLAGS) $(SRC_INC_DIR) -MMD -MP -c -o $@ $<
 
-%.o:$(IMGUI_DIR)/backends/%.cpp
-	$(CXX) $(CXXFLAGS) -c -o $@ $<
+# Build ImGui Source
+$(BUILD)/%.o:$(IMGUI_DIR)/%.cpp
+	$(CXX) $(CXXFLAGS) $(IMGUI_LIBS) -c -o $@ $<
 
-all: $(EXE)
-	@echo Build complete for $(ECHO_MESSAGE)
+# Build ImGui Backend Source
+$(BUILD)/%.o:$(IMGUI_DIR)/backends/%.cpp
+	$(CXX) $(CXXFLAGS) $(IMGUI_LIBS) -I$(IMGUI_DIR) -c -o $@ $<
 
-$(EXE): $(OBJS)
-	$(CXX) -o $@ $^ $(CXXFLAGS) $(LIBS)
+# Link Together
+$(EXE): $(ALL_OBJS)
+	$(CXX) -o $@ $^ $(CXXFLAGS) $(IMGUI_LIBS)
 
 clean:
-	del $(EXE) $(OBJS)
+	del $(addprefix .\build\, $(SOURCES:.cpp=.o))
+
+-include $(DEPS)

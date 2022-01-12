@@ -35,7 +35,7 @@ private:
 };
 
 struct Chat_Menu {
-    // store chat messages 
+    // store chat messages
 };
 
 struct Users_Menu {

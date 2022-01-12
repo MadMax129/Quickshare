@@ -36,6 +36,9 @@ void Client_Sock::recv_thread()
                 return;
 
             default:
+                /* TODO: Limit all messags to one length, link them in list if more than 
+                    msg size. Handle creating list here
+                */
                 msg_queue.push(&global_msg);
                 break;
         }
