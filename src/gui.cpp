@@ -68,21 +68,10 @@ void Context::init_imgui()
 void Context::chat_menu() 
 {
     ImGui::Begin("Global Chat", NULL);
-    char input[10] = {0};
+    static char input[10] = {0};
 
     ImGui::BeginChild("Log", ImVec2(0, ImGui::GetWindowHeight() - 85), true);
 
-    static bool got = false;
-    static Tcp_Msg* m;
-    // if (clisock->msg_queue.size() > 0)
-    //    m = clisock->msg_queue.pop(), got = true;
-
-    // ImGui::Text(text);
-    if (got) {
-        ImGui::TextColored(ImVec4(0.77, .188, .201, 1.0), "%s:", (const char*)m->data.chat.from_user); 
-        ImGui::SameLine();
-        ImGui::TextWrapped((const char*)m->data.chat.data);
-    }
 
     ImGui::EndChild();
 

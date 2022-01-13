@@ -48,7 +48,7 @@ private:
     void update_list();
 
     Context* ctx;
-    std::vector<Intro> users;
+    std::vector<Tcp_Msg::Id> users;
     Tcp_Msg* buf;
 };
 
@@ -73,8 +73,6 @@ private:
     GLFWwindow* window;
     char* glsl_version;
     ImVec4 clear_color;
-    Chat_Msg** msg_array;
-    unsigned int msg_count;
 
     Login_Menu l_menu;
     Users_Menu u_menu;

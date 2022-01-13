@@ -33,3 +33,5 @@
 
 # ImGui library
 lib/
+
+.vscode/

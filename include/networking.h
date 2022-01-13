@@ -9,30 +9,34 @@
 #define USERNAME_MAX_LIMIT 16
 #define DATA_MAX 512
 
-enum Message_Type {
-    M_ERROR = -1,
-    M_NEW_CLIENT = 1,
-    M_GLOBAL_CHAT,
-    M_USER_ADD,
-    M_USER_REMOVE,
-};
-
-struct Intro {
-    char username[USERNAME_MAX_LIMIT];
-};
-
-struct Chat_Msg {
-    unsigned char from_user[USERNAME_MAX_LIMIT];
-    unsigned char data[DATA_MAX];
+enum class Msg_Type : unsigned char {
+    SERROR,         // Server Error
+    NEW_CLIENT,     // Client connecting to server
+    CLIENT_ID,      // Server sends ID to client
+    
+    GLOBAL_CHAT,    // Client or Server chat message
+    
+    USER_ADD,       // Add client to active list
+    USER_REMOVE,    // Remove client from active list
 };
 
 struct Tcp_Msg {
-    unsigned char m_type;
+    struct Id {
+        unsigned char username[USERNAME_MAX_LIMIT];
+    };
+    struct Chat_Msg {
+        unsigned char username[USERNAME_MAX_LIMIT];
+        unsigned char data[512-16-1];
+    };
     union {
-        Intro intro;
-        Chat_Msg chat;
-    } data;
-} __attribute__((packed));
+        Id id;
+        Chat_Msg msg;
+    };
+    Msg_Type m_type;
+};
+
+static_assert(sizeof(Msg_Type) == 1);
+static_assert(sizeof(Tcp_Msg) == 512);
 
 #define MAX_QUEUE_SIZE 16
 
@@ -42,7 +46,7 @@ public:
     ~Msg_Queue();
 
     void pop(Tcp_Msg* buf);
-    unsigned char peek();
+    Msg_Type peek();
     void push(Tcp_Msg* item);
     int get_size();
     

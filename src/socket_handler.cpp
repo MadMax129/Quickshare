@@ -97,8 +97,8 @@ void Client_Sock::start_connection()
 bool Client_Sock::send_intro(char* username)
 {
     memset(&global_msg, 0, sizeof(global_msg));
-    global_msg.m_type = M_NEW_CLIENT;
-    memcpy(global_msg.data.intro.username, username, USERNAME_MAX_LIMIT);
+    global_msg.m_type = Msg_Type::NEW_CLIENT;
+    memcpy(global_msg.id.username, username, USERNAME_MAX_LIMIT);
     if (send(_tcp_socket, (const char*)&global_msg, sizeof(global_msg), 0) == SOCKET_ERROR)
         return false;
 
@@ -135,10 +135,10 @@ void Msg_Queue::pop(Tcp_Msg* buf)
     mutex.unlock();
 }
 
-unsigned char Msg_Queue::peek()
+Msg_Type Msg_Queue::peek()
 {
     mutex.lock();
-    unsigned char copy = queue[front].m_type;
+    Msg_Type copy = queue[front].m_type;
     mutex.unlock();
     return copy;
 }

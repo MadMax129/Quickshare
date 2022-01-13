@@ -20,9 +20,9 @@ void Users_Menu::update_list()
 {
     ctx->clisock->msg_queue.pop(buf);
 
-    if (buf->m_type == M_USER_ADD) {
-        printf("New client %s\n", buf->data.intro.username);
-        users.push_back(buf->data.intro);
+    if (buf->m_type == Msg_Type::USER_ADD) {
+        // printf("New client %s\n", buf->data.intro.username);
+        // users.push_back(buf->data.intro);
     }
     else {
         // for (const auto &e : users) {
@@ -34,8 +34,8 @@ void Users_Menu::update_list()
 
 void Users_Menu::draw()
 {
-    char peek = ctx->clisock->msg_queue.peek();
-    if (peek == M_USER_ADD || peek == M_USER_REMOVE)
+    Msg_Type peek = ctx->clisock->msg_queue.peek();
+    if (peek == Msg_Type::USER_ADD || peek == Msg_Type::USER_REMOVE)
         update_list();
 
     ImGui::Begin("User List", NULL, ImGuiWindowFlags_NoResize);
