@@ -39,10 +39,10 @@ struct Chat_Menu {
 };
 
 struct Users_Menu {
-    
     Users_Menu(Context* context);
     ~Users_Menu();
     void draw();
+    void tests();
 
 private:
     void update_list();

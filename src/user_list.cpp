@@ -11,6 +11,16 @@ Users_Menu::Users_Menu(Context* context)
     memset(buf, 0, sizeof(Tcp_Msg));
 }
 
+void Users_Menu::tests() 
+{
+    Tcp_Msg msg;
+    msg.m_type = Msg_Type::USER_ADD;
+    strcpy((char*)msg.id.username, "maks");
+    ctx->clisock->msg_queue.push(&msg);
+    strcpy((char*)msg.id.username, "weyne");
+    ctx->clisock->msg_queue.push(&msg); 
+}
+
 Users_Menu::~Users_Menu() 
 {
     free(buf);
@@ -21,10 +31,11 @@ void Users_Menu::update_list()
     ctx->clisock->msg_queue.pop(buf);
 
     if (buf->m_type == Msg_Type::USER_ADD) {
-        // printf("New client %s\n", buf->data.intro.username);
+        printf("New client %s\n", buf->id.username);
         // users.push_back(buf->data.intro);
     }
     else {
+        printf("Client dissconnected %s\n", buf->id.username);
         // for (const auto &e : users) {
         //     if (strcmp(e, buf->data.intro.username))
         //         printf("Erase %s\n", e);

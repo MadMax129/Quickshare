@@ -10,6 +10,7 @@ int main(int argc, const char *argv[]) {
     }
     Context ctx(&client);
 
+
     ctx.create_window(1000, 720, "Quickshare");
     ctx.init_imgui();
     ctx.main_loop();
