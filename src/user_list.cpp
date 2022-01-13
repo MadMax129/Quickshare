@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include "gui.h"
 #include "networking.h"
+#include <iostream>
 
 Users_Menu::Users_Menu(Context* context)
 {
@@ -19,6 +20,11 @@ void Users_Menu::tests()
     ctx->clisock->msg_queue.push(&msg);
     strcpy((char*)msg.id.username, "weyne");
     ctx->clisock->msg_queue.push(&msg); 
+    strcpy((char*)msg.id.username, "shawn");
+    ctx->clisock->msg_queue.push(&msg); 
+    msg.m_type = Msg_Type::USER_REMOVE;
+    strcpy((char*)msg.id.username, "maks");
+    ctx->clisock->msg_queue.push(&msg);
 }
 
 Users_Menu::~Users_Menu() 
@@ -29,18 +35,27 @@ Users_Menu::~Users_Menu()
 void Users_Menu::update_list()
 {
     ctx->clisock->msg_queue.pop(buf);
-
+    
     if (buf->m_type == Msg_Type::USER_ADD) {
         printf("New client %s\n", buf->id.username);
-        // users.push_back(buf->data.intro);
+
+        users.push_back(buf->id); 
+
     }
     else {
         printf("Client dissconnected %s\n", buf->id.username);
-        // for (const auto &e : users) {
-        //     if (strcmp(e, buf->data.intro.username))
-        //         printf("Erase %s\n", e);
-        // }
-    } 
+        int i = 0; 
+
+        for (const auto &e : users)
+        {
+            if (strncmp((char*)e.username, (char*)buf->id.username, USERNAME_MAX_LIMIT) == 0)
+            {
+                users.erase(users.begin()+i);
+                break;
+            }
+            i++;
+        }
+    }
 }
 
 void Users_Menu::draw()
