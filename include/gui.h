@@ -1,9 +1,6 @@
 #pragma once
 
 #include "imgui.h"
-#include "imgui_impl_glfw.h"
-#include "imgui_impl_opengl3.h"
-#include <stdio.h>
 #include <GLFW/glfw3.h>
 #include <memory.h>
 #include <vector>
@@ -64,6 +61,7 @@ public:
     bool create_window(int width, int height, const char* name);
     void init_imgui();
     void main_loop();
+    void menu_bar();
     void change_state(App_State state);
 
     Client_Sock* clisock;

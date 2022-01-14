@@ -19,10 +19,7 @@ Context::Context(Client_Sock* client) : l_menu(this), u_menu(this)
     clisock = client;
 }
 
-Context::~Context()
-{
-    // delete msg_array;
-}
+Context::~Context() {}
 
 bool Context::create_window(int width, int height, const char* name) 
 {
@@ -61,8 +58,6 @@ void Context::init_imgui()
     ImGui_ImplOpenGL3_Init(this->glsl_version);
     io.Fonts->AddFontFromFileTTF(FONT_PATH, FONT_SIZE);
     clear_color = ImVec4(0.45f, 0.55f, 0.60f, 1.00f);
-
-    // chat = Chat();
 }
 
 void Context::chat_menu() 
@@ -101,6 +96,23 @@ void Context::error_window()
     ImGui::End();
 }
 
+void Context::menu_bar()
+{
+    if (ImGui::BeginMainMenuBar())
+    {
+        if (ImGui::BeginMenu("Settings"))
+        {
+            if (ImGui::BeginMenu("Background Color")) 
+            {
+                ImGui::ColorEdit3("MyColor##1", (float*)&clear_color);
+                ImGui::EndMenu();
+            }
+            ImGui::EndMenu();
+        }
+        ImGui::EndMainMenuBar();
+    }
+}
+
 void Context::change_state(App_State state)
 {
     // When changing state reset menu parameters
@@ -119,6 +131,8 @@ void Context::main_loop()
     {
         glfwPollEvents();
         IMGUI_NEW_FRAME();
+
+        menu_bar();
 
         // Check if connection was lost with server
         if (app_state == S_MAIN_MENU && clisock->connected == 0) 

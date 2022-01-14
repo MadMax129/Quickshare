@@ -2,6 +2,8 @@
 #include "gui.h"
 #include "networking.h"
 #include <iostream>
+#include <algorithm>
+#include <cstring>
 
 Users_Menu::Users_Menu(Context* context)
 {
@@ -37,25 +39,29 @@ void Users_Menu::update_list()
     ctx->clisock->msg_queue.pop(buf);
     
     if (buf->m_type == Msg_Type::USER_ADD) {
-        printf("New client %s\n", buf->id.username);
-
         users.push_back(buf->id); 
-
     }
     else {
-        printf("Client dissconnected %s\n", buf->id.username);
-        int i = 0; 
-
-        for (const auto &e : users)
-        {
-            if (strncmp((char*)e.username, (char*)buf->id.username, USERNAME_MAX_LIMIT) == 0)
-            {
+        int i = 0;
+        for (const auto &e : users) {
+            if (std::strncmp(
+                reinterpret_cast<const char*>(e.username), 
+                reinterpret_cast<const char*>(buf->id.username), 
+                USERNAME_MAX_LIMIT) == 0) {
                 users.erase(users.begin()+i);
                 break;
             }
             i++;
         }
     }
+
+    // Sort alphabetically
+    std::sort(users.begin(), users.end(), [](auto& str1, auto& str2) {
+        return std::strncmp(
+            reinterpret_cast<const char*>(str1.username), 
+            reinterpret_cast<const char*>(str2.username), 
+            USERNAME_MAX_LIMIT) < 0;
+    });
 }
 
 void Users_Menu::draw()
