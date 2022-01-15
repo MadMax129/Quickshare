@@ -32,7 +32,16 @@ private:
 };
 
 struct Chat_Menu {
-    // store chat messages
+    Chat_Menu(Context* context);
+    ~Chat_Menu();
+
+    void draw();
+
+private:
+    void update_msgs();
+
+    Context* ctx;
+    std::vector<Tcp_Msg::Chat_Msg> msgs;
 };
 
 struct Users_Menu {
@@ -74,7 +83,7 @@ private:
 
     Login_Menu l_menu;
     Users_Menu u_menu;
-    void chat_menu();
+    Chat_Menu  c_menu;
     void error_window();
 };
 

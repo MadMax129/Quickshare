@@ -11,7 +11,7 @@ static void glfw_error_callback(int error, const char* description)
     fprintf(stderr, "Glfw Error %d: %s\n", error, description);
 }
 
-Context::Context(Client_Sock* client) : l_menu(this), u_menu(this)
+Context::Context(Client_Sock* client) : l_menu(this), u_menu(this), c_menu(this)
 {
     window = NULL;
     glsl_version = NULL;
@@ -60,30 +60,13 @@ void Context::init_imgui()
     clear_color = ImVec4(0.45f, 0.55f, 0.60f, 1.00f);
 }
 
-void Context::chat_menu() 
-{
-    ImGui::Begin("Global Chat", NULL);
-    static char input[10] = {0};
-
-    ImGui::BeginChild("Log", ImVec2(0, ImGui::GetWindowHeight() - 85), true);
-
-
-    ImGui::EndChild();
-
-    if (ImGui::InputText("Input", input, 10,  ImGuiInputTextFlags_EnterReturnsTrue)) {
-        printf("Done '%s'\n", input);
-    }
-
-    ImGui::End();
-}
-
 void Context::error_window()
 {
     ImGui::Begin("Error", NULL, ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoCollapse);
     ImGui::SetWindowSize(ImVec2(300,100));
 
     ImGui::TextColored(ImVec4(1.0f, 0.0, 0.0, 1.0f), "Error occured with connection to server...");
-
+    
     // Attempt to reconnect to server
     if (ImGui::Button("Return")) {
         // Check if socket connection can be opened, continue back to login menu
@@ -150,7 +133,7 @@ void Context::main_loop()
 
             case S_MAIN_MENU:
                 u_menu.draw();
-                chat_menu();
+                c_menu.draw();
                 break;
         }
 

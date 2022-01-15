@@ -18,7 +18,8 @@ IMGUI_SOURCES += $(IMGUI_DIR)/backends/imgui_impl_glfw.cpp \
 				 $(IMGUI_DIR)/backends/imgui_impl_opengl3.cpp
 
 INCLUDES = ../include
-SOURCES  =	socket_handler.cpp \
+SOURCES  =	chat_menu.cpp      \
+			socket_handler.cpp \
 			user_list.cpp      \
 			login.cpp          \
 			gui.cpp            \
