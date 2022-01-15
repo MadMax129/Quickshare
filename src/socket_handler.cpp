@@ -28,16 +28,17 @@ void Client_Sock::recv_thread()
         
         switch (result)
         {
-            case 0:
-            case SOCKET_ERROR:
+            case 0: case SOCKET_ERROR: {
                 LOGGER("Server recv error\n");
                 connected = 0;
                 disconnect();
                 return;
+            }
 
-            default:
+            default: {
                 msg_queue.push(&global_msg);
                 break;
+            }
         }
     }
 }

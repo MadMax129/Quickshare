@@ -19,21 +19,17 @@ Chat_Menu::~Chat_Menu()
 
 void Chat_Menu::test()
 {
-    Tcp_Msg temp; 
-    temp.m_type = Msg_Type::GLOBAL_CHAT;
+    buf->m_type = Msg_Type::GLOBAL_CHAT;
     for( size_t i = 0; i < 10; i++ ){
-        strcpy((char*)temp.msg.data, "message I just found out, that pressing backspace while doing input text (or other input) does nothing. I'm using glfw gl3 example. I tried to find any built in function to tell imgui to delete chars but found nothing. Only function to clear whole input but that's not what I need.");
-        strcpy((char*)temp.msg.username, "maks");
-        ctx->clisock->msg_queue.push(&temp);
+        strcpy((char*)buf->msg.data, "message I just found out, that need.");
+        strcpy((char*)buf->msg.username, "maks");
+        ctx->clisock->msg_queue.push(buf);
     }
-
-    
 }
 
 void Chat_Menu::update_msgs()
 {
     ctx->clisock->msg_queue.pop(buf);
-
 
     if (buf->m_type == Msg_Type::GLOBAL_CHAT && msgs.size() < MAX_MSG_AMT)
     {
@@ -44,11 +40,7 @@ void Chat_Menu::update_msgs()
        msgs.erase(msgs.begin(), msgs.begin()+1);
        msgs.push_back(buf->msg);
     }
-   
 }
-
-
-
 
 void Chat_Menu::draw()
 {
@@ -72,7 +64,6 @@ void Chat_Menu::draw()
 
     if (ImGui::InputText("Input", input, 10,  ImGuiInputTextFlags_EnterReturnsTrue)) {
         printf("Done '%s'\n", input);
-        
     }
 
     ImGui::End();

@@ -110,7 +110,7 @@ void Context::main_loop()
 {
     u_menu.tests();
     c_menu.test();
-    app_state = S_MAIN_MENU;
+    // app_state = S_MAIN_MENU;
     while (!glfwWindowShouldClose(window))
     {
         glfwPollEvents();
