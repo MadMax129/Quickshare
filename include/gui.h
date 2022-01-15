@@ -34,7 +34,8 @@ private:
 struct Chat_Menu {
     Chat_Menu(Context* context);
     ~Chat_Menu();
-
+    
+    void test();
     void draw();
 
 private:
@@ -42,6 +43,8 @@ private:
 
     Context* ctx;
     std::vector<Tcp_Msg::Chat_Msg> msgs;
+    Tcp_Msg* buf;
+    static const unsigned int MAX_MSG_AMT = 60;
 };
 
 struct Users_Menu {
