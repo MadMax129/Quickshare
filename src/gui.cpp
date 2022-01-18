@@ -81,15 +81,15 @@ void Context::error_window()
 
 void Context::menu_bar()
 {
-    if (ImGui::BeginMainMenuBar())
-    {
-        if (ImGui::BeginMenu("Settings"))
-        {
-            if (ImGui::BeginMenu("Background Color")) 
-            {
+    if (ImGui::BeginMainMenuBar()) {
+        if (ImGui::BeginMenu("Settings")) {
+            if (ImGui::BeginMenu("Background Color")) {
                 ImGui::ColorEdit3("MyColor##1", (float*)&clear_color);
                 ImGui::EndMenu();
             }
+            ImGui::EndMenu();
+        }
+        else if (ImGui::BeginMenu("View")) {
             ImGui::EndMenu();
         }
         ImGui::EndMainMenuBar();
@@ -110,7 +110,7 @@ void Context::main_loop()
 {
     u_menu.tests();
     c_menu.test();
-    // app_state = S_MAIN_MENU;
+    app_state = S_MAIN_MENU;
     while (!glfwWindowShouldClose(window))
     {
         glfwPollEvents();

@@ -31,12 +31,10 @@ void Chat_Menu::update_msgs()
 {
     ctx->clisock->msg_queue.pop(buf);
 
-    if (buf->m_type == Msg_Type::GLOBAL_CHAT && msgs.size() < MAX_MSG_AMT)
-    {
+    if (buf->m_type == Msg_Type::GLOBAL_CHAT && msgs.size() < MAX_MSG_AMT) {
         msgs.push_back(buf->msg);
     }
-    else
-    {
+    else {
        msgs.erase(msgs.begin(), msgs.begin()+1);
        msgs.push_back(buf->msg);
     }
@@ -52,9 +50,8 @@ void Chat_Menu::draw()
     static char input[10] = {0};
 
     ImGui::BeginChild("Log", ImVec2(0, ImGui::GetWindowHeight() - 85), true, ImGuiWindowFlags_NoMove);
-
-    for (const auto &e : msgs) //displays messages from msgs
-    {
+    
+    for (const auto &e : msgs) {
         ImGui::TextColored(ImVec4(0.77, .188, .201, 1.0), "%s:", (char*)e.username); 
         ImGui::SameLine();
         ImGui::TextWrapped((char*)e.data);    
