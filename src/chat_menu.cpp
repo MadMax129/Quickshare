@@ -19,7 +19,7 @@ Chat_Menu::~Chat_Menu()
 void Chat_Menu::test()
 {
     buf->m_type = Msg_Type::GLOBAL_CHAT;
-    for( size_t i = 0; i < 10; i++ ){
+    for(size_t i = 0; i < 10; i++) {
         strcpy((char*)buf->msg.data, "message I just found out, that need.");
         strcpy((char*)buf->msg.username, "maks");
         ctx->clisock->msg_queue.push(buf);

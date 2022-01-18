@@ -6,6 +6,9 @@
 #include "gui.h"
 #include "networking.h"
 
+#define STB_IMAGE_IMPLEMENTATION
+#include "../lib/stb_image.h"
+
 static void glfw_error_callback(int error, const char* description)
 {
     fprintf(stderr, "Glfw Error %d: %s\n", error, description);
@@ -37,6 +40,13 @@ bool Context::create_window(int width, int height, const char* name)
     if (window == NULL)
         return false;
 
+    GLFWimage images;
+    images.width = 630;
+    images.height = 630;
+    images.pixels = stbi_load(ICON_PATH, &images.width, &images.height, 0, 4); 
+    glfwSetWindowIcon(window, 1, &images); 
+    stbi_image_free(images.pixels);
+
     glfwMakeContextCurrent(window);
     glfwSwapInterval(1);
     
@@ -45,16 +55,24 @@ bool Context::create_window(int width, int height, const char* name)
 
 void Context::init_imgui() 
 {
+    // Init ImGui
     IMGUI_CHECKVERSION();
     ImGui::CreateContext();
+
     ImGuiIO& io = ImGui::GetIO();
+    
+    // Style Setup
     ImGui::StyleColorsDark();
     ImGuiStyle &style = ImGui::GetStyle();
     style.WindowRounding = 4.0f;
-    style.FrameRounding = 4.0f; 
+    style.FrameRounding = 4.0f;
+
+    // Glfw Backend setup
     ImGui_ImplGlfw_InitForOpenGL(this->window, true);
     ImGui_ImplOpenGL3_Init(this->glsl_version);
     io.Fonts->AddFontFromFileTTF(FONT_PATH, FONT_SIZE);
+
+    // Default Background color
     clear_color = ImVec4(0.45f, 0.55f, 0.60f, 1.00f);
 }
 
@@ -140,9 +158,6 @@ void Context::main_loop()
                     f_menu.draw();
                 break;
         }
-
-
-
         ImGui::ShowDemoWindow();
 
         // Rendering

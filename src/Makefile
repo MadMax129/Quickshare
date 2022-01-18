@@ -66,7 +66,7 @@ $(BUILD_DIR)/%.o:$(IMGUI_DIR)/backends/%.cpp
 
 # Link Together
 $(EXE): $(ALL_OBJS)
-	$(CXX) -o $@ $^ $(CXXFLAGS) $(IMGUI_LIBS)
+	$(CXX) -o $@ $^ ./icon/icon.res $(CXXFLAGS) $(IMGUI_LIBS)
 
 clean:
 	del $(addprefix .\build\, $(SOURCES:.cpp=.o))

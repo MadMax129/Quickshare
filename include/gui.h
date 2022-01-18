@@ -9,6 +9,7 @@
 
 #define FONT_PATH ".././lib/imgui-1.85/misc/fonts/Roboto-Medium.ttf"
 #define FONT_SIZE 14.0f
+#define ICON_PATH "../images/logo.png"
 
 struct Context;
 
