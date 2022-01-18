@@ -2,9 +2,9 @@
 ## Quickshare Makefile
 ## ----------------------------------------------------------------------
 
-CXX ?= g++
-EXE ?= test.exe
-BUILD_DIR ?= build
+CXX = g++
+EXE = test.exe
+BUILD_DIR = build
 TYPE = DEBUG
 
 IMGUI_DIR ?= ../lib/imgui-1.85

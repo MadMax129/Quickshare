@@ -92,7 +92,7 @@ void Users_Menu::draw()
                 ImGui::SameLine();
 
                 if (ImGui::SmallButton("Share")) {
-                    ctx->f_menu.open = true;
+                    ctx->f_menu.set_state(true);
                 }
     
                 ImGui::TreePop();

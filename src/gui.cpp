@@ -48,11 +48,6 @@ void Context::init_imgui()
     IMGUI_CHECKVERSION();
     ImGui::CreateContext();
     ImGuiIO& io = ImGui::GetIO();
-
-    // io.IniFilename = 
-    //io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;     // Enable Keyboard Controls
-    //io.ConfigFlags |= ImGuiConfigFlags_NavEnableGamepad;      // Enable Gamepad Controls
-
     ImGui::StyleColorsDark();
     ImGuiStyle &style = ImGui::GetStyle();
     style.WindowRounding = 4.0f;
@@ -94,7 +89,7 @@ void Context::menu_bar()
         }
         else if (ImGui::BeginMenu("View")) {
             if (ImGui::MenuItem("File Sharing")) {
-                f_menu.open = true;
+                f_menu.set_state(true);
             }
             ImGui::EndMenu();
         }
@@ -114,9 +109,9 @@ void Context::change_state(App_State state)
 
 void Context::main_loop() 
 {
-    u_menu.tests();
-    c_menu.test();
-    app_state = S_MAIN_MENU;
+    // u_menu.tests();
+    // c_menu.test();
+    // app_state = S_MAIN_MENU;
     while (!glfwWindowShouldClose(window))
     {
         glfwPollEvents();
@@ -141,9 +136,8 @@ void Context::main_loop()
             case S_MAIN_MENU:
                 u_menu.draw();
                 c_menu.draw();
-                if (f_menu.open){
+                if (f_menu.get_state())
                     f_menu.draw();
-                }
                 break;
         }
 

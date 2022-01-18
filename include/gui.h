@@ -69,13 +69,12 @@ struct File_Menu {
     ~File_Menu();
 
     void draw();
-
-    bool open; 
+    void set_state(bool state);
+    bool get_state() const;
 
 private:
-    
+    bool open;
     Context* ctx;
-
 };
 
 struct Context {

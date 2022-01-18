@@ -13,7 +13,6 @@ Chat_Menu::Chat_Menu(Context* context)
 
 Chat_Menu::~Chat_Menu()
 {
-    
     free(buf);
 }
 
@@ -50,7 +49,7 @@ void Chat_Menu::draw()
     static char input[10] = {0};
 
     ImGui::BeginChild("Log", ImVec2(0, ImGui::GetWindowHeight() - 85), true, ImGuiWindowFlags_NoMove);
-    
+
     for (const auto &e : msgs) {
         ImGui::TextColored(ImVec4(0.77, .188, .201, 1.0), "%s:", (char*)e.username); 
         ImGui::SameLine();

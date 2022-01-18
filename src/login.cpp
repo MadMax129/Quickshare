@@ -5,9 +5,7 @@
 Login_Menu::Login_Menu(Context* context)
 {
     ctx = context;
-    local_state = L_DEFAULT;
-    started_connection = false;
-    memset(username, 0, USERNAME_MAX_LIMIT);
+    reset();
 }
 
 void Login_Menu::reset()

@@ -17,7 +17,6 @@ void Client_Sock::disconnect()
 {
     WSACleanup();
     closesocket(_tcp_socket);
-    // closesocket(_udp_socket);
 }
 
 void Client_Sock::recv_thread()
@@ -28,10 +27,15 @@ void Client_Sock::recv_thread()
         
         switch (result)
         {
-            case 0: case SOCKET_ERROR: {
-                LOGGER("Server recv error\n");
+            case 0: {
+                LOGGER("Server has shut down\n");
                 connected = 0;
                 disconnect();
+                return;
+            }
+
+            case SOCKET_ERROR: {
+                LOGGER("Recieved error\n");
                 return;
             }
 
@@ -55,10 +59,7 @@ bool Client_Sock::init_socket()
         return false;
 
     _tcp_socket = socket(AF_INET, SOCK_STREAM, 0);
-    // _udp_socket = socket(AF_INET, SOCK_DGRAM, 0);
-
-    // if (_tcp_socket == INVALID_SOCKET || _udp_socket == INVALID_SOCKET)
-        // return false;
+    // Eventually add udp socket
 
     if (_tcp_socket == INVALID_SOCKET)
         return false;

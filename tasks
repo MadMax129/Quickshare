@@ -1,7 +1,0 @@
-# Client
-- Get chat message queue working
-- Recieve user list from server
-
-# Server
-- Handle multiple clients
-- Store client data
