@@ -38,7 +38,7 @@ struct Tcp_Msg {
 static_assert(sizeof(Msg_Type) == 1);
 static_assert(sizeof(Tcp_Msg) == 512);
 
-#define MAX_QUEUE_SIZE 16
+#define MAX_QUEUE_SIZE 100
 
 struct Msg_Queue {
 public:

@@ -1,9 +1,11 @@
 #include <stdio.h>
 #include "gui.h"
+#include "imgui.h"
 #include "networking.h"
 #include <iostream>
 #include <algorithm>
 #include <cstring>
+
 
 Users_Menu::Users_Menu(Context* context)
 {
@@ -24,9 +26,9 @@ void Users_Menu::tests()
     ctx->clisock->msg_queue.push(&msg); 
     strcpy((char*)msg.id.username, "shawn");
     ctx->clisock->msg_queue.push(&msg); 
-    msg.m_type = Msg_Type::USER_REMOVE;
     strcpy((char*)msg.id.username, "maks");
     ctx->clisock->msg_queue.push(&msg);
+
 }
 
 Users_Menu::~Users_Menu() 
@@ -71,20 +73,55 @@ void Users_Menu::draw()
         update_list();
 
     ImGui::Begin("User List", NULL, ImGuiWindowFlags_NoResize);
-    ImGui::SetWindowSize(ImVec2(300, 300));
-    ImVec2 outer_size = ImVec2(0.0f, ImGui::GetTextLineHeightWithSpacing() * 10);
-    if (ImGui::BeginTable("split2", 1, ImGuiTableFlags_NoSavedSettings | ImGuiTableFlags_ScrollY, outer_size))
-    {
-        for (size_t i = 0; i < users.size(); i++)
-        {
-            ImGui::TableNextColumn();
-            if (ImGui::TreeNode((void*)(intptr_t)i, "%s", users.at(i).username))
-            {
+    ImGui::SetWindowSize(ImVec2(270, 250));
+
+    filter.Draw("Search");
+    //try to implement hover over/click clear 
+    // printf("%d\n" , filter.IsActive());
+    // if( strlen(filter.InputBuf) == 0){
+    //     strcpy(filter.InputBuf, "Search"); 
+    // }
+    // else if( ImGui::IsItemHovered()){
+    //     strcpy(filter.InputBuf, "");
+    // }
+
+    for (size_t i = 0; i < users.size(); i++) {
+        if (filter.PassFilter((char*)users.at(i).username)) {
+            if (ImGui::TreeNode((void*)(intptr_t)i, "%s", users.at(i).username)) {
                 if (ImGui::SmallButton("Ping")) {}
+                ImGui::SameLine();
+
+                if (ImGui::SmallButton("Share")) {
+                    ctx->f_menu.open = true;
+                }
+    
                 ImGui::TreePop();
             }
         }
-        ImGui::EndTable();
     }
+
+    //drawing list of users 
+    // ImVec2 outer_size = ImVec2(0.0f, ImGui::GetTextLineHeightWithSpacing() * 10);
+    // if (ImGui::BeginTable("split2", 1, ImGuiTableFlags_NoSavedSettings | ImGuiTableFlags_ScrollY, outer_size))
+    // {
+    //     for (size_t i = 0; i < users.size(); i++)
+    //     {
+    //         ImGui::TableNextColumn();
+    //         if (ImGui::TreeNode((void*)(intptr_t)i, "%s", users.at(i).username))
+    //         {
+    //             if (ImGui::SmallButton("Ping")){
+                    
+    //             }
+    //             ImGui::SameLine();
+    //             if (ImGui::SmallButton("Share")){
+    //                 ctx->f_menu.open = true;
+    //             }
+                
+    //             ImGui::TreePop();
+    //         }
+    //     }
+    //     ImGui::EndTable();
+    // }
+    
     ImGui::End();
 }

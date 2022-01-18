@@ -11,7 +11,7 @@ static void glfw_error_callback(int error, const char* description)
     fprintf(stderr, "Glfw Error %d: %s\n", error, description);
 }
 
-Context::Context(Client_Sock* client) : l_menu(this), u_menu(this), c_menu(this)
+Context::Context(Client_Sock* client) : l_menu(this), u_menu(this), c_menu(this), f_menu(this)
 {
     window = NULL;
     glsl_version = NULL;
@@ -54,6 +54,9 @@ void Context::init_imgui()
     //io.ConfigFlags |= ImGuiConfigFlags_NavEnableGamepad;      // Enable Gamepad Controls
 
     ImGui::StyleColorsDark();
+    ImGuiStyle &style = ImGui::GetStyle();
+    style.WindowRounding = 4.0f;
+    style.FrameRounding = 4.0f; 
     ImGui_ImplGlfw_InitForOpenGL(this->window, true);
     ImGui_ImplOpenGL3_Init(this->glsl_version);
     io.Fonts->AddFontFromFileTTF(FONT_PATH, FONT_SIZE);
@@ -90,6 +93,9 @@ void Context::menu_bar()
             ImGui::EndMenu();
         }
         else if (ImGui::BeginMenu("View")) {
+            if (ImGui::MenuItem("File Sharing")) {
+                f_menu.open = true;
+            }
             ImGui::EndMenu();
         }
         ImGui::EndMainMenuBar();
@@ -135,8 +141,13 @@ void Context::main_loop()
             case S_MAIN_MENU:
                 u_menu.draw();
                 c_menu.draw();
+                if (f_menu.open){
+                    f_menu.draw();
+                }
                 break;
         }
+
+
 
         ImGui::ShowDemoWindow();
 

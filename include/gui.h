@@ -50,8 +50,10 @@ private:
 struct Users_Menu {
     Users_Menu(Context* context);
     ~Users_Menu();
+
     void draw();
     void tests();
+
 
 private:
     void update_list();
@@ -59,6 +61,21 @@ private:
     Context* ctx;
     std::vector<Tcp_Msg::Id> users;
     Tcp_Msg* buf;
+    ImGuiTextFilter filter;
+};
+
+struct File_Menu {
+    File_Menu(Context* context);
+    ~File_Menu();
+
+    void draw();
+
+    bool open; 
+
+private:
+    
+    Context* ctx;
+
 };
 
 struct Context {
@@ -78,15 +95,17 @@ public:
 
     Client_Sock* clisock;
 
+    Login_Menu l_menu;
+    Users_Menu u_menu;
+    Chat_Menu  c_menu;
+    File_Menu f_menu;
+
 private:
     App_State app_state;
     GLFWwindow* window;
     char* glsl_version;
     ImVec4 clear_color;
 
-    Login_Menu l_menu;
-    Users_Menu u_menu;
-    Chat_Menu  c_menu;
     void error_window();
 };
 
