@@ -5,11 +5,11 @@
 #include <memory.h>
 #include <vector>
 #include "networking.h"
-#include "quickshare.h"
 
-#define FONT_PATH ".././lib/imgui-1.85/misc/fonts/Roboto-Medium.ttf"
+#define CACHE_DIR "C:\\Users\\Maks\\AppData\\Local\\Quickshare\\"
+#define FONT_PATH "C:\\Users\\Maks\\AppData\\Local\\Quickshare\\font\\Roboto-Medium.ttf"
+#define ICON_PATH "C:\\Users\\Maks\\AppData\\Local\\Quickshare\\icon\\logo.png"
 #define FONT_SIZE 14.0f
-#define ICON_PATH "../images/logo.png"
 
 struct Context;
 

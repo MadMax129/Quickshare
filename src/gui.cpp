@@ -14,7 +14,8 @@ static void glfw_error_callback(int error, const char* description)
     fprintf(stderr, "Glfw Error %d: %s\n", error, description);
 }
 
-Context::Context(Client_Sock* client) : l_menu(this), u_menu(this), c_menu(this), f_menu(this)
+Context::Context(Client_Sock* client) : l_menu(this), u_menu(this), 
+                                        c_menu(this), f_menu(this)
 {
     window = NULL;
     glsl_version = NULL;
@@ -60,6 +61,7 @@ void Context::init_imgui()
     ImGui::CreateContext();
 
     ImGuiIO& io = ImGui::GetIO();
+    io.IniFilename = (CACHE_DIR "windows_pos.ini");
     
     // Style Setup
     ImGui::StyleColorsDark();

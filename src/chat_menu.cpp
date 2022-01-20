@@ -1,4 +1,5 @@
 #include "gui.h"
+#include "quickshare.h"
 
 Chat_Menu::Chat_Menu(Context* context)
 {

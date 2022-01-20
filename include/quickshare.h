@@ -14,3 +14,10 @@
 #define FATAL_MEM() \
     do { printf("[ MEMORY FAILURE ] (%s, %d)\n", __FILE__, __LINE__); exit(1); } while (0)
 #endif
+
+#include <Lmcons.h>
+struct Qs {
+    Qs();
+    void cache_icon();
+    char dir_path[64];
+};

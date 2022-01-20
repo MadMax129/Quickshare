@@ -4,10 +4,9 @@
 #include <thread>
 #include <mutex>
 #include <atomic>
-#include <condition_variable>
 
 #define USERNAME_MAX_LIMIT 16
-#define DATA_MAX 512
+#define PACKET_MAX_SIZE 512
 
 enum class Msg_Type : unsigned char {
     SERROR,         // Server Error
@@ -26,7 +25,9 @@ struct Tcp_Msg {
     };
     struct Chat_Msg {
         unsigned char username[USERNAME_MAX_LIMIT];
-        unsigned char data[512-16-1];
+        unsigned char data[PACKET_MAX_SIZE    - 
+                           USERNAME_MAX_LIMIT - 
+                           sizeof(Msg_Type)];
     };
     union {
         Id id;
@@ -35,8 +36,8 @@ struct Tcp_Msg {
     Msg_Type m_type;
 };
 
-static_assert(sizeof(Msg_Type) == 1);
-static_assert(sizeof(Tcp_Msg) == 512);
+static_assert(sizeof(Msg_Type) == sizeof(char));
+static_assert(sizeof(Tcp_Msg) == PACKET_MAX_SIZE);
 
 #define MAX_QUEUE_SIZE 100
 

@@ -3,9 +3,10 @@
 ## ----------------------------------------------------------------------
 
 CXX = g++
-EXE = test.exe
+EXE = qs.exe
 BUILD_DIR = build
 TYPE = DEBUG
+CACHE_DIR = C:\Users\%USERNAME%\AppData\Local\Quickshare
 
 IMGUI_DIR ?= ../lib/imgui-1.85
 IMGUI_SOURCES =	$(IMGUI_DIR)/imgui.cpp        \
@@ -35,11 +36,11 @@ SRC_INC_DIR = -I$(INCLUDES) -I$(IMGUI_DIR) -I$(IMGUI_DIR)/backends
 CXXFLAGS += -O2 -Wall -std=c++17 -pedantic-errors
 IMGUI_LIBS = -lglfw3 -lgdi32 -lopengl32 -limm32 -lws2_32
 
-# ifeq ($(TYPE), RELEASE)
-# @echo Release mode
-# endif
+ifeq ($(TYPE), RELEASE)
+	LINKER += -static -s -static-libgcc -static-libstdc++
+endif
 
-.PHONY: all clean directory
+.PHONY: all clean directory install_all clean_cache build_icon
 
 all: directory compile
 ifneq ($(OS), Windows_NT)
@@ -51,6 +52,22 @@ compile: $(EXE)
 
 directory:
 	if not exist $(BUILD_DIR) ( mkdir $(BUILD_DIR) )
+
+install_all:
+	if not exist $(CACHE_DIR) ( mkdir $(CACHE_DIR) )
+	if not exist $(CACHE_DIR)\icon ( mkdir $(CACHE_DIR)\icon )
+	if not exist $(CACHE_DIR)\font ( mkdir $(CACHE_DIR)\font )
+	copy ..\images\logo.png $(CACHE_DIR)\icon
+	copy ..\.\lib\imgui-1.85\misc\fonts\Roboto-Medium.ttf $(CACHE_DIR)\font
+
+clean_cache:
+	rmdir /s /q $(CACHE_DIR)
+
+clean:
+	del $(addprefix .\build\, $(SOURCES:.cpp=.o))
+
+build_icon:
+	windres .\icon\resource.rc -O coff -o .\icon\icon.res
 
 # Build App Source
 $(BUILD_DIR)/%.o:%.cpp
@@ -66,9 +83,6 @@ $(BUILD_DIR)/%.o:$(IMGUI_DIR)/backends/%.cpp
 
 # Link Together
 $(EXE): $(ALL_OBJS)
-	$(CXX) -o $@ $^ ./icon/icon.res $(CXXFLAGS) $(IMGUI_LIBS)
-
-clean:
-	del $(addprefix .\build\, $(SOURCES:.cpp=.o))
+	$(CXX) -o $@ $^ ./icon/icon.res $(CXXFLAGS) $(LINKER) $(IMGUI_LIBS)
 
 -include $(DEPS)

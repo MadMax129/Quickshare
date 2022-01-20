@@ -1,11 +1,8 @@
 #include <stdio.h>
 #include "gui.h"
-#include "imgui.h"
-#include "networking.h"
-#include <iostream>
 #include <algorithm>
 #include <cstring>
-
+#include "quickshare.h"
 
 Users_Menu::Users_Menu(Context* context)
 {
