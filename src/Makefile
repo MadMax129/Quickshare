@@ -6,7 +6,13 @@ CXX = g++
 EXE = qs.exe
 BUILD_DIR = build
 TYPE = DEBUG
-CACHE_DIR = C:\Users\%USERNAME%\AppData\Local\Quickshare
+
+# Install Directories
+INSTALL_DIR = "C:\Program Files\Quickshare"
+ICON_PATH   = "C:\Program Files\Quickshare\icon\logo.png"
+
+# Generate Config file with paths
+CONFIG = ..\includes\config.h
 
 IMGUI_DIR ?= ../lib/imgui-1.85
 IMGUI_SOURCES =	$(IMGUI_DIR)/imgui.cpp        \
@@ -37,10 +43,10 @@ CXXFLAGS += -O2 -Wall -std=c++17 -pedantic-errors
 IMGUI_LIBS = -lglfw3 -lgdi32 -lopengl32 -limm32 -lws2_32
 
 ifeq ($(TYPE), RELEASE)
-	LINKER += -static -s -static-libgcc -static-libstdc++
+	LINKER += -static -s -static-libgcc -static-libstdc++ -mwindows
 endif
 
-.PHONY: all clean directory install_all clean_cache build_icon
+.PHONY: all clean directory install_all build_icon
 
 all: directory compile
 ifneq ($(OS), Windows_NT)
@@ -51,20 +57,18 @@ endif
 compile: $(EXE)
 
 directory:
-	if not exist $(BUILD_DIR) ( mkdir $(BUILD_DIR) )
+	@if not exist $(BUILD_DIR) ( mkdir $(BUILD_DIR) )
 
 install_all:
-	if not exist $(CACHE_DIR) ( mkdir $(CACHE_DIR) )
-	if not exist $(CACHE_DIR)\icon ( mkdir $(CACHE_DIR)\icon )
-	if not exist $(CACHE_DIR)\font ( mkdir $(CACHE_DIR)\font )
-	copy ..\images\logo.png $(CACHE_DIR)\icon
-	copy ..\.\lib\imgui-1.85\misc\fonts\Roboto-Medium.ttf $(CACHE_DIR)\font
-
-clean_cache:
-	rmdir /s /q $(CACHE_DIR)
+	if not exist $(INSTALL_DIR) ( mkdir $(INSTALL_DIR) )
+	if not exist $(INSTALL_DIR)\icon ( mkdir $(INSTALL_DIR)\icon )
+	copy ..\images\logo.png $(INSTALL_DIR)\icon
+	
+# Eventually move exe into its program files and make shortcut
 
 clean:
 	del $(addprefix .\build\, $(SOURCES:.cpp=.o))
+	rmdir /s /q $(INSTALL_DIR)
 
 build_icon:
 	windres .\icon\resource.rc -O coff -o .\icon\icon.res

@@ -6,9 +6,7 @@
 #include <vector>
 #include "networking.h"
 
-#define CACHE_DIR "C:\\Users\\Maks\\AppData\\Local\\Quickshare\\"
-#define FONT_PATH "C:\\Users\\Maks\\AppData\\Local\\Quickshare\\font\\Roboto-Medium.ttf"
-#define ICON_PATH "C:\\Users\\Maks\\AppData\\Local\\Quickshare\\icon\\logo.png"
+#define ICON_PATH "C:\\Program Files\\Quickshare\\icon\\logo.png"
 #define FONT_SIZE 14.0f
 
 struct Context;

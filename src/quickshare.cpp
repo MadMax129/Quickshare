@@ -3,7 +3,7 @@
 #include "networking.h"
 #include <windows.h>
 
-// static Qs qs;
+Qs qs;
 
 Qs::Qs()
 {
@@ -15,7 +15,10 @@ Qs::Qs()
     CreateDirectory(reinterpret_cast<TCHAR*>(dir_path), NULL);
 }
 
-int main(int argc, const char *argv[]) 
+int WINAPI WinMain(HINSTANCE hInstance,
+                   HINSTANCE hPrevInstance,
+                   LPSTR lpCmdLine,
+                   int nCmdShow)
 {
     Client_Sock client("192.168.1.31", 5000);
     if (!client.init_socket()) {

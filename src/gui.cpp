@@ -1,13 +1,15 @@
+#include <stdio.h>
+#include <GLFW/glfw3.h> 
 #include "imgui.h"
 #include "imgui_impl_glfw.h"
 #include "imgui_impl_opengl3.h"
-#include <stdio.h>
-#include <GLFW/glfw3.h> 
 #include "gui.h"
-#include "networking.h"
+#include "quickshare.h"
 
 #define STB_IMAGE_IMPLEMENTATION
 #include "../lib/stb_image.h"
+
+#include "roboto-medium_font.h"
 
 static void glfw_error_callback(int error, const char* description)
 {
@@ -44,7 +46,10 @@ bool Context::create_window(int width, int height, const char* name)
     GLFWimage images;
     images.width = 630;
     images.height = 630;
-    images.pixels = stbi_load(ICON_PATH, &images.width, &images.height, 0, 4); 
+
+    images.pixels = stbi_load(ICON_PATH, &images.width, &images.height, 0, 4);
+    if (!images.pixels)
+        FATAL("Failed to load icon '%s'\n", ICON_PATH);
     glfwSetWindowIcon(window, 1, &images); 
     stbi_image_free(images.pixels);
 
@@ -61,7 +66,7 @@ void Context::init_imgui()
     ImGui::CreateContext();
 
     ImGuiIO& io = ImGui::GetIO();
-    io.IniFilename = (CACHE_DIR "windows_pos.ini");
+    // io.IniFilename = (CACHE_DIR "windows_pos.ini");
     
     // Style Setup
     ImGui::StyleColorsDark();
@@ -72,7 +77,10 @@ void Context::init_imgui()
     // Glfw Backend setup
     ImGui_ImplGlfw_InitForOpenGL(this->window, true);
     ImGui_ImplOpenGL3_Init(this->glsl_version);
-    io.Fonts->AddFontFromFileTTF(FONT_PATH, FONT_SIZE);
+    // io.Fonts->AddFontFromFileTTF(FONT_PATH, FONT_SIZE);
+
+    io.Fonts->AddFontFromMemoryCompressedBase85TTF(font_tff_data_compressed_data_base85, FONT_SIZE);
+    
 
     // Default Background color
     clear_color = ImVec4(0.45f, 0.55f, 0.60f, 1.00f);
