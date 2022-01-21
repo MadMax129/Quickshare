@@ -9,7 +9,7 @@
 #define STB_IMAGE_IMPLEMENTATION
 #include "../lib/stb_image.h"
 
-#include "roboto-medium_font.h"
+#include "fonts/roboto-medium_font.h"
 
 static void glfw_error_callback(int error, const char* description)
 {
