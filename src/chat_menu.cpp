@@ -47,6 +47,7 @@ void Chat_Menu::draw()
         update_msgs();
 
     ImGui::Begin("Global Chat", NULL);
+
     static char input[10] = {0};
 
     ImGui::BeginChild("Log", ImVec2(0, ImGui::GetWindowHeight() - 85), true, ImGuiWindowFlags_NoMove);

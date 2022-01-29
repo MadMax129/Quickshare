@@ -59,8 +59,10 @@ private:
 
     Context* ctx;
     std::vector<Tcp_Msg::Id> users;
+    std::vector<Tcp_Msg::Id> friends;
     Tcp_Msg* buf;
     ImGuiTextFilter filter;
+    boolean state; //true if in global user list | false when in friends
 };
 
 struct File_Menu {
@@ -105,6 +107,7 @@ private:
     ImVec4 clear_color;
 
     void error_window();
+    void init_style();
 };
 
 
