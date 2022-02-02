@@ -11,9 +11,6 @@ TYPE = DEBUG
 INSTALL_DIR = "C:\Program Files\Quickshare"
 ICON_PATH   = "C:\Program Files\Quickshare\icon\logo.png"
 
-# Generate Config file with paths
-CONFIG = ..\includes\config.h
-
 IMGUI_DIR ?= ../lib/imgui-1.85
 IMGUI_SOURCES =	$(IMGUI_DIR)/imgui.cpp        \
 				$(IMGUI_DIR)/imgui_demo.cpp   \
@@ -29,7 +26,7 @@ SOURCES  =	file_menu.cpp	   \
 			chat_menu.cpp      \
 			socket_handler.cpp \
 			user_list.cpp      \
-			login.cpp          \
+			login_menu.cpp          \
 			gui.cpp            \
 			quickshare.cpp
 
@@ -72,6 +69,8 @@ clean:
 
 build_icon:
 	windres .\icon\resource.rc -O coff -o .\icon\icon.res
+
+# TO create shortcut mklink qs_short.lnk qs.exe
 
 # Build App Source
 $(BUILD_DIR)/%.o:%.cpp

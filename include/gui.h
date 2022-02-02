@@ -2,9 +2,9 @@
 
 #include "imgui.h"
 #include <GLFW/glfw3.h>
-#include <memory.h>
 #include <vector>
 #include "networking.h"
+#include <memory>
 
 #define ICON_PATH "C:\\Program Files\\Quickshare\\icon\\logo.png"
 #define FONT_SIZE 14.0f
@@ -12,22 +12,25 @@
 struct Context;
 
 struct Login_Menu {
-    enum {
-        L_DEFAULT,
-        L_CLICKED_ENTER,
-        L_CONNCETING,
-        L_FAILED_TO_CONNECT,
-        L_CONNECTED
-    } local_state;
-    bool started_connection;
-
     Login_Menu(Context* context);
     void draw();
     void reset();
 
 private:
+    enum {
+        L_DEFAULT,
+        L_CONNCETING,
+        L_FAILED,
+        L_CONNECTED
+    } sign_in_state, sign_up_state;
+
     Context* ctx;
     char username[USERNAME_MAX_LIMIT];
+    char password[PASSWORD_MAX_LIMIT];
+    bool sign_up;
+    
+    void draw_sign_up();
+    inline bool fields_empty(); 
 };
 
 struct Chat_Menu {
@@ -42,7 +45,7 @@ private:
 
     Context* ctx;
     std::vector<Tcp_Msg::Chat_Msg> msgs;
-    Tcp_Msg* buf;
+    std::unique_ptr<Tcp_Msg> msg_buf;
     static const unsigned int MAX_MSG_AMT = 60;
 };
 
@@ -53,14 +56,12 @@ struct Users_Menu {
     void draw();
     void tests();
 
-
 private:
     void update_list();
 
     Context* ctx;
     std::vector<Tcp_Msg::Id> users;
-    std::vector<Tcp_Msg::Id> friends;
-    Tcp_Msg* buf;
+    std::unique_ptr<Tcp_Msg> msg_buf;
     ImGuiTextFilter filter;
     boolean state; //true if in global user list | false when in friends
 };
@@ -81,9 +82,9 @@ private:
 struct Context {
 public:
     enum App_State {
-        S_ERROR,
-        S_REGISTER,
-        S_MAIN_MENU
+        ERROR_WINDOW,
+        LOGIN,
+        MAIN_MENU
     };
     Context(Client_Sock* client);
     ~Context(); 
@@ -101,15 +102,14 @@ public:
     File_Menu f_menu;
 
 private:
+    void error_window();
+    void init_style();
+
     App_State app_state;
     GLFWwindow* window;
     char* glsl_version;
     ImVec4 clear_color;
-
-    void error_window();
-    void init_style();
 };
-
 
 #define IMGUI_NEW_FRAME() \
     ImGui_ImplOpenGL3_NewFrame(); \

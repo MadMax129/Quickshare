@@ -3,10 +3,11 @@
 #include "quickshare.h"
 #include <assert.h>
 
-static Tcp_Msg global_msg;
-
 Client_Sock::Client_Sock(const char *ip, const unsigned short port) :
-    _port(port), _ip(ip) {}
+    _port(port), _ip(ip)
+{
+    connected.store(State::INACTIVE);
+}
 
 Client_Sock::~Client_Sock() 
 {
@@ -21,24 +22,39 @@ void Client_Sock::disconnect()
 
 void Client_Sock::recv_thread()
 {
+    static Tcp_Msg global_msg = {0};
+
+    // Try to connect first
+    try_connect();
+
     for (;;)
     {
         int result = recv(_tcp_socket, (char*)&global_msg, sizeof(global_msg), 0);
         
         switch (result)
         {
+            // Server gracefully shut off, must disconnect first
             case 0: {
-                LOGGER("Server has shut down\n");
-                connected = 0;
+                LOGGER("Server gracefully shut off...\n");
                 disconnect();
-                return;
+                init_socket();
+                connected.store(State::FAILED);
+                break;
             }
-
+            
+            // Server returned error 
             case SOCKET_ERROR: {
-                LOGGER("Recieved error\n");
-                return;
+                LOGGER("Server connecting issue...\n");
+
+                do {
+                    Sleep(2000);
+                    try_connect();
+                } while (connected.load() != State::CONNECTED);
+
+                break;
             }
 
+            // Got message from server
             default: {
                 msg_queue.push(&global_msg);
                 break;
@@ -47,10 +63,9 @@ void Client_Sock::recv_thread()
     }
 }
 
-void Client_Sock::start_recv()
+Client_Sock::State Client_Sock::get_state() const
 {
-    server_read = std::thread(&Client_Sock::recv_thread, this);
-    server_read.detach();
+    return static_cast<State>(connected.load());
 }
 
 bool Client_Sock::init_socket() 
@@ -73,28 +88,26 @@ bool Client_Sock::init_socket()
 
 void Client_Sock::try_connect()
 {
+    LOGGER("Attempting to connect to server...\n");
     if (connect(_tcp_socket, (struct sockaddr*)&_server_addr,
-                            sizeof(_server_addr)) == SOCKET_ERROR)
-        connected = 0;
-    else
-        connected = 1;
-}
-
-int Client_Sock::has_connected()
-{
-    int copy = connected;
-    return copy;
+                            sizeof(_server_addr)) == SOCKET_ERROR) {
+        connected.store(State::FAILED);
+    }
+    else {
+        LOGGER("Connected to server!\n");
+        connected.store(State::CONNECTED);
+    }
 }
 
 void Client_Sock::start_connection()
 {
-    connected = -1;
-    std::thread conn(Client_Sock::try_connect, this);
-    conn.detach();
+    recv_th = std::thread(&Client_Sock::recv_thread, this);
+    recv_th.detach();
 }
 
 bool Client_Sock::send_intro(char* username)
 {
+    static struct Tcp_Msg global_msg;
     memset(&global_msg, 0, sizeof(global_msg));
     global_msg.m_type = Msg_Type::NEW_CLIENT;
     memcpy(global_msg.id.username, username, USERNAME_MAX_LIMIT);

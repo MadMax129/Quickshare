@@ -1,42 +1,36 @@
 #include "gui.h"
 #include "quickshare.h"
+#include <cstring>
 
-Chat_Menu::Chat_Menu(Context* context)
+Chat_Menu::Chat_Menu(Context* context) : msg_buf(new Tcp_Msg)
 {
     ctx = context;
     msgs.reserve(60);
-
-    buf = (Tcp_Msg*)malloc(sizeof(Tcp_Msg));
-    if (!buf)
-        FATAL_MEM();
-    memset(buf, 0, sizeof(Tcp_Msg));
 }
 
-Chat_Menu::~Chat_Menu()
-{
-    free(buf);
-}
+Chat_Menu::~Chat_Menu() {}
 
 void Chat_Menu::test()
 {
-    buf->m_type = Msg_Type::GLOBAL_CHAT;
+    msg_buf->m_type = Msg_Type::GLOBAL_CHAT;
     for(size_t i = 0; i < 10; i++) {
-        strcpy((char*)buf->msg.data, "message I just found out, that need.");
-        strcpy((char*)buf->msg.username, "maks");
-        ctx->clisock->msg_queue.push(buf);
+        std::strcpy((char*)msg_buf->msg.data, "message I just found out, that need.");
+        std::strcpy((char*)msg_buf->msg.username, "maks");
+        ctx->clisock->msg_queue.push(msg_buf.get());
     }
 }
 
 void Chat_Menu::update_msgs()
 {
-    ctx->clisock->msg_queue.pop(buf);
+    // use MyInputTextMultiline see (resize callbacks) and flags to make it read only
+    ctx->clisock->msg_queue.pop(msg_buf.get());
 
-    if (buf->m_type == Msg_Type::GLOBAL_CHAT && msgs.size() < MAX_MSG_AMT) {
-        msgs.push_back(buf->msg);
+    if (msg_buf->m_type == Msg_Type::GLOBAL_CHAT && msgs.size() < MAX_MSG_AMT) {
+        msgs.push_back(msg_buf->msg);
     }
     else {
        msgs.erase(msgs.begin(), msgs.begin()+1);
-       msgs.push_back(buf->msg);
+       msgs.push_back(msg_buf->msg);
     }
 }
 

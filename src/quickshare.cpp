@@ -25,6 +25,8 @@ int WINAPI WinMain(HINSTANCE hInstance,
         LOGGER("Failed to init socket\n");
         exit(1);
     }
+    client.start_connection();
+    
     Context ctx(&client);
 
     ctx.create_window(1000, 720, "Quickshare");

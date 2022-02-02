@@ -4,48 +4,40 @@
 #include <cstring>
 #include "quickshare.h"
 
-Users_Menu::Users_Menu(Context* context)
+Users_Menu::Users_Menu(Context* context) : msg_buf(new Tcp_Msg)
 {
     ctx = context;
-    buf = (Tcp_Msg*)malloc(sizeof(Tcp_Msg));
-    if (!buf)
-        FATAL_MEM();
-    memset(buf, 0, sizeof(Tcp_Msg));
 }
 
 void Users_Menu::tests() 
 {
     Tcp_Msg msg;
     msg.m_type = Msg_Type::USER_ADD;
-    strcpy((char*)msg.id.username, "maks");
+    std::strcpy((char*)msg.id.username, "maks");
     ctx->clisock->msg_queue.push(&msg);
-    strcpy((char*)msg.id.username, "weyne");
+    std::strcpy((char*)msg.id.username, "weyne");
     ctx->clisock->msg_queue.push(&msg); 
-    strcpy((char*)msg.id.username, "shawn");
+    std::strcpy((char*)msg.id.username, "shawn");
     ctx->clisock->msg_queue.push(&msg); 
-    strcpy((char*)msg.id.username, "maks");
+    std::strcpy((char*)msg.id.username, "maks");
     ctx->clisock->msg_queue.push(&msg);
-
 }
 
-Users_Menu::~Users_Menu() 
-{
-    free(buf);
-}
+Users_Menu::~Users_Menu() {}
 
 void Users_Menu::update_list()
 {
-    ctx->clisock->msg_queue.pop(buf);
+    ctx->clisock->msg_queue.pop(msg_buf.get());
     
-    if (buf->m_type == Msg_Type::USER_ADD) {
-        users.push_back(buf->id); 
+    if (msg_buf->m_type == Msg_Type::USER_ADD) {
+        users.push_back(msg_buf->id); 
     }
     else {
         int i = 0;
         for (const auto &e : users) {
             if (std::strncmp(
                 reinterpret_cast<const char*>(e.username), 
-                reinterpret_cast<const char*>(buf->id.username), 
+                reinterpret_cast<const char*>(msg_buf->id.username), 
                 USERNAME_MAX_LIMIT) == 0) {
                 users.erase(users.begin()+i);
                 break;
@@ -118,59 +110,5 @@ void Users_Menu::draw()
         
         ImGui::EndTabBar();
     }
-
-    //filtering moved up ^^^^
-    // filter.Draw("Search");
-
-    // for (size_t i = 0; i < users.size(); i++) {
-    //     if (filter.PassFilter((char*)users.at(i).username)) {
-    //         if (ImGui::TreeNode((void*)(intptr_t)i, "%s", users.at(i).username)) {
-
-    //             // if (ImGui::SmallButton("Ping")) {}
-    //             // ImGui::SameLine();
-
-    //             if (ImGui::SmallButton("Share")) {
-    //                 ctx->f_menu.set_state(true);
-    //             }
-    
-    //             ImGui::TreePop();
-    //         }
-    //     }
-    // }
-
-    
-
-    //try to implement hover over/click clear 
-    // printf("%d\n" , filter.IsActive());
-    // if( strlen(filter.InputBuf) == 0){
-    //     strcpy(filter.InputBuf, "Search"); 
-    // }
-    // else if( ImGui::IsItemHovered()){
-    //     strcpy(filter.InputBuf, "");
-    // }
-
-
-    //drawing list of users 
-    // ImVec2 outer_size = ImVec2(0.0f, ImGui::GetTextLineHeightWithSpacing() * 10);
-    // if (ImGui::BeginTable("split2", 1, ImGuiTableFlags_NoSavedSettings | ImGuiTableFlags_ScrollY, outer_size))
-    // {
-    //     for (size_t i = 0; i < users.size(); i++)
-    //     {
-    //         ImGui::TableNextColumn();
-    //         if (ImGui::TreeNode((void*)(intptr_t)i, "%s", users.at(i).username))
-    //         {
-    //             if (ImGui::SmallButton("Ping")){
-                    
-    //             }
-    //             ImGui::SameLine();
-    //             if (ImGui::SmallButton("Share")){
-    //                 ctx->f_menu.open = true;
-    //             }
-                
-    //             ImGui::TreePop();
-    //         }
-    //     }
-    //     ImGui::EndTable();
-    // }
     ImGui::End();
 }

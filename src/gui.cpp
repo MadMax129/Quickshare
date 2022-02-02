@@ -21,7 +21,7 @@ Context::Context(Client_Sock* client) : l_menu(this), u_menu(this),
 {
     window = NULL;
     glsl_version = NULL;
-    app_state = S_REGISTER;
+    app_state = LOGIN;
     clisock = client;
 }
 
@@ -59,12 +59,14 @@ bool Context::create_window(int width, int height, const char* name)
     return true;
 }
 
-void Context::init_style(){
+void Context::init_style() {
 
     ImGui::StyleColorsDark();
     ImGuiStyle &style = ImGui::GetStyle();
     // style.WindowRounding = 4.0f;
     // style.FrameRounding = 4.0f;
+
+    // Explore https://github.com/ocornut/imgui/issues/707
 
     style.WindowPadding = ImVec2(15, 15);
 	style.WindowRounding = 5.0f;
@@ -95,7 +97,6 @@ void Context::init_style(){
 	style.Colors[ImGuiCol_ScrollbarGrab] = ImVec4(0.80f, 0.80f, 0.83f, 0.31f);
 	style.Colors[ImGuiCol_ScrollbarGrabHovered] = ImVec4(0.56f, 0.56f, 0.58f, 1.00f);
 	style.Colors[ImGuiCol_ScrollbarGrabActive] = ImVec4(0.06f, 0.05f, 0.07f, 1.00f);
-	// style.Colors[ImGuiCol_ComboBg] = ImVec4(0.19f, 0.18f, 0.21f, 1.00f);
 	style.Colors[ImGuiCol_CheckMark] = ImVec4(0.80f, 0.80f, 0.83f, 0.31f);
 	style.Colors[ImGuiCol_SliderGrab] = ImVec4(0.80f, 0.80f, 0.83f, 0.31f);
 	style.Colors[ImGuiCol_SliderGrabActive] = ImVec4(0.06f, 0.05f, 0.07f, 1.00f);
@@ -105,23 +106,16 @@ void Context::init_style(){
 	style.Colors[ImGuiCol_Header] = ImVec4(0.10f, 0.09f, 0.12f, 1.00f);
 	style.Colors[ImGuiCol_HeaderHovered] = ImVec4(0.56f, 0.56f, 0.58f, 1.00f);
 	style.Colors[ImGuiCol_HeaderActive] = ImVec4(0.06f, 0.05f, 0.07f, 1.00f);
-	// style.Colors[ImGuiCol_Column] = ImVec4(0.56f, 0.56f, 0.58f, 1.00f);
-	// style.Colors[ImGuiCol_ColumnHovered] = ImVec4(0.24f, 0.23f, 0.29f, 1.00f);
-	// style.Colors[ImGuiCol_ColumnActive] = ImVec4(0.56f, 0.56f, 0.58f, 1.00f);
 	style.Colors[ImGuiCol_ResizeGrip] = ImVec4(0.00f, 0.00f, 0.00f, 0.00f);
 	style.Colors[ImGuiCol_ResizeGripHovered] = ImVec4(0.56f, 0.56f, 0.58f, 1.00f);
 	style.Colors[ImGuiCol_ResizeGripActive] = ImVec4(0.06f, 0.05f, 0.07f, 1.00f);
-	// style.Colors[ImGuiCol_CloseButton] = ImVec4(0.40f, 0.39f, 0.38f, 0.16f);
-	// style.Colors[ImGuiCol_CloseButtonHovered] = ImVec4(0.40f, 0.39f, 0.38f, 0.39f);
-	// style.Colors[ImGuiCol_CloseButtonActive] = ImVec4(0.40f, 0.39f, 0.38f, 1.00f);
 	style.Colors[ImGuiCol_PlotLines] = ImVec4(0.40f, 0.39f, 0.38f, 0.63f);
 	style.Colors[ImGuiCol_PlotLinesHovered] = ImVec4(0.25f, 1.00f, 0.00f, 1.00f);
 	style.Colors[ImGuiCol_PlotHistogram] = ImVec4(0.40f, 0.39f, 0.38f, 0.63f);
 	style.Colors[ImGuiCol_PlotHistogramHovered] = ImVec4(0.25f, 1.00f, 0.00f, 1.00f);
 	style.Colors[ImGuiCol_TextSelectedBg] = ImVec4(0.25f, 1.00f, 0.00f, 0.43f);
-	// style.Colors[ImGuiCol_ModalWindowDarkening] = ImVec4(1.00f, 0.98f, 0.95f, 0.73f);
-    //centering title bars of windows
 
+    // Centering title bars
     ImGuiStyle &center = ImGui::GetStyle();
     center.WindowTitleAlign = ImVec2(0.5f,0.5f);
 }
@@ -133,7 +127,7 @@ void Context::init_imgui()
     ImGui::CreateContext();
 
     ImGuiIO& io = ImGui::GetIO();
-    // io.IniFilename = (CACHE_DIR "windows_pos.ini");
+    // io.IniFilename
     
     init_style();
 
@@ -141,8 +135,6 @@ void Context::init_imgui()
     ImGui_ImplGlfw_InitForOpenGL(this->window, true);
     ImGui_ImplOpenGL3_Init(this->glsl_version);
     
-    // io.Fonts->AddFontFromFileTTF("../lib/imgui-1.85/misc/fonts/Ruda-ExtraBold.ttf", 15);
-
     io.Fonts->AddFontFromMemoryCompressedBase85TTF(font_tff_data_compressed_data_base85, FONT_SIZE);
     
     // Default Background color
@@ -157,13 +149,8 @@ void Context::error_window()
     ImGui::TextColored(ImVec4(1.0f, 0.0, 0.0, 1.0f), "Error occured with connection to server...");
     
     // Attempt to reconnect to server
-    if (ImGui::Button("Return")) {
-        // Check if socket connection can be opened, continue back to login menu
-        if (clisock->init_socket()) {
-            change_state(S_REGISTER);
-            clisock->connected = -1;
-        }
-    }
+    if (ImGui::Button("Return")) 
+        change_state(LOGIN);
 
     ImGui::End();
 }
@@ -192,7 +179,7 @@ void Context::change_state(App_State state)
 {
     // When changing state reset menu parameters
     assert(app_state != state);
-    if (state == S_REGISTER)
+    if (state == LOGIN)
         l_menu.reset();
 
     app_state = state;
@@ -200,9 +187,9 @@ void Context::change_state(App_State state)
 
 void Context::main_loop() 
 {
-    u_menu.tests();
-    c_menu.test();
-    app_state = S_MAIN_MENU;
+    // u_menu.tests();
+    // c_menu.test();
+    app_state = MAIN_MENU;
 
     while (!glfwWindowShouldClose(window))
     {
@@ -212,20 +199,22 @@ void Context::main_loop()
         menu_bar();
 
         // Check if connection was lost with server
-        if (app_state == S_MAIN_MENU && clisock->connected == 0) 
-            change_state(S_ERROR);
+        // Comment out for MAIN_MENU Testing
+        // if (app_state == MAIN_MENU &&
+        //     clisock->get_state() == Client_Sock::State::FAILED) 
+        //     change_state(ERROR_WINDOW);
 
         switch (app_state)
         {
-            case S_ERROR:
+            case ERROR_WINDOW:
                 error_window();
                 break;
 
-            case S_REGISTER:
+            case LOGIN:
                 l_menu.draw();
                 break;
 
-            case S_MAIN_MENU:
+            case MAIN_MENU:
                 u_menu.draw();
                 c_menu.draw();
                 if (f_menu.get_state())

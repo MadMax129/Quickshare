@@ -6,6 +6,7 @@
 #include <atomic>
 
 #define USERNAME_MAX_LIMIT 16
+#define PASSWORD_MAX_LIMIT 16
 #define PACKET_MAX_SIZE 512
 
 enum class Msg_Type : unsigned char {
@@ -64,13 +65,17 @@ public:
 
     bool init_socket();
     bool send_intro(char* username);
-    void start_recv();
     void start_connection();
-    int has_connected();
-    void disconnect();
+
+    enum State {
+        INACTIVE,
+        FAILED,
+        CONNECTED,
+    };
+
+    State get_state() const;
 
     Msg_Queue msg_queue;
-    std::atomic<int> connected;
 
 private:
     unsigned short _port;
@@ -79,10 +84,12 @@ private:
     SOCKET _tcp_socket;
     SOCKET _udp_socket;
     sockaddr_in _server_addr;
-    std::thread server_read;
+    std::thread recv_th;
+    std::atomic<int> connected;
 
     void try_connect();
     void recv_thread();
+    inline void disconnect();
 };
 
 void test();
