@@ -187,9 +187,9 @@ void Context::change_state(App_State state)
 
 void Context::main_loop() 
 {
-    // u_menu.tests();
-    // c_menu.test();
-    // app_state = MAIN_MENU;
+    u_menu.tests();
+    c_menu.test();
+    app_state = MAIN_MENU;
 
     while (!glfwWindowShouldClose(window))
     {
@@ -198,11 +198,12 @@ void Context::main_loop()
 
         menu_bar();
 
+        
         // Check if connection was lost with server
         // Comment out for MAIN_MENU Testing
-        if (app_state == MAIN_MENU &&
-            clisock->get_state() == Client_Sock::State::FAILED) 
-            change_state(ERROR_WINDOW);
+        // if (app_state == MAIN_MENU &&
+        //     clisock->get_state() == Client_Sock::State::FAILED) 
+        //     change_state(ERROR_WINDOW);
 
         switch (app_state)
         {

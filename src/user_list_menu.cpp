@@ -13,14 +13,12 @@ void Users_Menu::tests()
 {
     Tcp_Msg msg;
     msg.m_type = Msg_Type::USER_ADD;
-    std::strcpy((char*)msg.id.username, "maks");
+    std::strcpy((char*)msg.id.username, "Maks");
     ctx->clisock->msg_queue.push(&msg);
-    std::strcpy((char*)msg.id.username, "weyne");
+    std::strcpy((char*)msg.id.username, "Weyne");
     ctx->clisock->msg_queue.push(&msg); 
-    std::strcpy((char*)msg.id.username, "shawn");
+    std::strcpy((char*)msg.id.username, "Shawn");
     ctx->clisock->msg_queue.push(&msg); 
-    std::strcpy((char*)msg.id.username, "maks");
-    ctx->clisock->msg_queue.push(&msg);
 }
 
 Users_Menu::~Users_Menu() {}
@@ -65,29 +63,31 @@ void Users_Menu::draw()
 
     if (ImGui::BeginTabBar("User Tabs", ImGuiTabBarFlags_Reorderable)) {
         if(ImGui::BeginTabItem("Global Users")) {
-            filter.Draw("Search");
 
+            filter.Draw("Search");
             for (size_t i = 0; i < users.size(); i++) {
                 if (filter.PassFilter((char*)users.at(i).username)) {
-                    if (ImGui::TreeNode((void*)(intptr_t)i, "%s", users.at(i).username)) {
-        
-                        if (ImGui::SmallButton("Share")) {
+                    ImGui::Selectable((char*)users.at(i).username);
+                    if(ImGui::BeginPopupContextItem()) {
+                        // ImGui::Selectable("Share");
+                        if (ImGui::Button("Share")) {
                             ctx->f_menu.set_state(true);
+                            ImGui::CloseCurrentPopup();
                         }
                         ImGui::SameLine();
                         //coloring buttons
-                        ImGui::PushStyleColor(ImGuiCol_Button, (ImVec4)ImColor::HSV(3 / 7.0f, 0.6f, 0.6f));
-                        ImGui::PushStyleColor(ImGuiCol_ButtonHovered, (ImVec4)ImColor::HSV(3 / 7.0f, 0.7f, 0.7f));
-                        ImGui::PushStyleColor(ImGuiCol_ButtonActive, (ImVec4)ImColor::HSV(3 / 7.0f, 0.8f, 0.8f));
-                        
-                        if (ImGui::SmallButton("Add as friend")) {
+                        // ImGui::PushStyleColor(ImGuiCol_Button, (ImVec4)ImColor::HSV(3 / 7.0f, 0.6f, 0.6f));
+                        // ImGui::PushStyleColor(ImGuiCol_ButtonHovered, (ImVec4)ImColor::HSV(3 / 7.0f, 0.7f, 0.7f));
+                        // ImGui::PushStyleColor(ImGuiCol_ButtonActive, (ImVec4)ImColor::HSV(3 / 7.0f, 0.8f, 0.8f)); 
+                        if (ImGui::Button("Add as friend")) {
                             //send req to server. 
+                            ImGui::CloseCurrentPopup();
                         }
 
-                        ImGui::PopStyleColor(3);  
-                        ImGui::TreePop();
-
-                    }
+                        // ImGui::PopStyleColor(3);  
+                        ImGui::EndPopup();
+                }
+                    
                 }
             }
             ImGui::EndTabItem();
