@@ -73,6 +73,8 @@ bool Client_Sock::init_socket()
     if (WSAStartup(MAKEWORD(2,2), &_wsa_data) != 0)
         return false;
 
+        // all this needs to be restarted when connection fails
+
     _tcp_socket = socket(AF_INET, SOCK_STREAM, 0);
     // Eventually add udp socket
 
