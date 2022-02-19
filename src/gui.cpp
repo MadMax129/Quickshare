@@ -134,6 +134,7 @@ void Context::main_loop()
 
         menu_bar();
 
+        
         // Check if connection was lost with server
         // Comment out for MAIN_MENU Testing
         // if (app_state == MAIN_MENU &&
