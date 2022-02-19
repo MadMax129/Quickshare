@@ -93,22 +93,33 @@ void Users_Menu::draw()
             ImGui::EndTabItem();
         }
         
-        if(ImGui::BeginTabItem("Friends")) {
-            
-            ImGui::BeginChild("Friend List", ImVec2(ImGui::GetWindowWidth()/2, ImGui::GetWindowHeight() - 60),true);
-            
+        if (ImGui::BeginTabItem("Friends")) {
+            friends_list();
+            ImGui::EndTabItem();
+        }
 
-            ImGui::EndChild();
-
-            ImGui::SameLine();
-            ImGui::SetCursorPosX( (ImGui::GetWindowWidth()/2.0) + 10.0);
-            ImGui::BeginChild("Friend Requests", ImVec2( (ImGui::GetWindowWidth()/2.0) - 16.0, ImGui::GetWindowHeight()/2.0),true);
-            
-            ImGui::EndChild();
+        if (ImGui::BeginTabItem("Friend Requests")) {
+            friend_requests();
             ImGui::EndTabItem();
         }
         
         ImGui::EndTabBar();
     }
     ImGui::End();
+}
+
+void Users_Menu::friends_list()
+{
+//     ImGui::BeginChild("friends_list", ImVec2(ImGui::GetWindowWidth()/2, ImGui::GetWindowHeight() - 60),true);
+        
+
+//     ImGui::EndChild();
+}
+
+void Users_Menu::friend_requests()
+{
+    // ImGui::BeginChild("friend_requests", ImVec2(ImGui::GetWindowWidth()/2, ImGui::GetWindowHeight() - 60),true);
+        
+
+    // ImGui::EndChild();
 }

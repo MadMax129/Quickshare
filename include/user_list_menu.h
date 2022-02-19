@@ -16,6 +16,8 @@ struct Users_Menu {
 
 private:
     void update_list();
+    void friends_list();
+    void friend_requests();
 
     Context* ctx;
     std::vector<Tcp_Msg::Id> users;

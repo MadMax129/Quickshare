@@ -76,7 +76,6 @@ bool Client_Sock::init_socket()
         // all this needs to be restarted when connection fails
 
     _tcp_socket = socket(AF_INET, SOCK_STREAM, 0);
-    // Eventually add udp socket
 
     if (_tcp_socket == INVALID_SOCKET)
         return false;

@@ -25,8 +25,9 @@ INCLUDES = ../include
 SOURCES  =	file_menu.cpp	   \
 			chat_menu.cpp      \
 			socket_handler.cpp \
-			user_list_menu.cpp      \
-			login_menu.cpp          \
+			user_list_menu.cpp \
+			login_menu.cpp     \
+			gui_style.cpp      \
 			gui.cpp            \
 			quickshare.cpp
 

@@ -13,7 +13,7 @@ Chat_Menu::~Chat_Menu() {}
 void Chat_Menu::test()
 {
     msg_buf->m_type = Msg_Type::GLOBAL_CHAT;
-    for(size_t i = 0; i < 10; i++) {
+    for(size_t i = 0; i < 80; i++) {
         std::strcpy((char*)msg_buf->msg.data, "message I just found out, that need.");
         std::strcpy((char*)msg_buf->msg.username, "maks");
         ctx->clisock->msg_queue.push(msg_buf.get());
@@ -46,11 +46,14 @@ void Chat_Menu::draw()
 
     ImGui::BeginChild("Log", ImVec2(0, ImGui::GetWindowHeight() - 85), true, ImGuiWindowFlags_NoMove);
 
-    for (const auto &e : msgs) {
-        ImGui::TextColored(ImVec4(0.77, .188, .201, 1.0), "%s:", (char*)e.username); 
-        ImGui::SameLine();
-        ImGui::TextWrapped((char*)e.data);    
-    }
+        ImGui::InputTextMultiline("test", (char*)msgs.at(0).data, sizeof(msgs.at(0).data), ImVec2(0, 0), ImGuiInputTextFlags_ReadOnly);
+    // for (const auto &e : msgs) {
+    //     ImGuiInputTextFlags_
+
+    //     ImGui::TextColored(ImVec4(0.77, .188, .201, 1.0), "%s:", (char*)e.username); 
+    //     ImGui::SameLine();
+    //     ImGui::TextWrapped((char*)e.data);    
+    // }
     
     ImGui::EndChild();
 
