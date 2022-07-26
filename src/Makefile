@@ -11,24 +11,9 @@ TYPE = DEBUG
 INSTALL_DIR = "C:\Program Files\Quickshare"
 ICON_PATH   = "C:\Program Files\Quickshare\icon\logo.png"
 
-IMGUI_DIR ?= ../lib/imgui-1.85
-IMGUI_SOURCES =	$(IMGUI_DIR)/imgui.cpp        \
-				$(IMGUI_DIR)/imgui_demo.cpp   \
-				$(IMGUI_DIR)/imgui_draw.cpp   \
-				$(IMGUI_DIR)/imgui_tables.cpp \
-				$(IMGUI_DIR)/imgui_widgets.cpp
-
-IMGUI_SOURCES += $(IMGUI_DIR)/backends/imgui_impl_glfw.cpp \
-				 $(IMGUI_DIR)/backends/imgui_impl_opengl3.cpp
 
 INCLUDES = ../include
-SOURCES  =	file_menu.cpp	   \
-			chat_menu.cpp      \
-			socket_handler.cpp \
-			user_list_menu.cpp \
-			login_menu.cpp     \
-			gui_style.cpp      \
-			gui.cpp            \
+SOURCES  =	network.cpp	   \
 			quickshare.cpp
 
 SRC_OBJS = $(addprefix $(BUILD_DIR)/, $(addsuffix .o, $(basename $(notdir $(SOURCES)))))
@@ -36,9 +21,9 @@ IMGUI_OBJS = $(addprefix $(BUILD_DIR)/, $(addsuffix .o, $(basename $(notdir $(IM
 ALL_OBJS = $(IMGUI_OBJS) $(SRC_OBJS)
 
 DEPS = $(addprefix build\, $(SOURCES:.cpp=.d))
-SRC_INC_DIR = -I$(INCLUDES) -I$(IMGUI_DIR) -I$(IMGUI_DIR)/backends
+SRC_INC_DIR = -I$(INCLUDES)
 CXXFLAGS += -O2 -Wall -std=c++17 -pedantic-errors
-IMGUI_LIBS = -lglfw3 -lgdi32 -lopengl32 -limm32 -lws2_32
+LIBS = -limm32 -lws2_32
 
 ifeq ($(TYPE), RELEASE)
 	LINKER += -static -s -static-libgcc -static-libstdc++ -mwindows
@@ -77,16 +62,8 @@ build_icon:
 $(BUILD_DIR)/%.o:%.cpp
 	$(CXX) $(CXXFLAGS) $(SRC_INC_DIR) -MMD -MP -c -o $@ $<
 
-# Build ImGui Source
-$(BUILD_DIR)/%.o:$(IMGUI_DIR)/%.cpp
-	$(CXX) $(CXXFLAGS) $(IMGUI_LIBS) -c -o $@ $<
-
-# Build ImGui Backend Source
-$(BUILD_DIR)/%.o:$(IMGUI_DIR)/backends/%.cpp
-	$(CXX) $(CXXFLAGS) $(IMGUI_LIBS) -I$(IMGUI_DIR) -c -o $@ $<
-
 # Link Together
 $(EXE): $(ALL_OBJS)
-	$(CXX) -o $@ $^ ./icon/icon.res $(CXXFLAGS) $(LINKER) $(IMGUI_LIBS)
+	$(CXX) -o $@ $^ ./icon/icon.res $(CXXFLAGS) $(LINKER) $(LIBS)
 
 -include $(DEPS)

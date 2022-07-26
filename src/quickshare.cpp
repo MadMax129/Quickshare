@@ -1,37 +1,15 @@
-#include "quickshare.h"
-#include "gui.h"
-#include "networking.h"
-#include <windows.h>
+#include "quickshare.hpp"
+// #include "network.h"
+// #include <windows.h>
 
-Qs qs;
-
-Qs::Qs()
-{
-    char user_name[32];
-    DWORD size = sizeof(user_name);
-    if (GetUserName(reinterpret_cast<TCHAR*>(user_name), &size) == 0)
-        FATAL("Username buffer too small\n");
-    snprintf(dir_path, 63, "C:\\Users\\%s\\AppData\\Local\\Quickshare", user_name);
-    CreateDirectory(reinterpret_cast<TCHAR*>(dir_path), NULL);
-}
-
+#ifdef SYSTEM_WIN_64
 int WINAPI WinMain(HINSTANCE hInstance,
                    HINSTANCE hPrevInstance,
                    LPSTR lpCmdLine,
                    int nCmdShow)
+#else
+int main(const int argc, const char* argv[])
+#endif
 {
-    Client_Sock client("192.168.1.31", 5000);
-    if (!client.init_socket()) {
-        LOGGER("Failed to init socket\n");
-        exit(1);
-    }
-    client.start_connection();
-    
-    Context ctx(&client);
-
-    ctx.create_window(1000, 720, "Quickshare");
-    ctx.init_imgui();
-    ctx.main_loop();
-    
     return 0;
 }
