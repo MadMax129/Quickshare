@@ -61,6 +61,12 @@ typedef std::uint64_t u64;
 #define LOGF(str, ...) \
     colored_printf(CL_YELLOW, str, __VA_ARGS__)
 
+#define P_ERROR(str) \
+    colored_print(CL_RED, str)
+
+#define P_ERRORF(str, ...) \
+    colored_printf(CL_RED, str, __VA_ARGS__)
+
 static inline void _colored_print(void* color, const char* str, ...)
 {
     va_list ap;

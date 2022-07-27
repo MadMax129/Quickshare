@@ -25,10 +25,9 @@ int main(const int argc, const char* argv[])
 int main(const int argc, const char* argv[])
 #endif
 {
-    Network net;
-    
+    Network net{};
+
     init_qs();
-    net.init_socket();
     net.network_loop();
 
     return 0;

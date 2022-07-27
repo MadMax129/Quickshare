@@ -1,43 +1,108 @@
 #include "network.hpp"
 #include "quickshare.hpp"
 #include <assert.h>
+#include <algorithm>
+#include <iterator>
 
-static void get_comp_name(wchar_t buffer[CLIENT_NAME_LEN])
+static void get_comp_name(TCHAR buffer[CLIENT_NAME_LEN])
 {
     DWORD buf_size = CLIENT_NAME_LEN;
-    GetComputerName((LPSTR)buffer, &buf_size);
+    GetComputerName(buffer, &buf_size);
 }
 
 Network::~Network() 
 {
+    cleanup();
+}
+
+void Network::cleanup()
+{
+    FD_CLR(tcp_socket, &master_fds);
 #ifdef SYSTEM_WIN_64
     closesocket(tcp_socket);
     WSACleanup();
 #elif defined(SYSTEM_UNX)
     close(tcp_socket);
 #endif
+    while (master_fds.fd_count > 0) {
+        socket_t sock = master_fds.fd_array[0];
+        FD_CLR(sock, &master_fds);
+        closesocket(sock);
+    }
+    client_list.fill({});
+    client_count = 0;
+    cli_id = 0;
 }
 
 Client* Network::new_client()
 {
-    i32 idx = -1;
-    for (i32 i = 0; i < MAX_CLIENTS; i++) {
-        if (client_list[i].state == Client::EMPTY) {
-            client_list[i].state = Client::OPEN;
-            idx = i;
-            break;
+    auto cli = std::find_if(
+            std::begin(client_list), 
+            std::end(client_list),
+            [] (const Client &c) { return c.state == Client::EMPTY; }
+    );
+
+    cli->id = get_id();
+
+    ++client_count;
+
+    assert(cli != std::end(client_list));
+
+    return cli;
+}
+
+u8 Network::get_id() const 
+{
+    u8 lowest = 0;
+    bool looping = true;
+
+    if (client_count == 0)
+        return 0;
+
+    while (looping) {
+        for (u8 i = 0; i < MAX_CLIENTS; i++) {
+            if (client_list[i].state != Client::EMPTY && 
+                client_list[i].id == lowest) {
+                ++lowest;
+                looping = false;
+                break;
+            }
         }
     }
-    assert(idx != -1);
-    return &client_list[idx];
+
+    return lowest;
+}
+
+void Network::remove_client(socket_t sock)
+{
+    auto cli = std::find_if(
+        std::begin(client_list),
+        std::end(client_list),
+        [&] (const Client& c) { return c.socket == sock; }
+    );
+
+    assert(cli != std::end(client_list));
+    
+    closesocket(sock);
+    FD_CLR(sock, &master_fds);
+    std::memset(cli, 0, sizeof(Client));
+    --client_count;
 }
 
 void Network::debug_clients()
 {
-    for (i32 i = 0; i < MAX_CLIENTS; i++) {
-        const Client& cli = client_list[i];
-        if (cli.state == Client::COMPLETE) {
-            colored_printf(CL_BLUE, "%s:\n", cli.name);
+    printf("Client amount: %u\n", client_count);
+    for (const Client& cli : client_list) {
+        if (cli.state != Client::EMPTY) {
+            if (cli.state == Client::OPEN) {
+                colored_printf(CL_BLUE, "<...>: #%u\n", cli.id);
+                colored_print(CL_YELLOW, "\tState: Open\n");
+            
+            }
+            else if (cli.state == Client::COMPLETE) {
+                colored_printf(CL_BLUE, "%s: #%u\n", cli.name, cli.id);
+                colored_print(CL_GREEN, "\tState: Completed\n");
+            }
             printf("\t'%s:%d'\n", inet_ntoa(cli.addr.sin_addr), cli.addr.sin_port);
         }
     }
@@ -70,10 +135,9 @@ bool Network::init_socket()
         
         Client* host_client = new_client();
         assert(host_client);
-        get_comp_name(host_client->name);
-        host_client->addr = server_addr;
-        host_client->socket = tcp_socket;
-        host_client->id = cli_id++;
+        *host_client = Client(&server_addr, tcp_socket, cli_id++);
+        get_comp_name((TCHAR*)host_client->name);
+        host_client->state = Client::COMPLETE;
     }
 
     return true;
@@ -97,35 +161,98 @@ void Network::try_connect()
 
 void Network::network_loop()
 {
-    u32 s = state.load(std::memory_order_relaxed);
+    for (;;) {
+        while (!init_socket()) {
+            P_ERROR("Socket connection failed, retrying...");
+            Sleep(2000);
+        }
 
-    if (s == IS_SERVER)
-        conn_thread = std::thread(&Network::server_loop, this);
-    else if (s == IS_CLIENT)
-        conn_thread = std::thread(&Network::cli_loop, this);
+        u32 s = state.load(std::memory_order_relaxed);
 
-    conn_thread.join();
+        if (s == IS_SERVER)
+            conn_thread = std::thread(&Network::server_loop, this);
+        else if (s == IS_CLIENT)
+            conn_thread = std::thread(&Network::cli_loop, this);
+
+        conn_thread.join();
+
+        if (state.load(std::memory_order_relaxed) == FAILED_CONNECTION)
+            cleanup();
+    }
 }
 
 void Network::cli_loop()
 {
     Msg msg = {};
-    msg.type = Msg::NAME_SEND;
+    msg.hdr.type = Msg::NAME_SEND;
+    std::strcpy((char*)msg.buffer, "Maks");
     assert(send(tcp_socket, (char*)&msg, sizeof(Msg), 0) != SOCKET_ERROR);
+
+    assert(recv(tcp_socket, (char*)&msg, sizeof(Msg), MSG_WAITALL) != SOCKET_ERROR);
+
+    for (int i = 0; i < msg.list.client_count; i++)
+        printf("==>%s %d\n", msg.list.clients[i].name, msg.list.clients[i].id);
+
+
+    exit(1);
 }
 
-void Network::construct_client(socket_t socket, struct sockaddr_in* addr)
+void Network::server_analize_msg(const Msg& msg, socket_t socket)
 {
-    Client* c = new_client();
-    c->addr = *addr;
-    c->socket = socket;
-    c->id = cli_id++;
+    static Msg temp_msg_buf = {};
+    memset(&temp_msg_buf, 0, sizeof(Msg));
+
+    // Find client in list
+    auto cli = std::find_if(
+        std::begin(client_list),
+        std::end(client_list),
+        [&] (const Client& c) { return c.socket == socket; }
+    );
+
+    switch (msg.hdr.type)
+    {
+        case Msg::INVALID: 
+            break;
+
+        case Msg::NAME_SEND: {
+            std::wcsncpy(cli->name, (wchar_t*)msg.buffer, CLIENT_NAME_LEN);
+            cli->state = Client::COMPLETE;
+            
+            temp_msg_buf.hdr.type = Msg::CLIENT_LIST;
+            u32 i = 0;
+            for (const Client& c : client_list) {
+                if (c.state == Client::COMPLETE) {
+                    temp_msg_buf.list.clients[i].id = c.id;
+                    std::wcsncpy(temp_msg_buf.list.clients[i].name, c.name, CLIENT_NAME_LEN);
+                    ++i;
+                }
+            }
+            temp_msg_buf.list.client_count = client_count;
+
+            int sent_bytes = send(socket, (char*)&temp_msg_buf, sizeof(Msg), 0);
+
+            if (sent_bytes <= 0) {
+                LOG("Lost connection at send...\n");
+                remove_client(socket);
+                break;
+            }
+
+            assert(sent_bytes == sizeof(Msg));
+
+            break;
+        }
+
+        default: break;
+    }
+}
+
+#define EXIT_LOOP() { \
+    state.store(FAILED_CONNECTION); \
+    return; \
 }
 
 void Network::server_loop()
-{
-    fd_set master_fds, work_fds;
-    
+{   
     FD_ZERO(&master_fds);
     FD_SET(tcp_socket, &master_fds);
 
@@ -135,11 +262,9 @@ void Network::server_loop()
         const i32 res = select(0, &work_fds, NULL, NULL, NULL);
 
         if (res < 0) {
-            LOGF("ERROR SELCET %d\n", WSAGetLastError());
-            exit(1);
+            P_ERROR("Error occured after select...\n");
+            EXIT_LOOP();
         }
-
-        LOGF("%d\n", res);
 
         for (i32 i = 0; i < res; i++) {
             socket_t sock = work_fds.fd_array[i];
@@ -157,24 +282,24 @@ void Network::server_loop()
                 else {
                     LOGF("Client connected '%s:%d'\n", inet_ntoa(addr.sin_addr), addr.sin_port);
                     FD_SET(client, &master_fds);
-                    construct_client(client, &addr);
-                    client_count++;
+                    *new_client() = Client(&addr, client, cli_id++);
                 }
             }
             else {
                 Msg buf = {};
 
-                i32 recv_bytes = recv(sock, (char*)&buf, sizeof(Msg), 0);
-                if (recv_bytes <= 0) {
-                    LOG("Disconnect\n");
-                    closesocket(sock);
-                    FD_CLR(sock, &master_fds);
-                }
-                else 
-                    printf("==>%d\n", buf.type);
+                i32 recv_bytes = recv(sock, (char*)&buf, sizeof(Msg), MSG_WAITALL);
 
+                if (recv_bytes <= 0) {
+                    LOG("Client disconnect\n");
+                    remove_client(sock);
+                }
+                else {
+                    assert(recv_bytes == sizeof(Msg));
+                    server_analize_msg(buf, sock);
+                    // debug_clients();
+                }
             }
         }
-        
     }
 }

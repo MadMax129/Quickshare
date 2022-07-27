@@ -29,6 +29,10 @@ ifeq ($(TYPE), RELEASE)
 	LINKER += -static -s -static-libgcc -static-libstdc++ -mwindows
 endif
 
+ifeq ($(TYPE), DEBUG)
+	CXXFLAGS += -DDEBUG_MODE
+endif
+
 .PHONY: all clean directory install_all build_icon
 
 all: directory compile
