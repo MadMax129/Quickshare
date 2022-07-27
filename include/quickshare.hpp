@@ -5,12 +5,15 @@
 
 #if defined(_WIN64)
    #define SYSTEM_WIN_64
+   #define SYSTEM_NAME "Win64"
    #include <windows.h>
 #elif defined(__APPLE__) || defined(__MACH__)
    #define SYSTEM_MAC_64
+   #define SYSTEM_NAME "Mac64"
    #define SYSTEM_UNX
 #elif defined(__linux__)
    #define SYSTEM_LINUX_64
+   #define SYSTEM_NAME "Linux64"
    #define SYSTEM_UNX
 #else
    #define SYSTEM_ERROR
@@ -18,6 +21,7 @@
 
 #ifdef __x86_64__
    #define X86_64_CPU
+   #define ARCH "X86-64"
 #endif
 
 #include <cstdint>
