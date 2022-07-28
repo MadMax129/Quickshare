@@ -1,5 +1,7 @@
 #include "network.hpp"
 #include "quickshare.hpp"
+#include "file_manager.hpp"
+#include <time.h>
 
 static void init_qs()
 {
@@ -7,11 +9,11 @@ static void init_qs()
     colored_print(CL_BLUE, "The platform detected is not x86-64."
                             "This could have undefined results.");
 #endif
-#ifdef DEBUG_MODE
-    printf("QuickShare Debug Info:\n");
-    colored_printf(CL_GREEN, "OS:\t%s\n", SYSTEM_NAME);
-    colored_printf(CL_GREEN, "Arch:\t%s\n", ARCH);
-#endif
+// #ifdef DEBUG_MODE
+//     printf("QuickShare Debug Info:\n");
+//     colored_printf(CL_GREEN, "OS:\t%s\n", SYSTEM_NAME);
+//     colored_printf(CL_GREEN, "Arch:\t%s\n", ARCH);
+// #endif
 }
 
 #ifdef SYSTEM_WIN_64
@@ -25,7 +27,8 @@ int main(const int argc, const char* argv[])
 int main(const int argc, const char* argv[])
 #endif
 {
-    Network net{};
+    File_Manager f_manager{};
+    Network net(&f_manager);
 
     init_qs();
     net.network_loop();

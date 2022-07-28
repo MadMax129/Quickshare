@@ -25,6 +25,7 @@
 #endif
 
 #include <cstdint>
+#include <assert.h>
 
 typedef std::int8_t i8;
 typedef std::int16_t i16;
@@ -55,11 +56,15 @@ typedef std::uint64_t u64;
 #define colored_print(color, str) \
     _colored_print((void*)color, str)
 
-#define LOG(str) \
-    colored_print(CL_YELLOW, str)
+#define LOG(str) { \
+    colored_print(CL_YELLOW, "[ LOG ] "); \
+    printf(str); \
+}
 
-#define LOGF(str, ...) \
-    colored_printf(CL_YELLOW, str, __VA_ARGS__)
+#define LOGF(str, ...) { \
+    colored_print(CL_YELLOW, "[ LOG ] "); \
+    printf(str, __VA_ARGS__); \
+}
 
 #define P_ERROR(str) \
     colored_print(CL_RED, str)
