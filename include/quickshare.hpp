@@ -1,7 +1,8 @@
 #pragma once
 
-#include <stdio.h>
+#include <cstdio>
 #include <stdarg.h>
+#include <string>
 
 #if defined(_WIN64)
    #define SYSTEM_WIN_64
@@ -37,6 +38,16 @@ typedef std::uint16_t u16;
 typedef std::uint32_t u32;
 typedef std::uint64_t u64;
 
+/* Defines the max number of clients accepted */
+#define MAX_CLIENTS 16
+
+/* Max length for display computer host name */
+#define CLIENT_NAME_LEN 16
+
+#ifdef SYSTEM_WIN_64
+#   define PATH_TO_DATA "C:\\Users\\%s\\AppData\\Local\\Quickshare"
+#endif
+
 #if defined(SYSTEM_UNX)
 	#define CL_RESET  "\x1b[0m"
 	#define CL_RED    "\x1b[31m"
@@ -58,12 +69,12 @@ typedef std::uint64_t u64;
 
 #define LOG(str) { \
     colored_print(CL_YELLOW, "[ LOG ] "); \
-    printf(str); \
+    std::printf(str); \
 }
 
 #define LOGF(str, ...) { \
     colored_print(CL_YELLOW, "[ LOG ] "); \
-    printf(str, __VA_ARGS__); \
+    std::printf(str, __VA_ARGS__); \
 }
 
 #define P_ERROR(str) \
@@ -82,14 +93,21 @@ static inline void _colored_print(void* color, const char* str, ...)
     hConsole = GetStdHandle(STD_OUTPUT_HANDLE);
     SetConsoleTextAttribute(hConsole, (INT_PTR)color);
 #elif defined(SYSTEM_UNX)
-    fprintf(stdout, "%s", color);
+    std::fprintf(stdout, "%s", color);
 #endif
-	vfprintf(stdout, str, ap);
+	std::vfprintf(stdout, str, ap);
 #if defined(SYSTEM_WIN_64)
     SetConsoleTextAttribute(hConsole, CL_RESET);
 #elif defined(SYSTEM_UNX)
-    fprintf(stdout, "%s", CL_RESET);
+    std::fprintf(stdout, "%s", CL_RESET);
 #endif
 
 	va_end(ap);
 }
+
+struct QuickShare {
+    QuickShare();
+    std::string dir_path;
+};
+
+extern QuickShare qs;

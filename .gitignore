@@ -31,7 +31,6 @@
 *.out
 *.app
 
-# ImGui library
+# Folders
 lib/
-
 .vscode/

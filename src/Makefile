@@ -13,7 +13,9 @@ ICON_PATH   = "C:\Program Files\Quickshare\icon\logo.png"
 
 
 INCLUDES = ../include
-SOURCES  =	network.cpp	   \
+SOURCES  =	database.cpp     \
+			network.cpp	     \
+			file_manager.cpp \
 			quickshare.cpp
 
 SRC_OBJS = $(addprefix $(BUILD_DIR)/, $(addsuffix .o, $(basename $(notdir $(SOURCES)))))

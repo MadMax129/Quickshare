@@ -5,110 +5,58 @@
 #include <mutex>
 #include <cstdio>
 #include <cmath>
+#include <list>
+#include <utility>
+#include <condition_variable>
+#include "../lib/SPSCQueue.h"
 
-enum Transfer_State {
-    INACTIVE,
-    REQUESTED,
-    SENDING,
-    RECEVING
-};
+#define MAX_RECV_QUEUE_SIZE 32
 
-struct File_Manager {
-    File_Manager() = default;
-    ~File_Manager() = default;
+using Users_List = std::list<std::pair<UserId, Msg::Msg_Type>>;
 
-    inline void set_state(Transfer_State state)
-    {
-        this->state.store(state);
-    }
+struct File_Sharing {
+    File_Sharing();
+    ~File_Sharing();
 
-    inline Transfer_State get_state()
-    {
-        return state.load();
-    }
+    enum Transfer_State {
+        INACTIVE,
+        REQUESTED,
+        ACTIVE,
+        FINISHED,
+        FAILED
+    };
 
-    inline void set_recv_hdr(const Request *hdr)
-    {
-        // Only done if state is INACTIVE
-        // Meaning GUI cannot be reading this before then
-        this->hdr = *hdr;
-    }
+    struct Transfer_Data {
+        std::atomic<Transfer_State> state;
+        std::atomic<u32> progress;
+        Request hdr;
+        std::FILE* file;
+        Users_List users;
+        std::thread thread;
+        std::mutex lock;
+        std::condition_variable cond;
+    };
 
-    bool set_send_hdr(const char* fname, Request* req)
-    {
-        std::FILE* temp = std::fopen(fname, "r");
+    void cleanup();
+    inline void add_network(Network* net) { network = net; }
+    bool create_send(const char* fname, Users_List users);
+    bool create_recv(const Request *r_hdr, UserId from);
+    void fail_recv();
+    void accept_request();
+    void got_response(const Msg* msg);
+    void push_msg(const Msg* msg);
 
-        if (!temp)
-            return false;
-
-        std::fseek(temp, 0, SEEK_END);
-        i64 size = std::ftell(temp);
-        std::rewind(temp);
-        std::fclose(temp);
-
-        std::strncpy(hdr.file_name, fname, MAX_FILE_NAME);
-        hdr.file_size = size;
-        hdr.packets = std::ceil(((double)size / PACKET_MAX_SIZE));
-        *req = hdr;
-
-        return true;
-    }
-
-    inline void start_transfer(const char* name=NULL)
-    {
-        // Add later downloade directory for quickshare
-        Transfer_State s = state.load();
-        const char* mode;
-
-        assert(s == Transfer_State::SENDING || s == Transfer_State::RECEVING);
-
-        if (s == Transfer_State::SENDING)
-            mode = "rb";
-        else
-            mode = "wb";
-
-        if (!name)
-            out_file = fopen(hdr.file_name, mode);
-        else
-            out_file = fopen(name, mode);
-        recv_packets = 0;
-    }
-
-    inline void end_transfer()
-    {
-        std::fclose(out_file);
-    }
-
-    void write(const Msg& msg)
-    {
-        recv_packets.fetch_add(1, std::memory_order_relaxed);
-        std::fwrite((char*)&msg.packet.bytes, sizeof(char), msg.packet.packet_size, out_file);
-        LOGF("Recieved %u / %u packets\n", recv_packets.load(std::memory_order_relaxed), hdr.packets);
-    }
-
-    bool read(Msg& msg)
-    {
-        bool more = true;
-        u32 i;
-        // read from file and package into packet
-        for (i = 0; i < sizeof(msg.packet.bytes); i++) {
-            i32 c = std::fgetc(out_file);
-            if (c != EOF)
-                msg.packet.bytes[i] = c;
-            else {
-                more = false;
-                break;
-            }
-        }
-        msg.packet.packet_size = i;
-        recv_packets.fetch_add(1, std::memory_order_relaxed);
-
-        return more;
-    }
+    // Make private add api to control
+    Transfer_Data s_data{};
+    Transfer_Data r_data{};
 
 private:
-    std::atomic<Transfer_State> state{INACTIVE};
-    std::atomic<u32> recv_packets{0};
-    std::FILE *out_file;
-    Request hdr;
+    Msg* temp_msg;
+    // Queue r_msg_queue;
+    rigtorp::SPSCQueue<Msg> r_msg_queue;
+    void send_loop();
+    void send_packets();
+    void recv_loop();
+
+    Network* network;
 };
