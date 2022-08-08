@@ -57,7 +57,7 @@ int main(const int argc, const char* argv[])
             case 'e': return 0;
             case 's': {
                 UserId id;
-                char fname[] = "../test_files/4kimage.jpg";
+                char fname[] = "../test_files/big.txt";
                 scanf("%lld", &id);
                 Users_List a = {std::make_pair(id, Msg::INVALID)};
                 printf("Sending '%s' to '%lld'\n", fname, id);

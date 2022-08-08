@@ -14,7 +14,7 @@ struct Client {
         COMPLETE
     } state;
     UserId id;
-    wchar_t name[CLIENT_NAME_LEN];
+    char name[CLIENT_NAME_LEN];
     struct sockaddr_in addr;
     socket_t socket;
 };
@@ -86,6 +86,8 @@ private:
     void send_client_list();
     void analize_request(const Msg* msg, Client* cli);
     void analize_packet(const Msg* msg, Client* cli);
+    void accept_client();
+    void recv_msg(socket_t sock);
 
     /* Client message handlers */
     void handle_request(const Msg* msg, Client* cli);

@@ -9,10 +9,32 @@
     return; \
 }
 
-static void get_comp_name(TCHAR buffer[CLIENT_NAME_LEN])
+static void get_comp_name(char buffer[CLIENT_NAME_LEN])
 {
+#ifdef SYSTEM_WIN_64
     DWORD buf_size = CLIENT_NAME_LEN;
-    GetComputerName(buffer, &buf_size);
+    GetComputerName((TCHAR*)buffer, &buf_size);
+#elif defined(SYSTEM_UNX)
+    gethostname(buffer, CLIENT_NAME_LEN);
+#endif
+}
+
+static void os_close_socket(socket_t sock)
+{
+#ifdef SYSTEM_WIN_64
+    closesocket(sock);
+#elif defined(SYSTEM_UNX)
+    close(sock);
+#endif
+}
+
+static void os_sleep(u32 sec)
+{
+#ifdef SYSTEM_WIN_64
+    Sleep(sec * 1000);
+#elif defined(SYSTEM_UNX)
+    sleep(sec);
+#endif
 }
 
 Network::Network(File_Sharing* f) : f_manager(f)
@@ -34,17 +56,13 @@ void Network::cleanup()
 	if (is_server)
     	FD_CLR(tcp_socket, &master_fds);
 #ifdef SYSTEM_WIN_64
-    closesocket(tcp_socket);
     WSACleanup();
-#elif defined(SYSTEM_UNX)
-    close(tcp_socket);
 #endif
+    os_close_socket(tcp_socket);
 	if (is_server) {
-		while (master_fds.fd_count > 0) {
-			socket_t sock = master_fds.fd_array[0];
-			FD_CLR(sock, &master_fds);
-			closesocket(sock);
-		}
+		for (const auto& c : db->client_list)
+            if (c.state == Client::COMPLETE)
+                os_close_socket(c.socket);
 	}
     db->cleanup();
     f_manager->cleanup();
@@ -66,7 +84,7 @@ void Network::close_connection(socket_t socket)
 	
 	// Remove from database and close connection
 	db->remove_client(socket);
-	closesocket(socket);
+	os_close_socket(socket);
 	FD_CLR(socket, &master_fds);
 	send_client_list();
 }
@@ -105,7 +123,7 @@ bool Network::send_to_id(Msg* msg, UserId to)
 void Network::create_server_client()
 {
     Client* const host_client = db->new_client(&server_addr, tcp_socket);
-    get_comp_name((TCHAR*)host_client->name);
+    get_comp_name(host_client->name);
     host_client->state = Client::COMPLETE;
     this->my_id = host_client->id;
 }
@@ -122,7 +140,8 @@ bool Network::init_socket()
         return false;
 
     server_addr.sin_family = AF_INET;
-	server_addr.sin_addr.s_addr = inet_addr("127.0.0.1");
+	// server_addr.sin_addr.s_addr = INADDR_ANY;
+    server_addr.sin_addr.s_addr = inet_addr("127.0.0.1");
 	server_addr.sin_port = htons(STATIC_SERVER_PORT);
 
     if (bind(tcp_socket, (struct sockaddr*)&server_addr, sizeof(server_addr)) < 0) {
@@ -151,7 +170,7 @@ void Network::try_connect()
                     (struct sockaddr*)&server_addr, 
                     sizeof(server_addr)) < 0) {
             state.store(FAILED_CONNECTION, std::memory_order_relaxed); 
-            Sleep(2000);
+            os_sleep(2);
         }
         else {
             LOG("Connected to server!\n");
@@ -166,7 +185,7 @@ void Network::network_loop()
         for (;;) {
             while (!init_socket()) {
                 P_ERROR("Socket connection failed, retrying...\n");
-                Sleep(2000);
+                os_sleep(2);
             }
 
             if (is_server)
@@ -185,8 +204,8 @@ void Network::cli_loop()
 {
 	// Send computers name
 	temp_msg_buf->hdr.type = Msg::NAME_SEND;
-	std::strcpy((char*)temp_msg_buf->buffer, "Maks");
-	send_to_id(temp_msg_buf, 0);
+	std::strcpy((char*)temp_msg_buf->name, "Maks");
+	send_to_id(temp_msg_buf, 0); // check state
 
 	for (;;) {
 		i32 r_res = recv(tcp_socket, (char*)temp_msg_buf, sizeof(Msg), MSG_WAITALL);
@@ -203,7 +222,7 @@ void Network::cli_loop()
 				for (u32 i = 0; i < temp_msg_buf->list.client_count; i++) {
 					db->client_list[i].state = Client::COMPLETE;
 					db->client_list[i].id = temp_msg_buf->list.clients[i].id;
-					std::wcsncpy(db->client_list[i].name, 
+					std::strncpy(db->client_list[i].name, 
 								temp_msg_buf->list.clients->name, 
 								CLIENT_NAME_LEN);
 				}
@@ -225,30 +244,7 @@ void Network::cli_loop()
 				break;
 			}
 		}
-
 	}
-
-    // /*  SEND REQUEST                           */
-    // Users_List a = {std::make_pair(other, Msg::INVALID)};
-    // f_manager->create_send("text.txt", a);
-
-	// /* TEST FAIL SEND */
-	// // f_manager->fail_send();
-
-    // /*  RECEIVE ACCEPT                           */
-    // r_res = recv(tcp_socket, (char*)&msg, sizeof(Msg), MSG_WAITALL);
-    // assert(s_res != SOCKET_ERROR && s_res == sizeof(Msg));
-    // assert(msg.hdr.type == Msg::ACCEPTED);
-
-    // // Find from who we recieved accept
-    // f_manager->s_data.lock.lock();
-    // auto& l = f_manager->s_data.users.front();
-    // l.second = msg.hdr.type;
-    // f_manager->s_data.lock.unlock();
-    // f_manager->s_data.cond.notify_all();
-    
-    // getchar();
-    // exit(1);
 }
 
 void Network::server_analize_msg(const Msg* msg, socket_t socket)
@@ -345,7 +341,7 @@ void Network::analize_request(const Msg* msg, Client* cli)
 void Network::client_list_msg(const Msg* msg, Client* cli)
 {
     // Complete client by adding name
-    std::wcsncpy(cli->name, (wchar_t*)msg->buffer, CLIENT_NAME_LEN);
+    std::strncpy(cli->name, (char*)msg->name, CLIENT_NAME_LEN);
     cli->state = Client::COMPLETE;
 
     LOGF("Client init complete \"%s\"\n", (char*)cli->name);
@@ -362,46 +358,57 @@ void Network::server_loop()
     for (;;) {
         work_fds = master_fds;
         
-        const i32 res = select(0, &work_fds, NULL, NULL, NULL);
+        const i32 nready = select(FD_SETSIZE, &work_fds, NULL, NULL, NULL);
 
-        if (res < 0) {
+        if (nready < 0) {
             P_ERROR("Error occured after select...\n");
             EXIT_LOOP();
         }
 
-        for (i32 i = 0; i < res; i++) {
-            socket_t sock = work_fds.fd_array[i];
-
-            if (sock == tcp_socket) {
-                struct sockaddr_in addr;
-                int len = sizeof(addr);
-
-                socket_t client = accept(tcp_socket, (struct sockaddr*)&addr, &len);
-
-                if (db->full()) {
-                    LOGF("Client rejected '%s:%d'\n", inet_ntoa(addr.sin_addr), addr.sin_port);
-                    closesocket(client);
-                }
-                else {
-                    FD_SET(client, &master_fds);
-                    (void)db->new_client(&addr, client);
-                    // db->debug_clients();
-                }
+        for (i32 i = 0; i < nready; i++) {
+            if (FD_ISSET(tcp_socket, &work_fds)) {
+                accept_client();
             }
             else {
-                static Msg buf = {};
-
-                i32 recv_bytes = recv(sock, (char*)&buf, sizeof(Msg), MSG_WAITALL);
-
-                if (recv_bytes <= 0) {
-                    LOG("Closing connection on recv...\n");
-                    close_connection(sock);
-                }
-                else {
-                    assert(recv_bytes == sizeof(Msg));
-                    server_analize_msg(&buf, sock);
+                for (const auto& c : db->client_list) {
+                    if (c.state != Client::EMPTY && FD_ISSET(c.socket, &work_fds))
+                        recv_msg(c.socket);
                 }
             }
         }
+    }
+}
+
+void Network::recv_msg(socket_t sock)
+{
+    static Msg buf = {};
+
+    i32 recv_bytes = recv(sock, (char*)&buf, sizeof(Msg), MSG_WAITALL);
+
+    if (recv_bytes <= 0) {
+        LOG("Closing connection on recv...\n");
+        close_connection(sock);
+    }
+    else {
+        assert(recv_bytes == sizeof(Msg));
+        server_analize_msg(&buf, sock);
+    }
+}
+
+void Network::accept_client()
+{
+    struct sockaddr_in addr = {};
+    int len = sizeof(addr);
+
+    socket_t client = accept(tcp_socket, (struct sockaddr*)&addr, &len);
+
+    if (db->full()) {
+        LOGF("Client rejected '%s:%d'\n", inet_ntoa(addr.sin_addr), addr.sin_port);
+        closesocket(client);
+    }
+    else {
+        FD_SET(client, &master_fds);
+        (void)db->new_client(&addr, client);
+        // db->debug_clients();
     }
 }

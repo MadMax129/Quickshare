@@ -4,7 +4,7 @@
 #include <algorithm>
 #include <iterator>
 
-File_Sharing::File_Sharing() : r_msg_queue(MAX_RECV_QUEUE_SIZE)
+File_Sharing::File_Sharing() : r_msg_queue(MAX_RECV_QUEUE_SIZE+64)
 {
     s_data.thread = std::thread(&File_Sharing::send_loop, this);
     s_data.thread.detach();

@@ -38,12 +38,6 @@ typedef std::uint16_t u16;
 typedef std::uint32_t u32;
 typedef std::uint64_t u64;
 
-/* Defines the max number of clients accepted */
-#define MAX_CLIENTS 16
-
-/* Max length for display computer host name */
-#define CLIENT_NAME_LEN 16
-
 #ifdef SYSTEM_WIN_64
 #   define PATH_TO_DATA "C:\\Users\\%s\\AppData\\Local\\Quickshare"
 #endif

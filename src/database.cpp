@@ -113,7 +113,7 @@ void Database::create_msg(Msg* msg, const Client* cli)
     for (const Client& c : client_list) {
         if (c.state == Client::COMPLETE && c.id != cli->id) {
             msg->list.clients[i].id = c.id;
-            std::wcsncpy(msg->list.clients[i].name, c.name, CLIENT_NAME_LEN);
+            std::strncpy(msg->list.clients[i].name, c.name, CLIENT_NAME_LEN);
             ++i;
         }
     }
