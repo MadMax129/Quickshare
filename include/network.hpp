@@ -1,8 +1,14 @@
 #pragma once
 
-#include <WS2tcpip.h>
-#include <winsock2.h>
 #include "quickshare.hpp"
+#ifdef SYSTEM_WIN_64
+#   include <WS2tcpip.h>
+#   include <winsock2.h>
+#elif defined(SYSTEM_UNX)
+#   include <sys/socket.h>
+#   include <unistd.h>
+#   include <arpa/inet.h>
+#endif
 #include "msg.hpp"
 #include <atomic>
 #include <thread>

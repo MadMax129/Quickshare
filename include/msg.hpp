@@ -72,6 +72,6 @@ struct Msg {
 
         u8 buffer[PACKET_MAX_SIZE - sizeof(hdr)];
     };
-};
+} __attribute__((packed));
 
 static_assert(sizeof(Msg) == PACKET_MAX_SIZE);

@@ -40,6 +40,8 @@ typedef std::uint64_t u64;
 
 #ifdef SYSTEM_WIN_64
 #   define PATH_TO_DATA "C:\\Users\\%s\\AppData\\Local\\Quickshare"
+#elif defined(SYSTEM_UNX)
+#   define PATH_TO_DATA "./"
 #endif
 
 #if defined(SYSTEM_UNX)
@@ -87,7 +89,7 @@ static inline void _colored_print(void* color, const char* str, ...)
     hConsole = GetStdHandle(STD_OUTPUT_HANDLE);
     SetConsoleTextAttribute(hConsole, (INT_PTR)color);
 #elif defined(SYSTEM_UNX)
-    std::fprintf(stdout, "%s", color);
+    std::fprintf(stdout, "%s", (char*)color);
 #endif
 	std::vfprintf(stdout, str, ap);
 #if defined(SYSTEM_WIN_64)
