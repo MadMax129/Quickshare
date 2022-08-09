@@ -4,7 +4,9 @@
 #   include <winsock2.h>
 #   include <WS2tcpip.h>
 #elif defined(SYSTEM_UNX)
-// get the includes
+#   include <sys/socket.h>
+#   include <unistd.h>
+#   include <arpa/inet.h>
 #endif
 
 /* Test most efficient packet send size tcp 
@@ -21,7 +23,7 @@ struct Info {
 #ifdef SYSTEM_WIN_64
     SOCKET sock;
 #elif defined(SYSTEM_UNX)
-    int tcp_socket;
+    int sock;
 #endif
     struct sockaddr_in addr;
     int len;
@@ -51,7 +53,7 @@ void server()
     // Accept client
     Info other;
     other.len = sizeof(other.addr);
-    other.sock = accept(me.sock, (struct sockaddr*)&other.addr, &other.len);
+    other.sock = accept(me.sock, (struct sockaddr*)&other.addr, (socklen_t*)&other.len);
 
     if (other.sock < 0) {
         P_ERROR("Accept error\n");
@@ -169,10 +171,12 @@ void client()
 
 int main() 
 {
+#ifdef SYSTEM_WIN
     if (WSAStartup(MAKEWORD(2,2), &ctx.wsa_data) != 0) {
 		P_ERROR("WSAStartup\n");
         exit(1);
     }
+#endif
 
     for (u32 i = 0; i < 2; i++) {
         auto &c = ctx.client[i];
@@ -201,7 +205,7 @@ int main()
     }
 
     std::thread srv(server);
-    Sleep(1000);
+    sleep(1);
     std::thread cli(client);
 
     cli.join();
@@ -211,7 +215,7 @@ int main()
     closesocket(ctx.client[0].sock);
     closesocket(ctx.client[1].sock);
     WSACleanup();
-#elif SYSTEM_UNX
+#elif defined(SYSTEM_UNX)
     close(ctx.client[0].sock);
     close(ctx.client[1].sock);
 #endif

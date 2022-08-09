@@ -141,7 +141,7 @@ bool Network::init_socket()
 
     server_addr.sin_family = AF_INET;
 	// server_addr.sin_addr.s_addr = INADDR_ANY;
-    server_addr.sin_addr.s_addr = inet_addr("127.0.0.1");
+    server_addr.sin_addr.s_addr = inet_addr("192.168.1.204");
 	server_addr.sin_port = htons(STATIC_SERVER_PORT);
 
     if (bind(tcp_socket, (struct sockaddr*)&server_addr, sizeof(server_addr)) < 0) {
@@ -235,7 +235,7 @@ void Network::cli_loop()
 			case Msg::ACCEPTED: {
 				if (temp_msg_buf->hdr.recipient_id != my_id) {
 					P_ERRORF("Got invalid accept message hdr:\n"
-							"\tFrom %lld\n\tTo %lld\n", 
+							"\tFrom %ld\n\tTo %ld\n", 
 							temp_msg_buf->hdr.sender_id,
 							temp_msg_buf->hdr.recipient_id);
 					break;
@@ -303,10 +303,10 @@ void Network::handle_request(const Msg* msg, Client* cli)
     // Send message through queue to gui
     LOGF(
         "Transfer request:\n"
-        "\tFrom:   [%lld] %s\n"
+        "\tFrom:   [%ld] %s\n"
         "\tFile:  \"%s\"\n"
-        "\tSize:   %llu\n"
-        "\tPacket: %llu\n",
+        "\tSize:   %lu\n"
+        "\tPacket: %lu\n",
         cli->id, (char*)cli->name,
         msg->request.file_name,
         msg->request.file_size,
@@ -322,7 +322,7 @@ void Network::handle_request(const Msg* msg, Client* cli)
     temp_msg_buf->hdr.type = Msg::ACCEPTED;
     temp_msg_buf->hdr.sender_id = my_id;
     temp_msg_buf->hdr.recipient_id = cli->id;
-    assert(send(cli->socket, (char*)temp_msg_buf, sizeof(Msg), 0) != SOCKET_ERROR);
+    assert(send(cli->socket, (char*)temp_msg_buf, sizeof(Msg), 0) > 0);
     //////////////////////////////////////////////////////////
 }
 
@@ -400,11 +400,11 @@ void Network::accept_client()
     struct sockaddr_in addr = {};
     int len = sizeof(addr);
 
-    socket_t client = accept(tcp_socket, (struct sockaddr*)&addr, &len);
+    socket_t client = accept(tcp_socket, (struct sockaddr*)&addr, (socklen_t*)&len);
 
     if (db->full()) {
         LOGF("Client rejected '%s:%d'\n", inet_ntoa(addr.sin_addr), addr.sin_port);
-        closesocket(client);
+        os_close_socket(client);
     }
     else {
         FD_SET(client, &master_fds);

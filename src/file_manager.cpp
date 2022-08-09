@@ -6,14 +6,14 @@
 
 File_Sharing::File_Sharing() : r_msg_queue(MAX_RECV_QUEUE_SIZE+64)
 {
+    temp_msg = new Msg;
+    std::memset(temp_msg, 0, sizeof(Msg));
+
     s_data.thread = std::thread(&File_Sharing::send_loop, this);
     s_data.thread.detach();
 
     r_data.thread = std::thread(&File_Sharing::recv_loop, this);
     r_data.thread.detach();
-
-    temp_msg = new Msg;
-    std::memset(temp_msg, 0, sizeof(Msg));
 }
 
 File_Sharing::~File_Sharing() 
@@ -38,6 +38,8 @@ bool File_Sharing::create_send(const char* fname, Users_List users)
 
     s_data.users = users;
     s_data.file = std::fopen(fname, "rb");
+    if (!s_data.file)
+        return false;
     std::fseek(s_data.file, 0, SEEK_END);
     s_data.hdr.file_size = std::ftell(s_data.file);
     std::rewind(s_data.file);
@@ -65,12 +67,13 @@ void File_Sharing::send_loop()
         msg->hdr.sender_id = network->my_id;
         std::memcpy(&msg->request, &s_data.hdr, sizeof(Request));
 
+        // segfault somewhere here
         for (auto& user : s_data.users) {
-            LOGF("Sending request message to '%lld'\n", user.first);
+            LOGF("Sending request message to '%ld'\n", user.first);
 
             msg->hdr.recipient_id = user.first;
             if (!network->send_to_id(msg, user.first)) {
-                LOGF("Rejecting '%lld' due to disconnection...\n", user.first);
+                LOGF("Rejecting '%ld' due to disconnection...\n", user.first);
                 user.second = Msg::REJECTED;
             }
         }
@@ -87,7 +90,7 @@ void File_Sharing::send_loop()
 
         LOG("Got responses\n");
         for (auto &u : s_data.users)
-            LOGF("\t'%lld' -> %s\n", 
+            LOGF("\t'%ld' -> %s\n", 
                 u.first, 
                 u.second == Msg::ACCEPTED 
                 ? "Accepted" : "Rejected");
@@ -140,7 +143,7 @@ void File_Sharing::send_packets()
 
             if (user.second == Msg::ACCEPTED) {
                 if (!network->send_to_id(temp_msg, user.first)) {
-                    LOGF("Failed to send a packet, user '%lld' is now rejected\n", user.first);
+                    LOGF("Failed to send a packet, user '%ld' is now rejected\n", user.first);
                     user.second = Msg::REJECTED;
                 }
             }
@@ -168,8 +171,6 @@ bool File_Sharing::create_recv(const Request *r_hdr, UserId from)
 
 void File_Sharing::push_msg(const Msg* msg)
 {
-    // causing massive leak for some reason, I HAVE NO CLUE WHY
-    // printf("==>%d\n", msg->packet.packet_size);
     if (!r_msg_queue.try_push(*msg)) {
         P_ERRORF("Push failed at %u\n", r_data.progress.load());
         exit(1);
