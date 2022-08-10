@@ -1,79 +1,49 @@
 # Quickshare
 > Creating a network which brings all your necessities together
 
-[![Contributors][contributors-shield]][contributors-url]
+<!-- [![Contributors][contributors-shield]][contributors-url]
 [![Stargazers][stars-shield]][stars-url]
 [![Issues][issues-shield]][issues-url]
-[![MIT License][license-shield]][license-url]
+[![MIT License][license-shield]][license-url] -->
 
 <img src="images/full_logo.png" width="250" height="290"/>
+<br />
+<br />
 
 <!-- ABOUT THE PROJECT -->
-## About The Project
+# About The Project
 
 <!-- Add screen shot of gui -->
 [![Product Name Screen Shot][product-screenshot]](https://example.com)
 
 Quickshare is a tool that intends to simplify and speed up the process of sharing files, especially on local networks. We all have been stuck with the issue of quickly sharing files/folder onto other devices in the house, and therefore quickshare aims at tackling that issue.
-<!-- <p align="right">(<a href="#readme-top">back to top</a>)</p> -->
-### Built With
+<br />
+<br />
 
-![C++][C++]
+# Built With
 
-[![ImGUI][ImGUI]][imgui-url]
+<img src="https://upload.wikimedia.org/wikipedia/commons/1/18/ISO_C%2B%2B_Logo.svg" width=100 height=100>
+
+<img src="https://cloud.githubusercontent.com/assets/8225057/9825766/8b0de6c8-58cd-11e5-960f-0eeed4004d6c.png" width=300 height=100>
+<br />
+<br />
 
 <!-- GETTING STARTED -->
-## Getting Started
+# Getting Started
 
-This is an example of how you may give instructions on setting up your project locally.
-To get a local copy up and running follow these simple example steps.
-
-### Prerequisites
-
-This is an example of how to list things you need to use the software and how to install them.
-* npm
-  ```sh
-  npm install npm@latest -g
-  ```
-
-### Installation
-
-_Below is an example of how you can instruct your audience on installing and setting up your app. This template doesn't rely on any external dependencies or services._
-
-1. Get a free API Key at [https://example.com](https://example.com)
-2. Clone the repo
-   ```sh
-   git clone https://github.com/your_username_/Project-Name.git
-   ```
-3. Install NPM packages
-   ```sh
-   npm install
-   ```
-4. Enter your API in `config.js`
-   ```js
-   const API_KEY = 'ENTER YOUR API';
-   ```
-
-<p align="right">(<a href="#readme-top">back to top</a>)</p>
-
-
+To get started head over to the [releases](https://github.com/MadMax129/Quickshare/releases/) page and select the latest release for your platform. This will provide the application executable and will contain all you need to get started with Quickshare.
 
 <!-- USAGE EXAMPLES -->
 ## Usage
 
-Use this space to show useful examples of how a project can be used. Additional screenshots, code examples and demos work well in this space. You may also link to more resources.
+A simple example of ussage maybe add a gif....
 
 _For more examples, please refer to the [Documentation](https://example.com)_
-
-<p align="right">(<a href="#readme-top">back to top</a>)</p>
-
-
+<br />
+<br />
 
 <!-- ROADMAP -->
-## Roadmap
-
-- [x] Add Changelog
-- [x] Add back to top links
+# Roadmap
 - [ ] Add Additional Templates w/ Examples
 - [ ] Add "components" document to easily copy & paste sections of the readme
 - [ ] Multi-language Support
@@ -81,10 +51,6 @@ _For more examples, please refer to the [Documentation](https://example.com)_
     - [ ] Spanish
 
 See the [open issues](https://github.com/othneildrew/Best-README-Template/issues) for a full list of proposed features (and known issues).
-
-<p align="right">(<a href="#readme-top">back to top</a>)</p>
-
-
 
 <!-- CONTRIBUTING -->
 ## Contributing
@@ -100,18 +66,10 @@ Don't forget to give the project a star! Thanks again!
 4. Push to the Branch (`git push origin feature/AmazingFeature`)
 5. Open a Pull Request
 
-<p align="right">(<a href="#readme-top">back to top</a>)</p>
-
-
-
 <!-- LICENSE -->
 ## License
 
-Distributed under the MIT License. See `LICENSE.txt` for more information.
-
-<p align="right">(<a href="#readme-top">back to top</a>)</p>
-
-
+Distributed under the Apache 2.0 License. See `LICENSE` for more information.
 
 <!-- CONTACT -->
 ## Contact
@@ -119,10 +77,6 @@ Distributed under the MIT License. See `LICENSE.txt` for more information.
 Your Name - [@your_twitter](https://twitter.com/your_username) - email@example.com
 
 Project Link: [https://github.com/your_username/repo_name](https://github.com/your_username/repo_name)
-
-<p align="right">(<a href="#readme-top">back to top</a>)</p>
-
-
 
 <!-- ACKNOWLEDGMENTS -->
 ## Acknowledgments
@@ -138,27 +92,20 @@ Use this space to list resources you find helpful and would like to give credit 
 * [Font Awesome](https://fontawesome.com)
 * [React Icons](https://react-icons.github.io/react-icons/search)
 
-<p align="right">(<a href="#readme-top">back to top</a>)</p>
-
-
 
 <!-- MARKDOWN LINKS & IMAGES -->
 <!-- https://www.markdownguide.org/basic-syntax/#reference-style-links -->
-[contributors-shield]: https://img.shields.io/github/contributors/othneildrew/Best-README-Template.svg?style=for-the-badge
-[contributors-url]: https://github.com/othneildrew/Best-README-Template/graphs/contributors
-[forks-shield]: https://img.shields.io/github/forks/othneildrew/Best-README-Template.svg?style=for-the-badge
-[forks-url]: https://github.com/othneildrew/Best-README-Template/network/members
-[stars-shield]: https://img.shields.io/github/stars/othneildrew/Best-README-Template.svg?style=for-the-badge
-[stars-url]: https://github.com/othneildrew/Best-README-Template/stargazers
-[issues-shield]: https://img.shields.io/github/issues/othneildrew/Best-README-Template.svg?style=for-the-badge
-[issues-url]: https://github.com/othneildrew/Best-README-Template/issues
-[license-shield]: https://img.shields.io/github/license/othneildrew/Best-README-Template.svg?style=for-the-badge
-[license-url]: https://github.com/othneildrew/Best-README-Template/blob/master/LICENSE.txt
-[linkedin-shield]: https://img.shields.io/badge/-LinkedIn-black.svg?style=for-the-badge&logo=linkedin&colorB=555
-[linkedin-url]: https://linkedin.com/in/othneildrew
+[contributors-shield]: https://img.shields.io/github/contributors/MadMax129/Quickshare.svg?style=for-the-badge
+[stars-shield]: https://img.shields.io/github/stars/MadMax129/Quickshare.svg?style=for-the-badge
+[issues-shield]: https://img.shields.io/github/issues/MadMax129/Quickshare.svg?style=for-the-badge
+[license-shield]: https://img.shields.io/github/license/MadMax129/Quickshare.svg?style=for-the-badge
+
+[contributors-url]: https://github.com/MadMax129/Quickshare/graphs/contributors
+[stars-url]: https://github.com/MadMax129/Quickshare/stargazers
+[issues-url]: https://github.com/MadMax129/Quickshare/issues
+[license-url]: https://github.com/MadMax129/Quickshare/blob/master/LICENSE
+
 [product-screenshot]: images/screenshot.png
-
-
 [C++]: https://upload.wikimedia.org/wikipedia/commons/1/18/ISO_C%2B%2B_Logo.svg
 [ImGUI]: https://cloud.githubusercontent.com/assets/8225057/9825766/8b0de6c8-58cd-11e5-960f-0eeed4004d6c.png
 [imgui-url]: https://github.com/ocornut/imgui

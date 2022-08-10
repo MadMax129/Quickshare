@@ -1,10 +1,29 @@
+/** @file file_manager.cpp
+ * 
+ * @brief File sharing module
+ *      
+ * Copyright (c) 2022 Maks S.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */ 
+
 #include "file_manager.hpp"
 #include <cstring>
 #include <string>
 #include <algorithm>
 #include <iterator>
 
-File_Sharing::File_Sharing() : r_msg_queue(MAX_RECV_QUEUE_SIZE+64)
+File_Sharing::File_Sharing() : r_msg_queue(MAX_RECV_QUEUE_SIZE)
 {
     temp_msg = new Msg;
     std::memset(temp_msg, 0, sizeof(Msg));
@@ -16,10 +35,7 @@ File_Sharing::File_Sharing() : r_msg_queue(MAX_RECV_QUEUE_SIZE+64)
     r_data.thread.detach();
 }
 
-File_Sharing::~File_Sharing() 
-{
-    delete temp_msg;
-}
+File_Sharing::~File_Sharing() { }
 
 void File_Sharing::cleanup()
 {
@@ -50,29 +66,27 @@ bool File_Sharing::create_send(const char* fname, Users_List users)
     s_data.state.store(Transfer_State::REQUESTED, std::memory_order_relaxed);
     s_data.progress.store(0, std::memory_order_relaxed);
 
+
     s_data.cond.notify_one();
 
     return true;
 }
 
 void File_Sharing::send_loop()
-{
-    Msg* const msg = temp_msg;
-
+{   
     for (;;) {
         std::unique_lock<std::mutex> lk(s_data.lock);
         s_data.cond.wait(lk);
         
-        msg->hdr.type = Msg::REQUEST;
-        msg->hdr.sender_id = network->my_id;
-        std::memcpy(&msg->request, &s_data.hdr, sizeof(Request));
+        temp_msg->hdr.type = Msg::REQUEST;
+        temp_msg->hdr.sender_id = network->my_id;
+        std::memcpy(&temp_msg->request, &s_data.hdr, sizeof(Request));
 
-        // segfault somewhere here
         for (auto& user : s_data.users) {
             LOGF("Sending request message to '%ld'\n", user.first);
 
-            msg->hdr.recipient_id = user.first;
-            if (!network->send_to_id(msg, user.first)) {
+            temp_msg->hdr.recipient_id = user.first;
+            if (!network->send_to_id(temp_msg, user.first)) {
                 LOGF("Rejecting '%ld' due to disconnection...\n", user.first);
                 user.second = Msg::REJECTED;
             }

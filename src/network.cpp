@@ -1,8 +1,28 @@
+/** @file network.cpp
+ * 
+ * @brief Network module
+ *      
+ * Copyright (c) 2022 Maks S.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */ 
+
 #include "network.hpp"
 #include "quickshare.hpp"
 #include <assert.h>
 #include "file_manager.hpp"
 #include <cstring>
+#include "allocation.hpp"
 
 #define EXIT_LOOP() { \
     state.store(FAILED_CONNECTION, std::memory_order_relaxed); \
@@ -11,12 +31,7 @@
 
 static void get_comp_name(char buffer[CLIENT_NAME_LEN])
 {
-#ifdef SYSTEM_WIN_64
-    DWORD buf_size = CLIENT_NAME_LEN;
-    GetComputerName((TCHAR*)buffer, &buf_size);
-#elif defined(SYSTEM_UNX)
     gethostname(buffer, CLIENT_NAME_LEN);
-#endif
 }
 
 static void os_close_socket(socket_t sock)
@@ -39,6 +54,9 @@ static void os_sleep(u32 sec)
 
 Network::Network(File_Sharing* f) : f_manager(f)
 {
+    // temp_msg_buf = (Msg*)memory.get(Allocation::NETWORK_MSG);
+    // db = (Database*)memory.get();
+
     temp_msg_buf = new Msg;
     db = new Database;
 }
@@ -46,8 +64,6 @@ Network::Network(File_Sharing* f) : f_manager(f)
 Network::~Network()
 {
     cleanup();
-    delete temp_msg_buf;
-    delete db;
 }
 
 void Network::cleanup()
@@ -61,7 +77,7 @@ void Network::cleanup()
     os_close_socket(tcp_socket);
 	if (is_server) {
 		for (const auto& c : db->client_list)
-            if (c.state == Client::COMPLETE)
+            if (c.state != Client::EMPTY)
                 os_close_socket(c.socket);
 	}
     db->cleanup();
@@ -141,7 +157,7 @@ bool Network::init_socket()
 
     server_addr.sin_family = AF_INET;
 	// server_addr.sin_addr.s_addr = INADDR_ANY;
-    server_addr.sin_addr.s_addr = inet_addr("192.168.1.204");
+    server_addr.sin_addr.s_addr = inet_addr("127.0.0.1");
 	server_addr.sin_port = htons(STATIC_SERVER_PORT);
 
     if (bind(tcp_socket, (struct sockaddr*)&server_addr, sizeof(server_addr)) < 0) {
@@ -333,6 +349,7 @@ void Network::analize_request(const Msg* msg, Client* cli)
         handle_request(msg, cli);
     }
     else {
+        assert(false);
         // protection against fraudulant id ???
         send_msg(msg, db->get_client_by_id(msg->hdr.recipient_id));
     }

@@ -9,8 +9,9 @@
 #include <utility>
 #include <condition_variable>
 #include "../lib/SPSCQueue.h"
+#include "allocation.hpp"
 
-#define MAX_RECV_QUEUE_SIZE 32
+#define MAX_RECV_QUEUE_SIZE 64
 
 using Users_List = std::list<std::pair<UserId, Msg::Msg_Type>>;
 
@@ -52,7 +53,6 @@ struct File_Sharing {
 
 private:
     Msg* temp_msg;
-    // Queue r_msg_queue;
     rigtorp::SPSCQueue<Msg> r_msg_queue;
     void send_loop();
     void send_packets();
