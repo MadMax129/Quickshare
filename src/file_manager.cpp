@@ -25,8 +25,9 @@
 
 File_Sharing::File_Sharing() : r_msg_queue(MAX_RECV_QUEUE_SIZE)
 {
-    temp_msg = new Msg;
-    std::memset(temp_msg, 0, sizeof(Msg));
+    temp_msg = memory.get_msg(1);
+    s_data.buffer = memory.get_buffer(0);
+    r_data.buffer = memory.get_buffer(1);
 
     s_data.thread = std::thread(&File_Sharing::send_loop, this);
     s_data.thread.detach();
@@ -61,7 +62,7 @@ bool File_Sharing::create_send(const char* fname, Users_List users)
     std::rewind(s_data.file);
     
     std::strncpy((char*)s_data.hdr.file_name, fname, MAX_FILE_NAME - 1);
-    s_data.hdr.packets = std::ceil(((double)s_data.hdr.file_size / sizeof(Msg::packet.bytes)));
+    s_data.hdr.packets = packets_in_file(s_data.hdr.file_size);
 
     s_data.state.store(Transfer_State::REQUESTED, std::memory_order_relaxed);
     s_data.progress.store(0, std::memory_order_relaxed);
@@ -72,22 +73,47 @@ bool File_Sharing::create_send(const char* fname, Users_List users)
     return true;
 }
 
+u64 File_Sharing::packets_in_file(u64 file_size)
+{
+    u64 packets = 0;
+    u64 total_bytes = 0;
+    const u64 n_bufs = (u64)std::ceil((double)file_size / MEGABYTE);
+
+    for (u64 b = 0; b < n_bufs; b++) {
+        u64 b_read = 0;
+        if ((total_bytes + MEGABYTE) > file_size) {
+            b_read = file_size - total_bytes;
+            total_bytes += file_size - total_bytes;
+        }
+        else {
+            total_bytes += MEGABYTE;
+            b_read = MEGABYTE;
+        }
+
+        packets += (u64)std::ceil((double)b_read / sizeof(Msg::packet.bytes));
+    }
+
+    assert(total_bytes == file_size);
+
+    return packets;
+}
+
 void File_Sharing::send_loop()
 {   
     for (;;) {
         std::unique_lock<std::mutex> lk(s_data.lock);
         s_data.cond.wait(lk);
-        
-        temp_msg->hdr.type = Msg::REQUEST;
-        temp_msg->hdr.sender_id = network->my_id;
+
+        MSG_TYPE(temp_msg, Msg::REQUEST);
+        MSG_SENDER(temp_msg, network->my_id);
         std::memcpy(&temp_msg->request, &s_data.hdr, sizeof(Request));
 
         for (auto& user : s_data.users) {
-            LOGF("Sending request message to '%ld'\n", user.first);
+            LOGF("Sending request message to '%lld'\n", user.first);
 
             temp_msg->hdr.recipient_id = user.first;
             if (!network->send_to_id(temp_msg, user.first)) {
-                LOGF("Rejecting '%ld' due to disconnection...\n", user.first);
+                LOGF("Rejecting '%lld' due to disconnection...\n", user.first);
                 user.second = Msg::REJECTED;
             }
         }
@@ -104,7 +130,7 @@ void File_Sharing::send_loop()
 
         LOG("Got responses\n");
         for (auto &u : s_data.users)
-            LOGF("\t'%ld' -> %s\n", 
+            LOGF("\t'%lld' -> %s\n", 
                 u.first, 
                 u.second == Msg::ACCEPTED 
                 ? "Accepted" : "Rejected");
@@ -137,7 +163,55 @@ void File_Sharing::got_response(const Msg* msg)
 
 void File_Sharing::send_packets()
 {
-    // loop over packets requested in hdr
+    const u64 n_reads = (u64)std::ceil(((double)s_data.hdr.file_size / MEGABYTE));
+    
+    for (u32 mb = 0; mb < n_reads; mb++) {
+        const u64 f_read = std::fread(
+            s_data.buffer,
+            sizeof(u8),
+            MEGABYTE,
+            s_data.file
+        );
+
+        const u64 n_packets = (u64)std::ceil((double)f_read / sizeof(Msg::packet.bytes));
+
+        u64 p_progress = 0;
+        for (u64 p = 0; p < n_packets; p++) {
+            MSG_TYPE(temp_msg, Msg::PACKET);
+            MSG_SENDER(temp_msg, network->my_id);
+
+            // Determine packet size
+            if ((p_progress + sizeof(Msg::packet.bytes)) > f_read) {
+                temp_msg->packet.packet_size = f_read - p_progress;
+            }
+            else {
+                p_progress += sizeof(Msg::packet.bytes);
+                temp_msg->packet.packet_size = sizeof(Msg::packet.bytes);
+            }
+
+            // printf("Sending packet %llu size %u\n", p, temp_msg->packet.packet_size);
+
+            std::memcpy(
+                temp_msg->packet.bytes, 
+                s_data.buffer + p * sizeof(Msg::packet.bytes),
+                temp_msg->packet.packet_size
+            );
+
+            for (auto &user : s_data.users) {
+                temp_msg->hdr.recipient_id = user.first;
+
+                if (user.second == Msg::ACCEPTED) {
+                    if (!network->send_to_id(temp_msg, user.first)) {
+                        LOGF("Failed to send a packet, user '%lld' is now rejected\n", user.first);
+                        user.second = Msg::REJECTED;
+                    }
+                }
+            }
+            s_data.progress.fetch_add(1, std::memory_order_relaxed);
+        }
+    }
+
+    /* old fread constantly
     for (u32 packet = 0; packet < s_data.hdr.packets; packet++) {
         std::memset(temp_msg, 0, sizeof(Msg));
         temp_msg->hdr.type = Msg::PACKET;
@@ -157,13 +231,14 @@ void File_Sharing::send_packets()
 
             if (user.second == Msg::ACCEPTED) {
                 if (!network->send_to_id(temp_msg, user.first)) {
-                    LOGF("Failed to send a packet, user '%ld' is now rejected\n", user.first);
+                    LOGF("Failed to send a packet, user '%lld' is now rejected\n", user.first);
                     user.second = Msg::REJECTED;
                 }
             }
         }
         s_data.progress.fetch_add(1, std::memory_order_relaxed);
     }
+    */
 
     std::fclose(s_data.file);
     s_data.state.store(FINISHED, std::memory_order_relaxed);

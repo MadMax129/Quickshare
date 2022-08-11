@@ -16,7 +16,7 @@
 <!-- Add screen shot of gui -->
 [![Product Name Screen Shot][product-screenshot]](https://example.com)
 
-Quickshare is a tool that intends to simplify and speed up the process of sharing files, especially on local networks. We all have been stuck with the issue of quickly sharing files/folder onto other devices in the house, and therefore quickshare aims at tackling that issue.
+Quickshare is a tool that intends to simplify and speed up the process of sharing files, especially on local networks. The reoccuring issue of needing a fast way of file sharing know can come to an end with Quickshare. By creating a user friendly gui, Quickshare allows for easily selecting what to send and where with only a click of a button.
 <br />
 <br />
 
@@ -45,12 +45,13 @@ _For more examples, please refer to the [Documentation](https://example.com)_
 <!-- ROADMAP -->
 # Roadmap
 - [ ] Add Additional Templates w/ Examples
-- [ ] Add "components" document to easily copy & paste sections of the readme
+- [ ] Add folder sharing support
+- [ ] Add ability to host more quickshare servers
 - [ ] Multi-language Support
     - [ ] Chinese
     - [ ] Spanish
 
-See the [open issues](https://github.com/othneildrew/Best-README-Template/issues) for a full list of proposed features (and known issues).
+See the [open issues](https://github.com/MadMax129/Quickshare/issues) for a full list of proposed features (and known issues).
 
 <!-- CONTRIBUTING -->
 ## Contributing
@@ -74,23 +75,9 @@ Distributed under the Apache 2.0 License. See `LICENSE` for more information.
 <!-- CONTACT -->
 ## Contact
 
-Your Name - [@your_twitter](https://twitter.com/your_username) - email@example.com
+Maks S. - email@example.com
 
-Project Link: [https://github.com/your_username/repo_name](https://github.com/your_username/repo_name)
-
-<!-- ACKNOWLEDGMENTS -->
-## Acknowledgments
-
-Use this space to list resources you find helpful and would like to give credit to. I've included a few of my favorites to kick things off!
-
-* [Choose an Open Source License](https://choosealicense.com)
-* [GitHub Emoji Cheat Sheet](https://www.webpagefx.com/tools/emoji-cheat-sheet)
-* [Malven's Flexbox Cheatsheet](https://flexbox.malven.co/)
-* [Malven's Grid Cheatsheet](https://grid.malven.co/)
-* [Img Shields](https://shields.io)
-* [GitHub Pages](https://pages.github.com)
-* [Font Awesome](https://fontawesome.com)
-* [React Icons](https://react-icons.github.io/react-icons/search)
+Project Link: [https://github.com/MadMax129/Quickshare](https://github.com/MadMax129/Quickshare)
 
 
 <!-- MARKDOWN LINKS & IMAGES -->
@@ -105,7 +92,7 @@ Use this space to list resources you find helpful and would like to give credit 
 [issues-url]: https://github.com/MadMax129/Quickshare/issues
 [license-url]: https://github.com/MadMax129/Quickshare/blob/master/LICENSE
 
-[product-screenshot]: images/screenshot.png
+[product-screenshot]: images/demo1.png
 [C++]: https://upload.wikimedia.org/wikipedia/commons/1/18/ISO_C%2B%2B_Logo.svg
 [ImGUI]: https://cloud.githubusercontent.com/assets/8225057/9825766/8b0de6c8-58cd-11e5-960f-0eeed4004d6c.png
 [imgui-url]: https://github.com/ocornut/imgui

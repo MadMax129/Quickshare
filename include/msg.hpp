@@ -21,6 +21,9 @@
     typedef int socket_t;
 #endif
 
+#define MSG_TYPE(msg, mtype) msg->hdr.type = mtype
+#define MSG_SENDER(msg, id) msg->hdr.sender_id = id
+
 typedef time_t UserId;
 
 struct Request {

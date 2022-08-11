@@ -46,6 +46,8 @@ QuickShare::QuickShare()
 QuickShare qs{};
 Allocation memory;
 
+static volatile sig_atomic_t quit = false;
+
 #ifdef SYSTEM_WIN_64
 int WINAPI WinMain(HINSTANCE hInstance,
                    HINSTANCE hPrevInstance,
@@ -55,8 +57,10 @@ int WINAPI WinMain(HINSTANCE hInstance,
 int main(const int argc, const char* argv[])
 #endif
 {
-    if (!memory.try_allocate())
+    if (!memory.try_allocate()) {
+        memory.free();
         return 1;
+    }
 
     File_Sharing f_manager{};
     Network net(&f_manager);
@@ -90,6 +94,5 @@ int main(const int argc, const char* argv[])
     }
 
     memory.free();
-
     return 0;
 }

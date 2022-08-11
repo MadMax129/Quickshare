@@ -54,11 +54,11 @@ static void os_sleep(u32 sec)
 
 Network::Network(File_Sharing* f) : f_manager(f)
 {
-    // temp_msg_buf = (Msg*)memory.get(Allocation::NETWORK_MSG);
-    // db = (Database*)memory.get();
+    temp_msg_buf = memory.get_msg(0);
+    db = memory.get_db();
 
-    temp_msg_buf = new Msg;
-    db = new Database;
+    // temp_msg_buf = new Msg;
+    // db = new Database;
 }
 
 Network::~Network()
@@ -251,7 +251,7 @@ void Network::cli_loop()
 			case Msg::ACCEPTED: {
 				if (temp_msg_buf->hdr.recipient_id != my_id) {
 					P_ERRORF("Got invalid accept message hdr:\n"
-							"\tFrom %ld\n\tTo %ld\n", 
+							"\tFrom %lld\n\tTo %lld\n", 
 							temp_msg_buf->hdr.sender_id,
 							temp_msg_buf->hdr.recipient_id);
 					break;
@@ -319,17 +319,17 @@ void Network::handle_request(const Msg* msg, Client* cli)
     // Send message through queue to gui
     LOGF(
         "Transfer request:\n"
-        "\tFrom:   [%ld] %s\n"
+        "\tFrom:   [%lld] %s\n"
         "\tFile:  \"%s\"\n"
-        "\tSize:   %lu\n"
-        "\tPacket: %lu\n",
+        "\tSize:   %llu\n"
+        "\tPacket: %llu\n",
         cli->id, (char*)cli->name,
         msg->request.file_name,
         msg->request.file_size,
         msg->request.packets
     );
 
-    f_manager->create_recv(&msg->request, cli->id);
+    assert(f_manager->create_recv(&msg->request, cli->id));
     f_manager->accept_request();
 
     // /* Temp hard coded accept */

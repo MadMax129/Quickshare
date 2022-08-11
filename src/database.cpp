@@ -126,12 +126,12 @@ void Database::debug_clients() const
     for (const Client& cli : client_list) {
         if (cli.state != Client::EMPTY) {
             if (cli.state == Client::OPEN) {
-                colored_printf(CL_BLUE, "<...>: #%u\n", cli.id);
+                colored_printf(CL_BLUE, "<...>: #%lld\n", cli.id);
                 colored_print(CL_YELLOW, "\tState: Open\n");
             
             }
             else if (cli.state == Client::COMPLETE) {
-                colored_printf(CL_BLUE, "%s: #%u\n", cli.name, cli.id);
+                colored_printf(CL_BLUE, "%s: #%lld\n", cli.name, cli.id);
                 colored_print(CL_GREEN, "\tState: Completed\n");
             }
             printf("\t'%s:%d'\n", inet_ntoa(cli.addr.sin_addr), cli.addr.sin_port);

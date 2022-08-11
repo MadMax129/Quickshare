@@ -1,3 +1,22 @@
+/** @file network.hpp
+ * 
+ * @brief Network definition
+ *      
+ * Copyright (c) 2022 Maks S.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */ 
+
 #pragma once
 
 #include "quickshare.hpp"
@@ -29,7 +48,7 @@ struct Database {
     Database();
 
     void cleanup();
-    inline bool full() { return client_count == MAX_CLIENTS; }
+    inline bool full() const { return client_count == MAX_CLIENTS; }
     UserId get_id() const;
     Client* new_client(struct sockaddr_in* addr, socket_t sock);
     void remove_client(socket_t sock);

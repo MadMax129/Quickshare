@@ -36,6 +36,7 @@ struct File_Sharing {
         std::thread thread;
         std::mutex lock;
         std::condition_variable cond;
+        u8* buffer;
     };
 
     void cleanup();
@@ -57,6 +58,7 @@ private:
     void send_loop();
     void send_packets();
     void recv_loop();
+    u64 packets_in_file(u64 file_size);
 
     Network* network;
 };
