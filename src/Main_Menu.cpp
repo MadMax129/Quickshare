@@ -1,6 +1,6 @@
 #define NTDDI_VERSION 0x0A000006 //NTDDI_WIN10_RS5
 #define _WIN32_WINNT 0x0A00 // _WIN32_WINNT_WIN10, the _WIN32_WINNT macro must also be defined when defining NTDDI_VERSION
-#include "gui.h"
+#include "gui.hpp"
 #include <array>
 #include <windows.h>
 #include <string>
@@ -39,7 +39,7 @@ void Main_Menu::draw_path()
                     break;
                 }
                 case (false): {
-                    printf("ENCOUNTERED AN ERROR: (%d)\n", GetLastError());
+                    printf("ENCOUNTERED AN ERROR: (%lu)\n", GetLastError());
                     break;
                 }
             }
@@ -190,12 +190,10 @@ void Main_Menu::add_clients(Client_Array &clientList)
 {
     static bool selected[3] { false, false, false};
 
-    for (int i = 0; i < clientList.size(); i++)
+    for (std::size_t i = 0; i < clientList.size(); i++)
     {
         ImGui::Selectable(clientList[i],  &selected[i]);
-        
     }
-    
 }
 
 void Main_Menu::add_event(Transfer_Type type, const char *desc, const char *fname)

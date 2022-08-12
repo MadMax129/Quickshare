@@ -19,15 +19,8 @@
 
 #include "file_manager.hpp"
 #include "network.hpp"
+#include "gui.hpp"
 #include <string>
-
-static void init_qs()
-{
-#ifndef X86_64_CPU
-    colored_print(CL_BLUE, "The platform detected is not x86-64.\n"
-                            "This could have undefined results.\n");
-#endif
-}
 
 QuickShare::QuickShare() 
 {
@@ -41,14 +34,10 @@ QuickShare::QuickShare()
     CreateDirectory(reinterpret_cast<TCHAR*>(temp), NULL);
 #endif
     dir_path = std::string(temp);
-
-    printf("==>%s\n", dir_path.c_str());
 }
 
 QuickShare qs{};
 Allocation memory;
-
-static volatile sig_atomic_t quit = false;
 
 #ifdef SYSTEM_WIN_64
 int WINAPI WinMain(HINSTANCE hInstance,
@@ -66,35 +55,40 @@ int main(const int argc, const char* argv[])
 
     File_Sharing f_manager{};
     Network net(&f_manager);
+    Context ctx(&net);
     f_manager.add_network(&net);
 
-    init_qs();
     net.network_loop();
-
-    for (;;)
-    {
-        printf(
-            "Temporary user menu:\n"
-            "u - View users\n"
-            "e - exit\n"
-            "s - send file\n"
-        );
-        
-        int c = getchar();
-        
-        switch (c) {
-            case 'e': return 0;
-            case 's': {
-                UserId id;
-                char fname[] = "../test_files/4kimage.jpg";
-                (void)scanf("%lld", &id);
-                Users_List a = {std::make_pair(id, Msg::INVALID)};
-                printf("Sending '%s' to '%lld'\n", fname, id);
-                assert(f_manager.create_send(fname, a));
-            }
-        }
+    if (ctx.create_window(WINDOW_WIDTH, WINDOW_HEIGHT, "Quickshare")) {
+        ctx.init_imgui();
+        ctx.main_loop();
     }
 
+    // for (;;)
+    // {
+    //     printf(
+    //         "Temporary user menu:\n"
+    //         "u - View users\n"
+    //         "e - exit\n"
+    //         "s - send file\n"
+    //     );
+        
+    //     int c = getchar();
+        
+    //     switch (c) {
+    //         case 'e': return 0;
+    //         case 's': {
+    //             UserId id;
+    //             char fname[] = "../test_files/4kimage.jpg";
+    //             (void)scanf("%lld", &id);
+    //             Users_List a = {std::make_pair(id, Msg::INVALID)};
+    //             printf("Sending '%s' to '%lld'\n", fname, id);
+    //             assert(f_manager.create_send(fname, a));
+    //         }
+    //     }
+    // }
+
     memory.free();
+
     return 0;
 }

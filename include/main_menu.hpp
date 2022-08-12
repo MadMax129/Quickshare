@@ -29,8 +29,6 @@ public:
     bool open_file();
     void add_event(Transfer_Type type,  const char *desc,  const char *fname);
     void incoming_request(const char *desc, const char *fname);
-    
-    ImVec2 io;
 
 private:
     void draw_path();

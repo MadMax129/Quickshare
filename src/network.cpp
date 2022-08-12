@@ -56,14 +56,18 @@ Network::Network(File_Sharing* f) : f_manager(f)
 {
     temp_msg_buf = memory.get_msg(0);
     db = memory.get_db();
-
-    // temp_msg_buf = new Msg;
-    // db = new Database;
 }
 
 Network::~Network()
 {
+    state.store(CLOSE, std::memory_order_relaxed);
+    conn_thread.join();
     cleanup();
+}
+
+u32 Network::get_state() const
+{
+    return state.load(std::memory_order_relaxed);
 }
 
 void Network::cleanup()
@@ -209,11 +213,13 @@ void Network::network_loop()
             else 
                 cli_loop();
 
-            if (state.load(std::memory_order_relaxed) == FAILED_CONNECTION)
+            const auto s = state.load(std::memory_order_relaxed);
+            if (s == FAILED_CONNECTION)
                 cleanup();
+            else if (s == CLOSE)
+                return;
         }
     });
-    conn_thread.detach();
 }
 
 void Network::cli_loop()
@@ -374,12 +380,19 @@ void Network::server_loop()
 
     for (;;) {
         work_fds = master_fds;
+    #ifdef SYSTEM_WIN_64
+        timeval timeout = {1, 0};
+    #endif
         
-        const i32 nready = select(FD_SETSIZE, &work_fds, NULL, NULL, NULL);
+        const i32 nready = select(FD_SETSIZE, &work_fds, NULL, NULL, &timeout);
 
         if (nready < 0) {
             P_ERROR("Error occured after select...\n");
             EXIT_LOOP();
+        }
+        else if (nready == 0) {
+            if (state.load(std::memory_order_relaxed) == CLOSE)
+                return;
         }
 
         for (i32 i = 0; i < nready; i++) {

@@ -2,13 +2,14 @@
 
 #include "imgui.h"
 #include <GLFW/glfw3.h>
-#include "main_menu.h"
+#include "main_menu.hpp"
 #include <memory>
+#include "network.hpp"
 
 #define WINDOW_HEIGHT 500
 #define WINDOW_WIDTH 300
 
-#define ICON_PATH "C:\\Program Files\\Quickshare\\icon\\logo.png"
+#define ICON_PATH "../images/logo.png"
 #define FONT_SIZE 14.0f
 
 struct Context {
@@ -18,7 +19,7 @@ public:
         LOGIN,
         MAIN_MENU
     };
-    Context();
+    Context(Network* network);
     ~Context(); 
     bool create_window(int width, int height, const char* name);
     void init_imgui();
@@ -26,6 +27,7 @@ public:
     void menu_bar();
 
     Main_Menu f_menu;
+    Network* network;
 
 private:
     void error_window();

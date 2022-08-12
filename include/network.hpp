@@ -85,10 +85,14 @@ public:
     /* Send message api call */
     bool send_to_id(Msg* msg, UserId to);
 
+    /* Get network's state */
+    u32 get_state() const;
+
     /* Id of network instance */
     UserId my_id;
     
     enum {
+        CLOSE,
         INACTIVE,
         FAILED_CONNECTION,
         CONNECTED

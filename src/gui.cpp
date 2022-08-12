@@ -3,24 +3,23 @@
 #include "imgui.h"
 #include "imgui_impl_glfw.h"
 #include "imgui_impl_opengl3.h"
-#include "gui.h"
-#include "quickshare.h"
-
+#include "gui.hpp"
+#include "quickshare.hpp"
 #define STB_IMAGE_IMPLEMENTATION
 #include "../lib/stb_image.h"
-
-#include "fonts/roboto-medium_font.h"
+#include "roboto-medium_font.h"
 
 static void glfw_error_callback(int error, const char* description)
 {
     fprintf(stderr, "Glfw Error %d: %s\n", error, description);
 }
 
-Context::Context() : f_menu(this)
+Context::Context(Network* network) : f_menu(this)
 {
     window = NULL;
     glsl_version = NULL;
     app_state = LOGIN;
+    this->network = network;
 }
 
 Context::~Context() {}
@@ -48,8 +47,10 @@ bool Context::create_window(int width, int height, const char* name)
     images.height = 630;
 
     images.pixels = stbi_load(ICON_PATH, &images.width, &images.height, 0, 4);
-    if (!images.pixels)
-        FATAL("Failed to load icon '%s'\n", ICON_PATH);
+    if (!images.pixels) {
+        P_ERRORF("Failed to load icon '%s'\n", ICON_PATH);
+        return false;
+    }
     glfwSetWindowIcon(window, 1, &images); 
     stbi_image_free(images.pixels);
 
