@@ -16,13 +16,11 @@ static void glfw_error_callback(int error, const char* description)
     fprintf(stderr, "Glfw Error %d: %s\n", error, description);
 }
 
-Context::Context(Client_Sock* client) : l_menu(this), u_menu(this), 
-                                        c_menu(this), f_menu(this)
+Context::Context() : f_menu(this)
 {
     window = NULL;
     glsl_version = NULL;
     app_state = LOGIN;
-    clisock = client;
 }
 
 Context::~Context() {}
@@ -87,8 +85,7 @@ void Context::error_window()
     ImGui::TextColored(ImVec4(1.0f, 0.0, 0.0, 1.0f), "Error occured with connection to server...");
     
     // Attempt to reconnect to server
-    if (ImGui::Button("Return")) 
-        change_state(LOGIN);
+    if (ImGui::Button("Return")) ;
 
     ImGui::End();
 }
@@ -107,22 +104,8 @@ void Context::menu_bar()
     }
 }
 
-void Context::change_state(App_State state)
-{
-    // When changing state reset menu parameters
-    assert(app_state != state);
-    if (state == LOGIN)
-        l_menu.reset();
-
-    app_state = state;
-}
-
 void Context::main_loop() 
 {
-    // u_menu.tests();
-    c_menu.test();
-    app_state = MAIN_MENU;
-
     while (!glfwWindowShouldClose(window))
     {
         glfwPollEvents();
@@ -130,27 +113,8 @@ void Context::main_loop()
 
         menu_bar();
 
-        
-        // Check if connection was lost with server
-        // Comment out for MAIN_MENU Testing
-        // if (app_state == MAIN_MENU &&
-        //     clisock->get_state() == Client_Sock::State::FAILED) 
-        //     change_state(ERROR_WINDOW);
+        f_menu.draw();
 
-        switch (app_state)
-        {
-            case ERROR_WINDOW:
-                error_window();
-                break;
-
-            case LOGIN:
-                l_menu.draw();
-                break;
-
-            case MAIN_MENU:
-                f_menu.draw();
-                break;
-        }
         ImGui::ShowDemoWindow();
 
         // Rendering

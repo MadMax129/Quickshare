@@ -2,12 +2,11 @@
 
 #include "imgui.h"
 #include <GLFW/glfw3.h>
-#include "networking.h"
-#include "chat_menu.h"
-#include "Main_Menu.h"
-#include "login_menu.h"
-#include "user_list_menu.h"
+#include "main_menu.h"
 #include <memory>
+
+#define WINDOW_HEIGHT 500
+#define WINDOW_WIDTH 300
 
 #define ICON_PATH "C:\\Program Files\\Quickshare\\icon\\logo.png"
 #define FONT_SIZE 14.0f
@@ -19,19 +18,13 @@ public:
         LOGIN,
         MAIN_MENU
     };
-    Context(Client_Sock* client);
+    Context();
     ~Context(); 
     bool create_window(int width, int height, const char* name);
     void init_imgui();
     void main_loop();
     void menu_bar();
-    void change_state(App_State state);
 
-    Client_Sock* clisock;
-
-    Login_Menu l_menu;
-    Users_Menu u_menu;
-    Chat_Menu  c_menu;
     Main_Menu f_menu;
 
 private:

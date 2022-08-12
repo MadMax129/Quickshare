@@ -22,11 +22,7 @@ IMGUI_SOURCES += $(IMGUI_DIR)/backends/imgui_impl_glfw.cpp \
 				 $(IMGUI_DIR)/backends/imgui_impl_opengl3.cpp
 
 INCLUDES = ../include
-SOURCES  =	Main_Menu.cpp	   \
-			chat_menu.cpp      \
-			socket_handler.cpp \
-			user_list_menu.cpp \
-			login_menu.cpp     \
+SOURCES  =	main_menu.cpp	   \
 			gui_style.cpp      \
 			gui.cpp            \
 			quickshare.cpp
