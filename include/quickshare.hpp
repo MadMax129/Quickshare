@@ -58,9 +58,9 @@ typedef std::uint32_t u32;
 typedef unsigned long long int u64;
 
 #ifdef SYSTEM_WIN_64
-#   define PATH_TO_DATA "C:\\Users\\%s\\AppData\\Local\\Quickshare"
+#   define PATH_TO_DATA "C:\\Users\\%s\\Downloads"
 #elif defined(SYSTEM_UNX)
-#   define PATH_TO_DATA "./"
+#   define PATH_TO_DATA "/home/%s/Downloads"
 #endif
 
 #if defined(SYSTEM_UNX)

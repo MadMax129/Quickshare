@@ -41,6 +41,8 @@ QuickShare::QuickShare()
     CreateDirectory(reinterpret_cast<TCHAR*>(temp), NULL);
 #endif
     dir_path = std::string(temp);
+
+    printf("==>%s\n", dir_path.c_str());
 }
 
 QuickShare qs{};

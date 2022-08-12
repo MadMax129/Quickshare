@@ -6,7 +6,7 @@
 [![Issues][issues-shield]][issues-url]
 [![MIT License][license-shield]][license-url] -->
 
-<img src="images/full_logo.png" width="250" height="290"/>
+<img src="images/logo.png" width="250" height="290"/>
 <br />
 <br />
 
