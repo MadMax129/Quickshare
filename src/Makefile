@@ -22,7 +22,7 @@ IMGUI_SOURCES += $(IMGUI_DIR)/backends/imgui_impl_glfw.cpp \
 				 $(IMGUI_DIR)/backends/imgui_impl_opengl3.cpp
 
 INCLUDES = ../include
-SOURCES  =	file_menu.cpp	   \
+SOURCES  =	Main_Menu.cpp	   \
 			chat_menu.cpp      \
 			socket_handler.cpp \
 			user_list_menu.cpp \
@@ -37,8 +37,8 @@ ALL_OBJS = $(IMGUI_OBJS) $(SRC_OBJS)
 
 DEPS = $(addprefix build\, $(SOURCES:.cpp=.d))
 SRC_INC_DIR = -I$(INCLUDES) -I$(IMGUI_DIR) -I$(IMGUI_DIR)/backends
-CXXFLAGS += -O2 -Wall -std=c++17 -pedantic-errors
-IMGUI_LIBS = -lglfw3 -lgdi32 -lopengl32 -limm32 -lws2_32
+CXXFLAGS += -O2 -Wall -std=c++17 -pedantic-errors -lm -lkernel32 -lole32 -luuid
+IMGUI_LIBS = -lglfw3 -lgdi32 -lopengl32 -limm32 -lws2_32 
 
 ifeq ($(TYPE), RELEASE)
 	LINKER += -static -s -static-libgcc -static-libstdc++ -mwindows

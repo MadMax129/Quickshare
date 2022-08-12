@@ -4,7 +4,7 @@
 #include <GLFW/glfw3.h>
 #include "networking.h"
 #include "chat_menu.h"
-#include "file_menu.h"
+#include "Main_Menu.h"
 #include "login_menu.h"
 #include "user_list_menu.h"
 #include <memory>
@@ -32,7 +32,7 @@ public:
     Login_Menu l_menu;
     Users_Menu u_menu;
     Chat_Menu  c_menu;
-    File_Menu f_menu;
+    Main_Menu f_menu;
 
 private:
     void error_window();

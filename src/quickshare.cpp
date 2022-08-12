@@ -29,7 +29,7 @@ int WINAPI WinMain(HINSTANCE hInstance,
     
     Context ctx(&client);
 
-    ctx.create_window(1000, 720, "Quickshare");
+    ctx.create_window(300, 500, "Quickshare");
     ctx.init_imgui();
     ctx.main_loop();
     

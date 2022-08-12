@@ -37,7 +37,9 @@ bool Context::create_window(int width, int height, const char* name)
     glsl_version = (char*)"#version 130";
     glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
     glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 0);
+    glfwWindowHint(GLFW_RESIZABLE, GLFW_FALSE);
 
+    
     window = glfwCreateWindow(width, height, name, NULL, NULL);
 
     if (window == NULL)
@@ -101,12 +103,6 @@ void Context::menu_bar()
             }
             ImGui::EndMenu();
         }
-        if (ImGui::BeginMenu("View")) {
-            if (ImGui::MenuItem("File Sharing")) {
-                f_menu.set_state(true);
-            }
-            ImGui::EndMenu();
-        }
         ImGui::EndMainMenuBar();
     }
 }
@@ -152,10 +148,7 @@ void Context::main_loop()
                 break;
 
             case MAIN_MENU:
-                u_menu.draw();
-                c_menu.draw();
-                if (f_menu.get_state())
-                    f_menu.draw();
+                f_menu.draw();
                 break;
         }
         ImGui::ShowDemoWindow();
