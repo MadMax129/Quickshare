@@ -56,6 +56,10 @@
         "stdexcept": "cpp",
         "streambuf": "cpp",
         "cinttypes": "cpp",
-        "typeinfo": "cpp"
+        "typeinfo": "cpp",
+        "future": "cpp",
+        "limits.h": "c",
+        "syslimits.h": "c",
+        "iostream": "cpp"
     }
 }
