@@ -130,7 +130,7 @@ void Main_Menu::draw_request()
     {
         ImGui::PopStyleColor();
         ImGui::PopStyleVar();
-        incoming_request("Test file in order to test word wrapping ", "test.exe");
+        incoming_request("Test file in order to test word wrapping st file in order to test word wrapping st file in order to test word wrapping st file in order to test word wrapping ", "kamdkasdkmaksdm.exe");
     }
 
     ImGui::EndChildFrame();
@@ -171,9 +171,8 @@ void Main_Menu::draw()
 
 void Main_Menu::incoming_request(const char *desc, const char *fname )
 {
-    ImGui::Text("File Name:"); ImGui::SameLine(); ImGui::Text(fname);
-    ImGui::Text("File Descprition:   ");ImGui::TextWrapped(desc);
 
+    ImGui::SetCursorPosX(30); ImGui::SameLine(); ImGui::TextWrapped(fname);
     ImGui::SetCursorPosX(55);
     ImGui::PushStyleColor(ImGuiCol_Button, (ImVec4)ImColor::HSV(0 / 7.0f, 0.6f, 0.6f));ImGui::PushStyleColor(ImGuiCol_ButtonHovered, (ImVec4)ImColor::HSV(0 / 7.0f, 0.7f, 0.7f));
     ImGui::PushStyleColor(ImGuiCol_ButtonActive, (ImVec4)ImColor::HSV(0 / 7.0f, 0.8f, 0.8f));
@@ -184,7 +183,23 @@ void Main_Menu::incoming_request(const char *desc, const char *fname )
     ImGui::PushStyleColor(ImGuiCol_ButtonActive, (ImVec4)ImColor::HSV(2 / 7.0f, 0.8f, 0.8f));
     ImGui::Button("Accept");
     ImGui::PopStyleColor(3);
+    ImGui::SetCursorPosX(70); more_info(desc); 
 }
+
+void Main_Menu::more_info(const char *desc)
+{   
+    static float wrap_width = 200.0f;
+    if (ImGui::BeginPopupContextItem("my popup"))
+    {
+        ImGui::PushTextWrapPos(ImGui::GetCursorPos().x + wrap_width);
+        ImGui::Text(desc, wrap_width);
+        ImGui::PopTextWrapPos();
+        ImGui::EndPopup();
+    }
+    if(ImGui::Button("More Info"))
+        ImGui::OpenPopup("my popup");
+}
+
 
 void Main_Menu::add_clients(Client_Array &clientList)
 {
