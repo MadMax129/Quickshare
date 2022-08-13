@@ -20,10 +20,7 @@
 #pragma once
 
 #include "quickshare.hpp"
-#ifdef SYSTEM_WIN_64
-#   include <WS2tcpip.h>
-#   include <winsock2.h>
-#elif defined(SYSTEM_UNX)
+#ifdef SYSTEM_UNX
 #   include <sys/socket.h>
 #   include <unistd.h>
 #   include <arpa/inet.h>
@@ -31,6 +28,7 @@
 #include "msg.hpp"
 #include <atomic>
 #include <thread>
+#include "../lib/SPSCQueue.h"
 
 struct Client {
     enum {
@@ -60,8 +58,18 @@ struct Database {
     u32 client_count;
 };
 
+struct Net_Gui_Msg {
+    Msg::Msg_Type type;
+    union {
+        Msg::Client_List list;
+    };
+};
+
 /* Arbitrary server port that defines the central server location on local network */
 #define STATIC_SERVER_PORT 8345
+
+/* Network-gui queue size */
+#define NETWORK_GUI_QUEUE_SIZE 32
 
 struct File_Sharing;
 struct Client;
@@ -90,6 +98,9 @@ public:
 
     /* Id of network instance */
     UserId my_id;
+
+    /* Communicate with gui */
+    rigtorp::SPSCQueue<Net_Gui_Msg> gui_msg;
     
     enum {
         CLOSE,

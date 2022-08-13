@@ -21,6 +21,7 @@
 #include "network.hpp"
 #include "gui.hpp"
 #include <string>
+#include "nfd.h"
 
 QuickShare::QuickShare() 
 {
@@ -48,6 +49,11 @@ int WINAPI WinMain(HINSTANCE hInstance,
 int main(const int argc, const char* argv[])
 #endif
 {
+    (void)hInstance;
+    (void)hPrevInstance;
+    (void)lpCmdLine;
+    (void)nCmdShow;
+
     if (!memory.try_allocate()) {
         memory.free();
         return 1;

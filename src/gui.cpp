@@ -86,7 +86,7 @@ void Context::error_window()
     ImGui::TextColored(ImVec4(1.0f, 0.0, 0.0, 1.0f), "Error occured with connection to server...");
     
     // Attempt to reconnect to server
-    if (ImGui::Button("Return")) ;
+    if (ImGui::Button("Return")) {}
 
     ImGui::End();
 }

@@ -56,16 +56,17 @@ struct Msg {
         Msg_Type type;
     } hdr;
 
-    union {
+    struct Client_List {
         struct {
-            struct {
-                UserId id;
-                char name[CLIENT_NAME_LEN];
-            } clients[MAX_CLIENTS];
-            u8 client_count;
-        } list;
+            UserId id;
+            char name[CLIENT_NAME_LEN];
+        } clients[MAX_CLIENTS];
+        u8 client_count;
+    };
 
-        struct Request request;
+    union {
+        Client_List list;
+        Request request;
 
         struct {
             u16 packet_size; // [1, sizeof(bytes)]

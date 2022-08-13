@@ -1,10 +1,8 @@
-#define NTDDI_VERSION 0x0A000006 //NTDDI_WIN10_RS5
-#define _WIN32_WINNT 0x0A00 // _WIN32_WINNT_WIN10, the _WIN32_WINNT macro must also be defined when defining NTDDI_VERSION
 #include "gui.hpp"
 #include <array>
 #include <windows.h>
 #include <string>
-#include <shobjidl.h> 
+#include "nfd.h"
 
 Main_Menu::Main_Menu(Context* context)
 {
@@ -33,16 +31,7 @@ void Main_Menu::draw_path()
         const char *path = "Path...";
         if (ImGui::Button(path, ImVec2(200,20)))
         {
-            switch (open_file()) {
-                case (true): {
-                    printf("SELECTED FILE: %s\nFILE PATH: %s\n\n", sSelectedFile.c_str(), sFilePath.c_str());
-                    break;
-                }
-                case (false): {
-                    printf("ENCOUNTERED AN ERROR: (%lu)\n", GetLastError());
-                    break;
-                }
-            }
+            (void)open_file();
         }
         ImGui::PopStyleVar();
         ImGui::PopStyleColor();
@@ -269,63 +258,22 @@ void Main_Menu::add_event(Transfer_Type type, const char *desc, const char *fnam
 
 bool Main_Menu::open_file()
 {
-    //  CREATE FILE OBJECT INSTANCE
-    HRESULT f_SysHr = CoInitializeEx(NULL, COINIT_APARTMENTTHREADED | COINIT_DISABLE_OLE1DDE);
-    if (FAILED(f_SysHr))
-        return FALSE;
+    nfdchar_t *outPath = NULL;
+    nfdresult_t result = NFD_OpenDialog(NULL, NULL, &outPath);
 
-    // CREATE FileOpenDialog OBJECT
-    IFileOpenDialog *f_FileSystem;
-    f_SysHr = CoCreateInstance(CLSID_FileOpenDialog, NULL, CLSCTX_ALL, IID_IFileOpenDialog, reinterpret_cast<void**>(&f_FileSystem));
-    if (FAILED(f_SysHr)) {
-        CoUninitialize();
-        return FALSE;
+    if (result == NFD_OKAY)
+    {
+        puts(outPath);
+        free(outPath);
+    }
+    else if ( result == NFD_CANCEL )
+    {
+        puts("User pressed cancel.");
+    }
+    else 
+    {
+        printf("Error: %s\n", NFD_GetError() );
     }
 
-    //  SHOW OPEN FILE DIALOG WINDOW
-    f_SysHr = f_FileSystem->Show(NULL);
-    if (FAILED(f_SysHr)) {
-        f_FileSystem->Release();
-        CoUninitialize();
-        return FALSE;
-    }
-
-    //  RETRIEVE FILE NAME FROM THE SELECTED ITEM
-    IShellItem* f_Files;
-    f_SysHr = f_FileSystem->GetResult(&f_Files);
-    if (FAILED(f_SysHr)) {
-        f_FileSystem->Release();
-        CoUninitialize();
-        return FALSE;
-    }
-
-    //  STORE AND CONVERT THE FILE NAME
-    PWSTR f_Path;
-    f_SysHr = f_Files->GetDisplayName(SIGDN_FILESYSPATH, &f_Path);
-    if (FAILED(f_SysHr)) {
-        f_Files->Release();
-        f_FileSystem->Release();
-        CoUninitialize();
-        return FALSE;
-    }
-
-    //  FORMAT AND STORE THE FILE PATH
-    std::wstring path(f_Path);
-    std::string c(path.begin(), path.end());
-    sFilePath = c;
-
-    //  FORMAT STRING FOR EXECUTABLE NAME
-    const size_t slash = sFilePath.find_last_of("/\\");
-    sSelectedFile = sFilePath.substr(slash + 1);
-
-    //  SUCCESS, CLEAN UP
-    CoTaskMemFree(f_Path);
-    f_Files->Release();
-    f_FileSystem->Release();
-    CoUninitialize();
-    return TRUE;
+    return true;
 }
- 
-
-
-

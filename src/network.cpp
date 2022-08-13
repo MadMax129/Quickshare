@@ -52,7 +52,8 @@ static void os_sleep(u32 sec)
 #endif
 }
 
-Network::Network(File_Sharing* f) : f_manager(f)
+Network::Network(File_Sharing* f) : gui_msg(NETWORK_GUI_QUEUE_SIZE),
+                                    f_manager(f)
 {
     temp_msg_buf = memory.get_msg(0);
     db = memory.get_db();
@@ -156,8 +157,13 @@ bool Network::init_socket()
 #endif
     tcp_socket = socket(AF_INET, SOCK_STREAM, 0);
 
-    if (tcp_socket < 0) 
+#ifdef SYSTEM_WIN_64
+    if (tcp_socket == INVALID_SOCKET) 
         return false;
+#elif defined(SYSTEM_UNX)
+    if (tcp_socet < 0)
+        return false;
+#endif
 
     server_addr.sin_family = AF_INET;
 	// server_addr.sin_addr.s_addr = INADDR_ANY;
@@ -227,7 +233,7 @@ void Network::cli_loop()
 	// Send computers name
 	temp_msg_buf->hdr.type = Msg::NAME_SEND;
 	std::strcpy((char*)temp_msg_buf->name, "Maks");
-	send_to_id(temp_msg_buf, 0); // check state
+	(void)send_to_id(temp_msg_buf, 0);
 
 	for (;;) {
 		i32 r_res = recv(tcp_socket, (char*)temp_msg_buf, sizeof(Msg), MSG_WAITALL);
@@ -265,6 +271,8 @@ void Network::cli_loop()
 				f_manager->got_response(temp_msg_buf);
 				break;
 			}
+
+            default: assert(false); break;
 		}
 	}
 }
@@ -297,6 +305,7 @@ void Network::server_analize_msg(const Msg* msg, socket_t socket)
 
 void Network::handle_packet(const Msg* msg, Client* cli)
 {
+    (void)cli;
     // LOGF("Got packet:\n\t%s\n", (char*)msg->packet.bytes);
     f_manager->push_msg(msg);
 }
@@ -350,13 +359,15 @@ void Network::handle_request(const Msg* msg, Client* cli)
 
 void Network::analize_request(const Msg* msg, Client* cli)
 {
-    // Is the message directed at the server 
     if (msg->hdr.recipient_id == my_id) {
         handle_request(msg, cli);
     }
     else {
-        assert(false);
-        // protection against fraudulant id ???
+        const Client* const c = db->get_client_by_id(msg->hdr.recipient_id);
+        if (c == NULL) {
+            LOGF("Request is being send to unknown id '%lld'...\n", msg->hdr.recipient_id);
+            return;
+        }
         send_msg(msg, db->get_client_by_id(msg->hdr.recipient_id));
     }
 }

@@ -24,24 +24,26 @@
 #include <string>
 
 #if defined(_WIN64)
-   #define SYSTEM_WIN_64
-   #define SYSTEM_NAME "Win64"
-   #include <windows.h>
+#   define SYSTEM_WIN_64
+#   define SYSTEM_NAME "Win64"
+#   include <WS2tcpip.h>
+#   include <winsock2.h>
+#   include <windows.h>
 #elif defined(__APPLE__) || defined(__MACH__)
-   #define SYSTEM_MAC_64
-   #define SYSTEM_NAME "Mac64"
-   #define SYSTEM_UNX
+#   define SYSTEM_MAC_64
+#   define SYSTEM_NAME "Mac64"
+#   define SYSTEM_UNX
 #elif defined(__linux__)
-   #define SYSTEM_LINUX_64
-   #define SYSTEM_NAME "Linux64"
-   #define SYSTEM_UNX
+#   define SYSTEM_LINUX_64
+#   define SYSTEM_NAME "Linux64"
+#   define SYSTEM_UNX
 #else
-   #define SYSTEM_ERROR
+#   define SYSTEM_ERROR
 #endif
 
 #ifdef __x86_64__
-   #define X86_64_CPU
-   #define ARCH "X86-64"
+#   define X86_64_CPU
+#   define ARCH "X86-64"
 #endif
 
 #include <cstdint>
@@ -64,17 +66,17 @@ typedef unsigned long long int u64;
 #endif
 
 #if defined(SYSTEM_UNX)
-	#define CL_RESET  "\x1b[0m"
-	#define CL_RED    "\x1b[31m"
-	#define CL_BLUE   "\x1b[34m"
-	#define CL_GREEN  "\x1b[32m"
-	#define CL_YELLOW "\x1b[33m"
+#   define CL_RESET  "\x1b[0m"
+#   define CL_RED    "\x1b[31m"
+#   define CL_BLUE   "\x1b[34m"
+#   define CL_GREEN  "\x1b[32m"
+#   define CL_YELLOW "\x1b[33m"
 #elif defined(SYSTEM_WIN_64)
-   #define CL_RESET  7
-   #define CL_RED    4
-   #define CL_BLUE   1	
-   #define CL_GREEN  2
-   #define CL_YELLOW 6
+#   define CL_RESET  7
+#   define CL_RED    4
+#   define CL_BLUE   1	
+#   define CL_GREEN  2
+#   define CL_YELLOW 6
 #endif
 
 #define colored_printf(color, str, ...) \

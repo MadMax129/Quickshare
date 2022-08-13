@@ -21,6 +21,10 @@ IMGUI_SOURCES =	$(IMGUI_DIR)/imgui.cpp        \
 IMGUI_SOURCES += $(IMGUI_DIR)/backends/imgui_impl_glfw.cpp \
 				 $(IMGUI_DIR)/backends/imgui_impl_opengl3.cpp
 
+FILE_DIALOG_INCLUDE = "../lib/nativefiledialog/src/include"
+FILE_DIALOG_OBJ     = ../lib/nativefiledialog/build/obj/x64/Release/nfd/nfd_common.o \
+					  ../lib/nativefiledialog/build/obj/x64/Release/nfd/nfd_win.o
+
 INCLUDES = ../include
 SOURCES  =	database.cpp     \
 			network.cpp	     \
@@ -31,12 +35,12 @@ SOURCES  =	database.cpp     \
 
 SRC_OBJS = $(addprefix $(BUILD_DIR)/, $(addsuffix .o, $(basename $(notdir $(SOURCES)))))
 IMGUI_OBJS = $(addprefix $(BUILD_DIR)/, $(addsuffix .o, $(basename $(notdir $(IMGUI_SOURCES)))))
-ALL_OBJS = $(IMGUI_OBJS) $(SRC_OBJS)
+ALL_OBJS = $(IMGUI_OBJS) $(SRC_OBJS) $(FILE_DIALOG_OBJ)
 
 DEPS = $(addprefix build\, $(SOURCES:.cpp=.d))
-SRC_INC_DIR = -I$(INCLUDES) -I$(IMGUI_DIR) -I$(IMGUI_DIR)/backends
-CXXFLAGS += -O2 -Wall -std=c++17 -pedantic-errors
-LIBS = -limm32 -lws2_32 -lglfw3 -lgdi32 -lopengl32 -lm -lkernel32 -lole32 -luuid
+SRC_INC_DIR = -I$(INCLUDES) -I$(IMGUI_DIR) -I$(IMGUI_DIR)/backends -I$(FILE_DIALOG_INCLUDE)
+CXXFLAGS += -O2 -Wall -std=c++17 -pedantic-errors -Werror -Wextra
+LIBS = -limm32 -lws2_32 -lglfw3 -lgdi32 -lopengl32 -lm -lkernel32 -lole32 -luuid -L$(FILE_DIALOG_LIB) -lnfd
 
 ifeq ($(TYPE), RELEASE)
 	LINKER += -static -s -static-libgcc -static-libstdc++ -mwindows
@@ -46,7 +50,7 @@ ifeq ($(TYPE), DEBUG)
 	CXXFLAGS += -DDEBUG_MODE
 endif
 
-.PHONY: all clean directory install_all build_icon
+.PHONY: all clean directory install_all build_icon nfd
 
 all: directory compile
 ifneq ($(OS), Windows_NT)
@@ -63,6 +67,10 @@ install_all:
 	if not exist $(INSTALL_DIR) ( mkdir $(INSTALL_DIR) )
 	if not exist $(INSTALL_DIR)\icon ( mkdir $(INSTALL_DIR)\icon )
 	copy ..\images\logo.png $(INSTALL_DIR)\icon
+
+nfd:
+	cd ../lib/nativefiledialog/build/gmake_windows && \
+	mingw32-make.exe config=release_x64 nfd CC=g++
 	
 # Eventually move exe into its program files and make shortcut
 
