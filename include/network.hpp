@@ -25,51 +25,15 @@
 #   include <unistd.h>
 #   include <arpa/inet.h>
 #endif
-#include "msg.hpp"
 #include <atomic>
 #include <thread>
+#include "msg.hpp"
+#include "database.hpp"
+#include "net_gui.hpp"
 #include "../lib/SPSCQueue.h"
-
-struct Client {
-    enum {
-        EMPTY,
-        OPEN,
-        COMPLETE
-    } state;
-    UserId id;
-    char name[CLIENT_NAME_LEN];
-    struct sockaddr_in addr;
-    socket_t socket;
-};
-
-struct Database {
-    Database();
-
-    void cleanup();
-    inline bool full() const { return client_count == MAX_CLIENTS; }
-    UserId get_id() const;
-    Client* new_client(struct sockaddr_in* addr, socket_t sock);
-    void remove_client(socket_t sock);
-    Client* get_client(socket_t sock);
-    Client* get_client_by_id(UserId id);
-    void debug_clients() const;
-    void create_msg(Msg* msg, const Client* cli);
-    std::array<Client, MAX_CLIENTS> client_list;
-    u32 client_count;
-};
-
-struct Net_Gui_Msg {
-    Msg::Msg_Type type;
-    union {
-        Msg::Client_List list;
-    };
-};
 
 /* Arbitrary server port that defines the central server location on local network */
 #define STATIC_SERVER_PORT 8345
-
-/* Network-gui queue size */
-#define NETWORK_GUI_QUEUE_SIZE 32
 
 struct File_Sharing;
 struct Client;
@@ -103,8 +67,8 @@ public:
     rigtorp::SPSCQueue<Net_Gui_Msg> gui_msg;
     
     enum {
-        CLOSE,
         INACTIVE,
+        CLOSE,
         FAILED_CONNECTION,
         CONNECTED
     };
@@ -120,22 +84,23 @@ private:
     void cli_loop();
     void server_loop();
     
-    /* Analize message send from clients */
+    /* Server functions */
     void server_analize_msg(const Msg* msg, socket_t socket);
     void client_list_msg(const Msg* msg, Client* cli);
     void send_client_list();
     void analize_request(const Msg* msg, Client* cli);
     void analize_packet(const Msg* msg, Client* cli);
     void accept_client();
+    void create_server_client();
     void recv_msg(socket_t sock);
 
-    /* Client message handlers */
+    /* Message handlers */
     void handle_request(const Msg* msg, Client* cli);
     void handle_packet(const Msg* msg, Client* cli);
 
     /* Debug / Util */
     bool send_msg(const Msg* const msg, const Client* target);
-    void create_server_client();
+    void set_sock_timeout(u32 sec);
 
     bool is_server;
 #ifdef SYSTEM_WIN_64

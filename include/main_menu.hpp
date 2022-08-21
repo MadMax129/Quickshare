@@ -1,10 +1,9 @@
 #pragma once
 
 #include <array>
+#include "net_gui.hpp"
 
 struct Context;
-
-using Client_Array = std::array<const char*, 3>;
 
 #define MENU_BAR_MARGIN 20
 #define BACKLOG_WIN_SIZE ImVec2(120, 250)
@@ -25,7 +24,7 @@ public:
     void draw();
     void set_state(bool state);
     bool get_state() const;
-    void add_clients(Client_Array &clientList);
+    void add_clients();
     bool open_file();
     void add_event(Transfer_Type type,  const char *desc,  const char *fname);
     void incoming_request(const char *desc, const char *fname);
@@ -39,6 +38,7 @@ private:
 
     bool open;
     Context* ctx;
+    Msg::Client_List list;
     std::string sSelectedFile;
     std::string sFilePath;
 };

@@ -1,5 +1,5 @@
 ## ----------------------------------------------------------------------
-## Quickshare Makefile
+## Quickshare Makefile for Windows ONLY
 ## ----------------------------------------------------------------------
 
 CXX = g++
@@ -26,7 +26,8 @@ FILE_DIALOG_OBJ     = ../lib/nativefiledialog/build/obj/x64/Release/nfd/nfd_comm
 					  ../lib/nativefiledialog/build/obj/x64/Release/nfd/nfd_win.o
 
 INCLUDES = ../include
-SOURCES  =	database.cpp     \
+SOURCES  =	util.cpp         \
+			database.cpp     \
 			network.cpp	     \
 			file_manager.cpp \
 			main_menu.cpp    \
@@ -50,7 +51,9 @@ ifeq ($(TYPE), DEBUG)
 	CXXFLAGS += -DDEBUG_MODE
 endif
 
-.PHONY: all clean directory install_all build_icon nfd
+.PHONY: all clean directory \
+		install_dir build_icon install_nfd \
+		install_imgui
 
 all: directory compile
 ifneq ($(OS), Windows_NT)
@@ -63,14 +66,19 @@ compile: $(EXE)
 directory:
 	@if not exist $(BUILD_DIR) ( mkdir $(BUILD_DIR) )
 
-install_all:
+install_dir:
 	if not exist $(INSTALL_DIR) ( mkdir $(INSTALL_DIR) )
 	if not exist $(INSTALL_DIR)\icon ( mkdir $(INSTALL_DIR)\icon )
 	copy ..\images\logo.png $(INSTALL_DIR)\icon
 
-nfd:
+install_nfd:
+	cd ../lib && git clone https://github.com/mlabbe/nativefiledialog
 	cd ../lib/nativefiledialog/build/gmake_windows && \
 	mingw32-make.exe config=release_x64 nfd CC=g++
+
+install_imgui:
+	cd ../lib && git clone -b v1.85 https://github.com/ocornut/imgui/
+	cd ../lib && ren imgui imgui-1.85
 	
 # Eventually move exe into its program files and make shortcut
 

@@ -7,6 +7,7 @@
 Main_Menu::Main_Menu(Context* context)
 {
     ctx = context;
+    list.client_count = 0;
 }
 
 void Main_Menu::set_state(bool state) 
@@ -77,10 +78,17 @@ void Main_Menu::draw_users()
                                        ImGuiWindowFlags_NoMove     | 
                                        ImGuiWindowFlags_NoScrollbar;
 
+    if (ctx->network->gui_msg.front() != nullptr && 
+        ctx->network->gui_msg.front()->type == Msg::CLIENT_LIST)
+    {
+        list = ctx->network->gui_msg.front()->list;
+        ctx->network->gui_msg.pop();
+    }
+
     if (ImGui::BeginChildFrame(102, USERS_WIN_SIZE, flags))
     {
-        Client_Array clients =  {"DESKTOP-1238452", "DESKTOP-1256620", "DESKTOP-856234"};
-        add_clients(clients);
+        // Msg::Client_List clients =  {"DESKTOP-1238452", "DESKTOP-1256620", "DESKTOP-856234"};
+        add_clients();
 
         ImGui::PopStyleColor();
         ImGui::PopStyleVar();
@@ -119,7 +127,7 @@ void Main_Menu::draw_request()
     {
         ImGui::PopStyleColor();
         ImGui::PopStyleVar();
-        incoming_request("Test file in order to test word wrapping st file in order to test word wrapping st file in order to test word wrapping st file in order to test word wrapping ", "kamdkasdkmaksdm.exe");
+        // incoming_request("Test file in order to test word wrapping st file in order to test word wrapping st file in order to test word wrapping st file in order to test word wrapping ", "kamdkasdkmaksdm.exe");
     }
 
     ImGui::EndChildFrame();
@@ -190,13 +198,13 @@ void Main_Menu::more_info(const char *desc)
 }
 
 
-void Main_Menu::add_clients(Client_Array &clientList)
+void Main_Menu::add_clients()
 {
-    static bool selected[3] { false, false, false};
+    static bool selected[3] { false, false, false };
 
-    for (std::size_t i = 0; i < clientList.size(); i++)
+    for (std::size_t i = 0; i < list.client_count; i++)
     {
-        ImGui::Selectable(clientList[i],  &selected[i]);
+        ImGui::Selectable(list.clients[i].name,  &selected[i]);
     }
 }
 

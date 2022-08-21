@@ -49,10 +49,12 @@ int WINAPI WinMain(HINSTANCE hInstance,
 int main(const int argc, const char* argv[])
 #endif
 {
+#ifdef SYSTEM_WIN_64
     (void)hInstance;
     (void)hPrevInstance;
     (void)lpCmdLine;
     (void)nCmdShow;
+#endif
 
     if (!memory.try_allocate()) {
         memory.free();
@@ -65,34 +67,27 @@ int main(const int argc, const char* argv[])
     f_manager.add_network(&net);
 
     net.network_loop();
-    if (ctx.create_window(WINDOW_WIDTH, WINDOW_HEIGHT, "Quickshare")) {
-        ctx.init_imgui();
-        ctx.main_loop();
-    }
-
-    // for (;;)
-    // {
-    //     printf(
-    //         "Temporary user menu:\n"
-    //         "u - View users\n"
-    //         "e - exit\n"
-    //         "s - send file\n"
-    //     );
-        
-    //     int c = getchar();
-        
-    //     switch (c) {
-    //         case 'e': return 0;
-    //         case 's': {
-    //             UserId id;
-    //             char fname[] = "../test_files/4kimage.jpg";
-    //             (void)scanf("%lld", &id);
-    //             Users_List a = {std::make_pair(id, Msg::INVALID)};
-    //             printf("Sending '%s' to '%lld'\n", fname, id);
-    //             assert(f_manager.create_send(fname, a));
-    //         }
-    //     }
+    // if (ctx.create_window(WINDOW_WIDTH, WINDOW_HEIGHT, "Quickshare")) {
+    //     ctx.init_imgui();
+    //     ctx.main_loop();
     // }
+
+    for (;;)
+    {    
+        int c = getchar();
+        
+        switch (c) {
+            case 'e': return 0;
+            case 's': {
+                UserId id;
+                char fname[] = "../test_files/4kimage.jpg";
+                (void)scanf("%lld", &id);
+                Users_List a = {std::make_pair(id, Msg::INVALID)};
+                printf("Sending '%s' to '%lld'\n", fname, id);
+                assert(f_manager.create_send(fname, a));
+            }
+        }
+    }
 
     memory.free();
 

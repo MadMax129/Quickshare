@@ -15,12 +15,6 @@
 /* Max length for display computer host name */
 #define CLIENT_NAME_LEN 16
 
-#ifdef SYSTEM_WIN_64
-    typedef SOCKET socket_t;
-#elif defined(SYSTEM_UNX)
-    typedef int socket_t;
-#endif
-
 #define MSG_TYPE(msg, mtype) msg->hdr.type = mtype
 #define MSG_SENDER(msg, id) msg->hdr.sender_id = id
 

@@ -29,6 +29,7 @@
 #   include <WS2tcpip.h>
 #   include <winsock2.h>
 #   include <windows.h>
+#   include <iphlpapi.h>
 #elif defined(__APPLE__) || defined(__MACH__)
 #   define SYSTEM_MAC_64
 #   define SYSTEM_NAME "Mac64"
@@ -39,11 +40,14 @@
 #   define SYSTEM_UNX
 #else
 #   define SYSTEM_ERROR
+#   error Unsupported OS 
 #endif
 
 #ifdef __x86_64__
 #   define X86_64_CPU
 #   define ARCH "X86-64"
+#elif 
+#   error Unsupported arch
 #endif
 
 #include <cstdint>
@@ -58,6 +62,12 @@ typedef std::uint8_t u8;
 typedef std::uint16_t u16;
 typedef std::uint32_t u32;
 typedef unsigned long long int u64;
+
+#ifdef SYSTEM_WIN_64
+    typedef SOCKET socket_t;
+#elif defined(SYSTEM_UNX)
+    typedef int socket_t;
+#endif
 
 #ifdef SYSTEM_WIN_64
 #   define PATH_TO_DATA "C:\\Users\\%s\\Downloads"
@@ -100,27 +110,7 @@ typedef unsigned long long int u64;
 #define P_ERRORF(str, ...) \
     colored_printf(CL_RED, str, __VA_ARGS__)
 
-static inline void _colored_print(void* color, const char* str, ...)
-{
-    va_list ap;
-	va_start(ap, str);
-
-#if defined(SYSTEM_WIN_64)
-    HANDLE hConsole;
-    hConsole = GetStdHandle(STD_OUTPUT_HANDLE);
-    SetConsoleTextAttribute(hConsole, (INT_PTR)color);
-#elif defined(SYSTEM_UNX)
-    std::fprintf(stdout, "%s", (char*)color);
-#endif
-	std::vfprintf(stdout, str, ap);
-#if defined(SYSTEM_WIN_64)
-    SetConsoleTextAttribute(hConsole, CL_RESET);
-#elif defined(SYSTEM_UNX)
-    std::fprintf(stdout, "%s", CL_RESET);
-#endif
-
-	va_end(ap);
-}
+void _colored_print(void* color, const char* str, ...);
 
 struct QuickShare {
     QuickShare();

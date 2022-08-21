@@ -30,18 +30,29 @@ File_Sharing::File_Sharing() : r_msg_queue(MAX_RECV_QUEUE_SIZE)
     r_data.buffer = memory.get_buffer(1);
 
     s_data.thread = std::thread(&File_Sharing::send_loop, this);
-    s_data.thread.detach();
-
     r_data.thread = std::thread(&File_Sharing::recv_loop, this);
-    r_data.thread.detach();
 }
 
-File_Sharing::~File_Sharing() { }
+File_Sharing::~File_Sharing() 
+{
+    s_data.state.store(KILL);
+    r_data.state.store(KILL);
+    s_data.cond.notify_one();
+    r_data.cond.notify_one();
+
+    s_data.thread.join();
+    r_data.thread.join();
+
+    LOG("Cleaned up File_Sharing\n");
+}
 
 void File_Sharing::cleanup()
 {
-    assert(s_data.state.load(std::memory_order_relaxed) != ACTIVE);
-    assert(r_data.state.load(std::memory_order_relaxed) != ACTIVE);
+    s_data.state.store(CLOSE);
+    r_data.state.store(CLOSE);
+    s_data.cond.notify_one();
+    r_data.cond.notify_one();
+    
     s_data.state.store(INACTIVE, std::memory_order_relaxed);
     r_data.state.store(INACTIVE, std::memory_order_relaxed);
 }
@@ -58,6 +69,7 @@ bool File_Sharing::create_send(const char* fname, Users_List users)
     s_data.file = std::fopen(fname, "rb");
     if (!s_data.file)
         return false;
+
     std::fseek(s_data.file, 0, SEEK_END);
     s_data.hdr.file_size = std::ftell(s_data.file);
     std::rewind(s_data.file);
@@ -68,8 +80,7 @@ bool File_Sharing::create_send(const char* fname, Users_List users)
     s_data.state.store(Transfer_State::REQUESTED, std::memory_order_relaxed);
     s_data.progress.store(0, std::memory_order_relaxed);
 
-
-    s_data.cond.notify_one();
+    send_requests();
 
     return true;
 }
@@ -105,29 +116,18 @@ void File_Sharing::send_loop()
         std::unique_lock<std::mutex> lk(s_data.lock);
         s_data.cond.wait(lk);
 
-        MSG_TYPE(temp_msg, Msg::REQUEST);
-        MSG_SENDER(temp_msg, network->my_id);
-        std::memcpy(&temp_msg->request, &s_data.hdr, sizeof(Request));
+        switch (s_data.state.load(std::memory_order_relaxed))
+        {
+            case CLOSE:
+                s_data.state.store(FAILED, std::memory_order_relaxed);
+                continue;
+            
+            case KILL:
+                return;
 
-        for (auto& user : s_data.users) {
-            LOGF("Sending request message to '%lld'\n", user.first);
-
-            temp_msg->hdr.recipient_id = user.first;
-            if (!network->send_to_id(temp_msg, user.first)) {
-                LOGF("Rejecting '%lld' due to disconnection...\n", user.first);
-                user.second = Msg::REJECTED;
-            }
+            default: 
+                break;
         }
-
-        LOG("Waiting on all users response...\n");
-
-        s_data.cond.wait_for(lk, std::chrono::seconds(30), [&] {
-            for (const auto &user : s_data.users) {
-                if (user.second == Msg::INVALID)
-                    return false;
-            }
-            return true;
-        });
 
         LOG("Got responses\n");
         for (auto &u : s_data.users)
@@ -137,8 +137,26 @@ void File_Sharing::send_loop()
                 ? "Accepted" : "Rejected");
 
         s_data.state.store(ACTIVE, std::memory_order_relaxed);
-        
-       send_packets();
+
+        send_packets();
+    }
+}
+
+void File_Sharing::send_requests()
+{
+    MSG_TYPE(temp_msg, Msg::REQUEST);
+    MSG_SENDER(temp_msg, network->my_id);
+    std::memcpy(&temp_msg->request, &s_data.hdr, sizeof(Request));
+
+    for (auto& user : s_data.users) {
+        LOGF("Sending request message to '%lld'\n", user.first);
+
+        temp_msg->hdr.recipient_id = user.first;
+
+        if (!network->send_to_id(temp_msg, user.first)) {
+            LOGF("Rejecting '%lld' due to disconnection...\n", user.first);
+            user.second = Msg::REJECTED;
+        }
     }
 }
 
@@ -154,12 +172,26 @@ void File_Sharing::got_response(const Msg* msg)
         }
     );
 
-    assert(e != std::end(s_data.users));
+    if (e == std::end(s_data.users)) {
+        LOGF("Response from '%lld' is invalid\n", msg->hdr.sender_id);
+        return;
+    }
 
     e->second = msg->hdr.type;
+
+    if (got_all_responses())
+        s_data.cond.notify_one();
     
     s_data.lock.unlock();
-    s_data.cond.notify_one();
+}
+
+bool File_Sharing::got_all_responses()
+{
+    for (const auto& user : s_data.users) {
+        if (user.second == Msg::INVALID)
+            return false;
+    }
+    return true;
 }
 
 void File_Sharing::send_packets()
@@ -195,6 +227,10 @@ void File_Sharing::send_packets()
                 s_data.buffer + p * sizeof(Msg::packet.bytes),
                 temp_msg->packet.packet_size
             );
+
+            // if everyone disconnects just fail
+            // at end check if all users got file in that case set to FINISHED
+            // otherwsie set to FAILED
 
             for (auto &user : s_data.users) {
                 temp_msg->hdr.recipient_id = user.first;
@@ -262,12 +298,27 @@ void File_Sharing::recv_loop()
         std::unique_lock<std::mutex> lk(r_data.lock);
         r_data.cond.wait(lk);
 
+        switch (r_data.state.load(std::memory_order_relaxed))
+        {
+            case CLOSE:
+                r_data.state.store(FAILED, std::memory_order_relaxed);
+                continue;
+            
+            case KILL:
+                return;
+
+            default: 
+                break;
+        }
+
         /* Consider the examples:
             3 Clients:
             C1 C2 and C3 (aka server)
             C1 recv from C2
             C2 disconnectes however C1 only knows about server
             C2 must check updated client list and decided to call fail_recv()
+
+            TODO fail_recv must also be called from client_loop
         */
 
         for (u32 p = 0; p < r_data.hdr.packets; p++) {
@@ -278,7 +329,7 @@ void File_Sharing::recv_loop()
             
             msg = r_msg_queue.front();
 
-            if (r_data.state.load(std::memory_order_relaxed) == FAILED) {
+            if (r_data.state.load(std::memory_order_relaxed) == CLOSE) {
                 LOG("Recv failed exiting loop...\n");
                 failed = true;
                 break;
@@ -304,13 +355,9 @@ void File_Sharing::recv_loop()
             colored_print(CL_GREEN, "Success recv file\n");
         }
         else {
+            r_data.state.store(FAILED, std::memory_order_relaxed);
             P_ERROR("Failed to complete recv file...\n");
         }
         std::fclose(r_data.file);
     }
-}
-
-void File_Sharing::fail_recv()
-{
-    r_data.state.store(FAILED, std::memory_order_relaxed);
 }

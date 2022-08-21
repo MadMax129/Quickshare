@@ -52,6 +52,14 @@ static void os_sleep(u32 sec)
 #endif
 }
 
+void Network::set_sock_timeout(u32 sec)
+{
+#ifdef SYSTEM_WIN_64
+    DWORD timeout = sec * 1000;
+    setsockopt(tcp_socket, SOL_SOCKET, SO_RCVTIMEO, (char*)&timeout, sizeof(timeout));
+#endif
+}
+
 Network::Network(File_Sharing* f) : gui_msg(NETWORK_GUI_QUEUE_SIZE),
                                     f_manager(f)
 {
@@ -91,13 +99,16 @@ void Network::cleanup()
 
 void Network::close_connection(socket_t socket)
 {
+    /* If connection that is being closed was in a transfer, safely 
+       fail the file sharing recv loop 
+    */
 	File_Sharing::Transfer_State s = f_manager->r_data.state.load(std::memory_order_relaxed);
-
 	if (s == File_Sharing::ACTIVE || s == File_Sharing::REQUESTED) {
 		const Client* c = db->get_client(socket);
+        // ? Might not need to be loop for r_data.users
 		for (const auto& u : f_manager->r_data.users) {
 			if (u.first == c->id) {
-				f_manager->fail_recv();
+				f_manager->set_recv(File_Sharing::CLOSE);
 				break;
 			}
 		}
@@ -136,7 +147,7 @@ bool Network::send_to_id(Msg* msg, UserId to)
         if (sent_bytes <= 0) 
 			return false;
         else 
-			assert(sent_bytes == sizeof(Msg));
+			assert(sent_bytes == sizeof(Msg)); // TODO wrap in loop if this were to ever fail
 		return true;
     }
 }
@@ -166,14 +177,14 @@ bool Network::init_socket()
 #endif
 
     server_addr.sin_family = AF_INET;
-	// server_addr.sin_addr.s_addr = INADDR_ANY;
-    server_addr.sin_addr.s_addr = inet_addr("127.0.0.1");
+    server_addr.sin_addr.s_addr = inet_addr("127.0.0.1"); //  INADDR_ANY;
 	server_addr.sin_port = htons(STATIC_SERVER_PORT);
 
     if (bind(tcp_socket, (struct sockaddr*)&server_addr, sizeof(server_addr)) < 0) {
         LOG("Attempting to connect to server...\n");
         is_server = false;
-        try_connect(); // Wait till connection
+        try_connect();
+        set_sock_timeout(1);
     }
     else {
         LOG("Created server...\n");
@@ -239,8 +250,19 @@ void Network::cli_loop()
 		i32 r_res = recv(tcp_socket, (char*)temp_msg_buf, sizeof(Msg), MSG_WAITALL);
 
 		if (r_res < 0) {
-			P_ERROR("Lost connection to server...\n");
-			EXIT_LOOP();
+            // Handle timout on windows
+            #ifdef SYSTEM_WIN_64
+            if (WSAGetLastError() == WSAETIMEDOUT) {
+                if (state.load(std::memory_order_relaxed) == CLOSE)
+                    return;
+                else 
+                    continue;
+            } 
+            #endif
+            else {
+                P_ERROR("Lost connection to server...\n");
+                EXIT_LOOP();
+            }
 		}
 
 		switch (temp_msg_buf->hdr.type)
@@ -320,12 +342,20 @@ void Network::analize_packet(const Msg* msg, Client* cli)
 void Network::send_client_list()
 {
     // Echo message to all
+    Net_Gui_Msg gmsg(Msg::CLIENT_LIST);
+
     for (u32 i = 0; i < MAX_CLIENTS; i++) {
         const Client* c = &db->client_list[i];
         if (c->state == Client::COMPLETE && c->id != my_id) {
             db->create_msg(temp_msg_buf, c);
             send_msg(temp_msg_buf, c);
         }
+    }
+
+    gmsg.copy_list(&temp_msg_buf->list);
+
+    if (!gui_msg.try_push(gmsg)) {
+        P_ERROR("'gui_msg' push too slow\n");
     }
 }
 

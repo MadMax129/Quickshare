@@ -32,6 +32,7 @@ IMGUI_LIBS = -lglfw3 -lopengl32 -lws2_32 -lpthread
 
 ifeq ($(TYPE), RELEASE)
 	LINKER += -static -s -static-libgcc -static-libstdc++
+# Add CXXFALHS RELEASE 
 endif
 
 ifeq ($(TYPE), DEBUG)

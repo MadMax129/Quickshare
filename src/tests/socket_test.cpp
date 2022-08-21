@@ -171,7 +171,7 @@ void client()
 
 int main() 
 {
-#ifdef SYSTEM_WIN
+#ifdef SYSTEM_WIN_64
     if (WSAStartup(MAKEWORD(2,2), &ctx.wsa_data) != 0) {
 		P_ERROR("WSAStartup\n");
         exit(1);
