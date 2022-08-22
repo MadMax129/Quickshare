@@ -1,19 +1,8 @@
 #pragma once
 
-#include "quickshare.hpp"
 #include <ctime>
-
-/* Defines the size of a packet send through the network. */
-#define PACKET_MAX_SIZE 1304
-
-/* Max file name */
-#define MAX_FILE_NAME 64
-
-/* Defines the max number of clients accepted */
-#define MAX_CLIENTS 16
-
-/* Max length for display computer host name */
-#define CLIENT_NAME_LEN 16
+#include "util.hpp"
+#include "config.hpp"
 
 #define MSG_TYPE(msg, mtype) msg->hdr.type = mtype
 #define MSG_SENDER(msg, id) msg->hdr.sender_id = id

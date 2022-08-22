@@ -5,6 +5,7 @@
 CXX = g++
 EXE = qs.exe
 BUILD_DIR = build
+TEST_DIR = tests
 TYPE = DEBUG
 
 # Install Directories
@@ -27,12 +28,10 @@ FILE_DIALOG_OBJ     = ../lib/nativefiledialog/build/obj/x64/Release/nfd/nfd_comm
 
 INCLUDES = ../include
 SOURCES  =	util.cpp         \
-			database.cpp     \
-			network.cpp	     \
-			file_manager.cpp \
-			main_menu.cpp    \
-			gui.cpp          \
 			quickshare.cpp
+
+TEST_SOURCES =$(TEST_DIR)/conn_test.cpp $(TEST_DIR)/demo_test.cpp 
+TEST_EXE = $(addsuffix .exe, $(basename $(TEST_SOURCES)))
 
 SRC_OBJS = $(addprefix $(BUILD_DIR)/, $(addsuffix .o, $(basename $(notdir $(SOURCES)))))
 IMGUI_OBJS = $(addprefix $(BUILD_DIR)/, $(addsuffix .o, $(basename $(notdir $(IMGUI_SOURCES)))))
@@ -41,9 +40,11 @@ ALL_OBJS = $(IMGUI_OBJS) $(SRC_OBJS) $(FILE_DIALOG_OBJ)
 DEPS = $(addprefix build\, $(SOURCES:.cpp=.d))
 SRC_INC_DIR = -I$(INCLUDES) -I$(IMGUI_DIR) -I$(IMGUI_DIR)/backends -I$(FILE_DIALOG_INCLUDE)
 CXXFLAGS += -O2 -Wall -std=c++17 -pedantic-errors -Werror -Wextra
+IMGUI_FLAGS = -Wall -Wformat
 LIBS = -limm32 -lws2_32 -lglfw3 -lgdi32 -lopengl32 -lm -lkernel32 -lole32 -luuid -L$(FILE_DIALOG_LIB) -lnfd
 
 ifeq ($(TYPE), RELEASE)
+	CXXFLAGS += -DRELEASE_MODE
 	LINKER += -static -s -static-libgcc -static-libstdc++ -mwindows
 endif
 
@@ -51,7 +52,7 @@ ifeq ($(TYPE), DEBUG)
 	CXXFLAGS += -DDEBUG_MODE
 endif
 
-.PHONY: all clean directory \
+.PHONY: all clean directory tests \
 		install_dir build_icon install_nfd \
 		install_imgui
 
@@ -79,24 +80,33 @@ install_nfd:
 install_imgui:
 	cd ../lib && git clone -b v1.85 https://github.com/ocornut/imgui/
 	cd ../lib && ren imgui imgui-1.85
+
+tests: $(TEST_EXE)
 	
 # Eventually move exe into its program files and make shortcut
 
 clean:
-	del $(addprefix .\build\, $(SOURCES:.cpp=.o))
-	rmdir /s /q $(INSTALL_DIR)
+	del $(TEST_DIR)\*.exe
+	del -r $(BUILD_DIR)
+	del $(EXE)
 
 build_icon:
 	windres .\icon\resource.rc -O coff -o .\icon\icon.res
 
 # TO create shortcut mklink qs_short.lnk qs.exe
 
+# Build tests and run them
+$(TEST_DIR)/%.exe:$(TEST_DIR)/%.cpp
+	$(CXX) -o $@ $^ $(CXXFLAGS) $(filter-out build/quickshare.o, $(SRC_OBJS)) $(SRC_INC_DIR) $(LINKER) $(LIBS)
+	$@
+
+# Byukd ImGui Source
 $(BUILD_DIR)/%.o:$(IMGUI_DIR)/%.cpp
-	$(CXX) $(CXXFLAGS) $(IMGUI_LIBS) -c -o $@ $<
+	$(CXX) $(CXXFLAGS) $(IMGUI_FLAGS) -c -o $@ $<
 
 # Build ImGui Backend Source
 $(BUILD_DIR)/%.o:$(IMGUI_DIR)/backends/%.cpp
-	$(CXX) $(CXXFLAGS) $(IMGUI_LIBS) -I$(IMGUI_DIR) -c -o $@ $<
+	$(CXX) $(IMGUI_FLAGS) $(IMGUI_LIBS) -I$(IMGUI_DIR) -c -o $@ $<
 
 # Build App Source
 $(BUILD_DIR)/%.o:%.cpp

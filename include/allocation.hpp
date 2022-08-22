@@ -1,17 +1,15 @@
 #pragma once
 
-#include "network.hpp"
-#include "quickshare.hpp"
+#include "msg.hpp"
+#include "database.hpp"
+#include "config.hpp"
 #include <cstring>
 
-#define AMOUNT_OF_MSGS 3
-#define AMOUNT_OF_BUFFERS 2
-#define MEGABYTE (1024 * 1024)
-
-struct Database;
-struct Msg;
-
 struct Allocation {
+    enum {
+        NETWORK_MSG,
+    };
+
     bool try_allocate()
     {
         msgs = new (std::nothrow) Msg[AMOUNT_OF_MSGS];
@@ -59,3 +57,5 @@ private:
     Database* database = NULL;
     u8* buffers = NULL;
 };
+
+extern Allocation memory;

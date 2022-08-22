@@ -1,7 +1,15 @@
-#include "quickshare.hpp"
+#include "util.hpp"
+#ifdef SYSTEM_WIN_64
+#   include <windows.h>
+#endif
+#include <cstdio>
+#include <mutex>
+
+static std::mutex log_mtx;
 
 void _colored_print(void* color, const char* str, ...)
 {
+    log_mtx.lock();
     va_list ap;
 	va_start(ap, str);
 
@@ -20,4 +28,5 @@ void _colored_print(void* color, const char* str, ...)
 #endif
 
 	va_end(ap);
+    log_mtx.unlock();
 }

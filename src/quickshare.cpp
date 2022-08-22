@@ -17,28 +17,53 @@
  * limitations under the License.
  */ 
 
-#include "file_manager.hpp"
-#include "network.hpp"
-#include "gui.hpp"
 #include <string>
-#include "nfd.h"
 
-QuickShare::QuickShare() 
-{
-    char temp[256];
+#include "util.hpp"
+#include "allocation.hpp"
+
 #ifdef SYSTEM_WIN_64
-    char user_name[32];
-    DWORD size = sizeof(user_name);
-    if (GetUserName((TCHAR*)user_name, &size) == 0)
-        P_ERROR("User name length error\n");
-    std::snprintf(temp, sizeof(char[256])-1, PATH_TO_DATA, user_name);
-    CreateDirectory(reinterpret_cast<TCHAR*>(temp), NULL);
+#   include <WS2tcpip.h>
+#   include <winsock2.h>
+#   include <windows.h>
 #endif
-    dir_path = std::string(temp);
+
+struct Quickshare {
+    bool init_all();
+    void main();
+    void end();
+private:
+    WSAData wsa_data;
+};
+
+Quickshare qs;
+Allocation memory;
+
+bool Quickshare::init_all() 
+{
+#ifdef SYSTEM_WIN_64
+    if (WSAStartup(MAKEWORD(2,2), &wsa_data) != 0) {
+        P_ERROR("Failed to init 'WSAStartup'\n");
+        return false;
+    }
+#endif
+    return memory.try_allocate();
 }
 
-QuickShare qs{};
-Allocation memory;
+void Quickshare::end()
+{
+#ifdef SYSTEM_WIN_64
+    WSACleanup();
+#endif
+    memory.free();
+}
+
+#include "connection.hpp"
+
+void Quickshare::main()
+{
+    // Run locator first
+}
 
 #ifdef SYSTEM_WIN_64
 int WINAPI WinMain(HINSTANCE hInstance,
@@ -55,41 +80,14 @@ int main(const int argc, const char* argv[])
     (void)lpCmdLine;
     (void)nCmdShow;
 #endif
-
-    if (!memory.try_allocate()) {
-        memory.free();
-        return 1;
+    if (qs.init_all()) {
+        LOG("Starting Quickshare...\n");
+        qs.main();
+    }
+    else {
+        LOG("Failed to start Quickshare...\n");
     }
 
-    File_Sharing f_manager{};
-    Network net(&f_manager);
-    Context ctx(&net);
-    f_manager.add_network(&net);
-
-    net.network_loop();
-    // if (ctx.create_window(WINDOW_WIDTH, WINDOW_HEIGHT, "Quickshare")) {
-    //     ctx.init_imgui();
-    //     ctx.main_loop();
-    // }
-
-    for (;;)
-    {    
-        int c = getchar();
-        
-        switch (c) {
-            case 'e': return 0;
-            case 's': {
-                UserId id;
-                char fname[] = "../test_files/4kimage.jpg";
-                (void)scanf("%lld", &id);
-                Users_List a = {std::make_pair(id, Msg::INVALID)};
-                printf("Sending '%s' to '%lld'\n", fname, id);
-                assert(f_manager.create_send(fname, a));
-            }
-        }
-    }
-
-    memory.free();
-
+    qs.end();
     return 0;
 }

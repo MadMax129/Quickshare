@@ -39,6 +39,14 @@ struct File_Sharing;
 struct Client;
 struct Database;
 
+struct Net_Server {
+    
+};
+
+struct Net_Client {
+
+};
+
 struct Network {
 public:
 
