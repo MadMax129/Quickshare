@@ -4,6 +4,7 @@
 #include "database.hpp"
 #include "config.hpp"
 #include <cstring>
+#include <new>
 
 struct Allocation {
     enum {

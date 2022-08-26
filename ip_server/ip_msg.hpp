@@ -23,6 +23,6 @@ struct Ip_Msg {
             char ip[MAX_IP_LEN];
         } response;
     };
-};
+} __attribute__((packed));
 
 static_assert(sizeof(Ip_Msg) == 32);

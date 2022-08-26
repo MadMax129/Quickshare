@@ -24,6 +24,7 @@
 #endif
 
 #include <cstdint>
+#include <cstdio>
 #include <assert.h>
 
 typedef std::int8_t i8;

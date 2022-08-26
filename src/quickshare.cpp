@@ -17,14 +17,10 @@
  * limitations under the License.
  */ 
 
-#include <string>
-
 #include "util.hpp"
 #include "allocation.hpp"
 
 #ifdef SYSTEM_WIN_64
-#   include <WS2tcpip.h>
-#   include <winsock2.h>
 #   include <windows.h>
 #endif
 
@@ -57,8 +53,6 @@ void Quickshare::end()
 #endif
     memory.free();
 }
-
-#include "connection.hpp"
 
 void Quickshare::main()
 {
