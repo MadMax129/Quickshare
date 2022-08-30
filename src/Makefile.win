@@ -28,6 +28,9 @@ FILE_DIALOG_OBJ     = ../lib/nativefiledialog/build/obj/x64/Release/nfd/nfd_comm
 
 INCLUDES = ../include
 SOURCES  =	util.cpp         \
+			locator.cpp      \
+			gui.cpp          \
+			main_menu.cpp    \
 			quickshare.cpp
 
 TEST_SOURCES =$(TEST_DIR)/conn_test.cpp $(TEST_DIR)/demo_test.cpp 

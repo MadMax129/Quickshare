@@ -1,7 +1,8 @@
 #include "locator.hpp"
 #include "config.hpp"
+#include <cstring>
 
-bool Locator::locate(Locator_Conn& lc)
+bool Locator::init()
 {
     if (!conn.create_socket(STATIC_QS_SERVER_IP, STATIC_QS_SERVER_PORT))
         return false;
@@ -11,15 +12,26 @@ bool Locator::locate(Locator_Conn& lc)
 
     LOG("Connected to Qs Server...\n");
 
-    // either send to join a session
-    // or send to create session 
+    state.set(INACTIVE);
 
-    // for both read result
+    return true;
+}
 
-    // return error if cannot otherwise return success
+bool Locator::locate()
+{
+    Ip_Msg msg;
+    msg.type = Ip_Msg::ADD;
+    std::strcpy(msg.request.my_ip, "192.168.1.2");
+    std::strcpy(msg.request.net_name, "my_net_123");
 
+    assert(conn.send(conn.me(), &msg));
+    assert(conn.recv(conn.me(), &msg));
+    assert(msg.type != Ip_Msg::INVALID);
+
+    return true;
 }
 
 void Locator::cleanup()
 {
+    conn.close();
 }

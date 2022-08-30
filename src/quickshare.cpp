@@ -19,6 +19,8 @@
 
 #include "util.hpp"
 #include "allocation.hpp"
+#include "locator.hpp"
+#include "gui.hpp"
 
 #ifdef SYSTEM_WIN_64
 #   include <windows.h>
@@ -56,6 +58,14 @@ void Quickshare::end()
 
 void Quickshare::main()
 {
+    // Locator loc;
+    // assert(loc.init());
+    // (void)loc.locate();
+    Context ctx;
+    assert(ctx.create_window(WINDOW_WIDTH, WINDOW_HEIGHT, "Quickshare"));
+    ctx.init_imgui();
+    ctx.main_loop();
+
     // Run locator first
 }
 

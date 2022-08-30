@@ -4,13 +4,6 @@
 #include <GLFW/glfw3.h>
 #include "main_menu.hpp"
 #include <memory>
-#include "network.hpp"
-
-#define WINDOW_HEIGHT 500
-#define WINDOW_WIDTH 300
-
-#define ICON_PATH "../images/logo.png"
-#define FONT_SIZE 14.0f
 
 struct Context {
 public:
@@ -19,20 +12,19 @@ public:
         LOGIN,
         MAIN_MENU
     };
-    Context(Network* network);
-    ~Context(); 
+
+    Context();
     bool create_window(int width, int height, const char* name);
     void init_imgui();
     void main_loop();
     void menu_bar();
 
-    Main_Menu f_menu;
-    Network* network;
-
 private:
     void error_window();
     void init_style();
 
+    Main_Menu f_menu;
+    const char* error;
     App_State app_state;
     GLFWwindow* window;
     char* glsl_version;

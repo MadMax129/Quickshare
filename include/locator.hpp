@@ -2,13 +2,20 @@
 
 #include "connection.hpp"
 #include "../ip_server/ip_msg.hpp"
+#include "state.hpp"
 
 using Locator_Conn = Connection<Ip_Msg>;
 
 struct Locator {
-    bool locate(Locator_Conn& lc);
+    enum State {
+        INACTIVE,
+    };
+
+    bool init();
+    bool locate();
     void cleanup();
 
 private:
+    State_Manager<State> state;
     Locator_Conn conn;
 };
