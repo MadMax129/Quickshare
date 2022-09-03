@@ -8,12 +8,17 @@
 #include <sys/socket.h>
 #include <unistd.h>
 #include <arpa/inet.h>
+#include <fcntl.h>
 #include <sqlite3.h>
 #include <cerrno>
 #include <cstring>
 #include <assert.h>
+#include <thread>
+#include <condition_variable>
+#include <atomic>
 #include "ip_msg.hpp"
-#include "config.hpp"
+
+#define DATABASE_PATH "./database/ip_list_db"
 
 enum Host_State {
     // Default state, never should be set 
@@ -26,13 +31,22 @@ enum Host_State {
     YOU_SERVER = 2
 };
 
+enum Server_State {
+    ONLINE,
+    SHUTDOWN
+};
+
 struct Hosts {
     bool create_sql();
     void find_entry(const char* net_name, Ip_Msg* msg);
     void create_entry(const char* net_name, const char* ip, Ip_Msg* msg);
     void end();
+    std::condition_variable cond;
 
 private:
+    void cleaner();
+    std::thread c_th;
+    std::mutex c_mtx;
     sqlite3* db;
 };
 
@@ -50,3 +64,5 @@ private:
     int sock, new_client;
     sockaddr_in addr, new_addr;
 };
+
+extern std::atomic<Server_State> global_state;

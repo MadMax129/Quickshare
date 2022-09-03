@@ -1,4 +1,5 @@
 #include "ip_server.hpp"
+#include "../include/config.hpp"
 
 bool Server::init_server()
 {
@@ -8,11 +9,11 @@ bool Server::init_server()
         return false;
 
     addr.sin_family = AF_INET;
-    addr.sin_addr.s_addr = inet_addr(IP_ADDR);
-	addr.sin_port = htons(PORT);
+    addr.sin_addr.s_addr = inet_addr(QS_PUBLIC_IP);
+	addr.sin_port = htons(QS_PUBLIC_PORT);
 
     if (bind(sock, (struct sockaddr*)&addr, sizeof(addr)) < 0) {
-        std::printf("Failed to bind '%s':%d\n", IP_ADDR, PORT);
+        std::printf("Failed to bind '%s':%d\n", QS_PUBLIC_IP, QS_PUBLIC_PORT);
         return false;
     }
 
@@ -24,8 +25,7 @@ bool Server::init_server()
 
 void Server::loop()
 {
-    for (;;) {
-        std::printf("Waiting for connection...\n");
+    while (global_state.load(std::memory_order_relaxed) == ONLINE) {
         socklen_t len = sizeof(new_addr);
         new_client = accept(sock, (sockaddr*)&new_addr, &len);
 
@@ -39,7 +39,7 @@ void Server::loop()
             inet_ntoa(new_addr.sin_addr), 
             new_addr.sin_port
         );
-
+        
         request();
 
         close(new_client);
@@ -81,8 +81,10 @@ void Server::request()
 void Server::handle_msg(Ip_Msg& msg)
 {
     const char* msg_name = "";
-    if (msg.type == Ip_Msg::REQUEST) msg_name = "REQUEST";
-    else if (msg.type == Ip_Msg::ADD) msg_name = "ADD";
+    if (msg.type == Ip_Msg::REQUEST) 
+        msg_name = "REQUEST";
+    else if (msg.type == Ip_Msg::ADD) 
+        msg_name = "ADD";
 
     std::printf(
         "Request:\n"

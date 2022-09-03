@@ -2,6 +2,7 @@
 #include <signal.h>
 #include <cstdlib>
 
+std::atomic<Server_State> global_state{ONLINE};
 static Hosts hosts;
 static Server server(hosts);
 
@@ -9,9 +10,9 @@ void signal_callback_handler(int signum)
 {
     (void)signum;
     std::printf("Forced shutdown\n");
+    global_state.store(SHUTDOWN, std::memory_order_relaxed);
+    hosts.cond.notify_one();
     server.end();
-    hosts.end();
-    std::exit(1);
 }
 
 int main() 

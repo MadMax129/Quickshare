@@ -15,8 +15,8 @@ dir:
 	@mkdir -p build
 
 clean:
-	rm -r $(BUILD_DIR)
-	rm $(EXE)
+	rm -f -r $(BUILD_DIR)
+	rm -f $(EXE)
 
 all: clean dir $(EXE)
 	@echo Complete
