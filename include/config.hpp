@@ -41,3 +41,13 @@
 #define TWO_MENUS_Y_MARGIN 20.0f
 #define MENUS_SIDE_MARGIN 16.0f
 #define MENU_BOTTOM_MARGIN 35.0f
+
+/********** login_menu.hpp **********/
+#define MAX_INNER_SIZE 500.0f
+#define INNER_LOGIN_MARGIN 50.0f
+#define WELCOME_TEXT_MARGIN 20.0f
+#define SESSION_TEXT_MARGIN 3.0f
+#define KEY_TEXT_LEFT_MARGIN 50.0f
+#define KEY_TEXT_TOP_MARGIN 20.0f
+#define ENTER_BUTTON_MARGIN 20.0f
+#define ENTER_BUTTON_HEIGHT 30.0f

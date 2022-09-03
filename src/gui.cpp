@@ -1,9 +1,10 @@
-#include <stdio.h>
 #include <GLFW/glfw3.h> 
 #include "imgui.h"
 #include "imgui_impl_glfw.h"
 #include "imgui_impl_opengl3.h"
 #include "gui.hpp"
+#include "config.hpp"
+#include "util.hpp"
 #define STB_IMAGE_IMPLEMENTATION
 #include "../lib/stb_image.h"
 #include "roboto-medium_font.h"
@@ -13,11 +14,11 @@ static void glfw_error_callback(int error, const char* description)
     fprintf(stderr, "Glfw Error %d: %s\n", error, description);
 }
 
-Context::Context() : f_menu(this)
+Context::Context(Locator& loc) : loc(loc), f_menu(this), l_menu(this)
 {
     window = NULL;
     glsl_version = NULL;
-    app_state = LOGIN;
+    app_state = S_LOGIN;
 }
 
 void Context::init_style()
@@ -168,13 +169,27 @@ void Context::menu_bar()
 
 void Context::main_loop() 
 {
+    // app_state = S_MAIN_MENU;
     while (!glfwWindowShouldClose(window))
     {
         glfwPollEvents();
         IMGUI_NEW_FRAME();
 
         menu_bar();
-        f_menu.draw();
+        switch (app_state)
+        {
+            case S_ERROR:
+                error_window();
+                break;
+            
+            case S_LOGIN:
+                l_menu.draw();
+                break;
+
+            case S_MAIN_MENU:
+                f_menu.draw();
+                break;
+        }
 
         ImGui::ShowDemoWindow();
 

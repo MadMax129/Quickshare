@@ -1,6 +1,6 @@
 #include "gui.hpp"
-#include <array>
-#include <windows.h>
+#include "config.hpp"
+#include "util.hpp"
 #include <string>
 #include "nfd.h"
 
@@ -86,7 +86,9 @@ void Main_Menu::draw_request()
 									  ImGuiTableFlags_RowBg        | 
 									  ImGuiTableFlags_BordersOuter | 
 									  ImGuiTableFlags_BordersV;
-		
+	
+	// ! TABLE SHOULD FIT USER_NAME_LEN CHaracters on left most colum
+
 	if (ImGui::BeginTable("Requests", 3, flags, req_size))
 	{
 		// TODO: ADD read form queue here 
@@ -161,14 +163,14 @@ void Main_Menu::draw_session()
 		(MENU_BOTTOM_MARGIN * 0.5f) - (ImGui::GetTextLineHeight() * 2.0f)
 	};
 
-	// Align text to center or top right menu
+	// Align text to center of top right menu
 	ImGui::SetCursorPosX(
 		(session_size.x / 2.0f + (MENUS_SIDE_MARGIN / 2.0f) - 25.0f) + 
 		ImGui::GetWindowSize().x / 2.0f
 	);
 	ImGui::Text("Session");
 
-	// Align top right menu list box
+	// Align session list box
 	ImGui::SetCursorPosX((ImGui::GetWindowSize().x / 2.0f) + (MENUS_SIDE_MARGIN * 0.5f));
 
 	ImGui::PushStyleColor(ImGuiCol_FrameBg, ImVec4(0.32941f, 0.33333f, 0.42353f, 1.0f)); 

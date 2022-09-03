@@ -1,13 +1,6 @@
 #pragma once
 
-#include <array>
-#include "net_gui.hpp"
-
 struct Context;
-
-#define BACKLOG_WIN_SIZE ImVec2(120, 250)
-#define USERS_WIN_SIZE ImVec2(120, 250)
-#define REQUESTS_WIN_SIZE ImVec2(200, 100)
 
 struct Main_Menu {
 public:
@@ -34,7 +27,4 @@ private:
 
     bool open;
     Context* ctx;
-    // Msg::Client_List list;
-    std::string sSelectedFile;
-    std::string sFilePath;
 };

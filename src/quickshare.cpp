@@ -58,10 +58,8 @@ void Quickshare::end()
 
 void Quickshare::main()
 {
-    // Locator loc;
-    // assert(loc.init());
-    // (void)loc.locate();
-    Context ctx;
+    Locator loc;
+    Context ctx(loc);
     assert(ctx.create_window(WINDOW_WIDTH, WINDOW_HEIGHT, "Quickshare"));
     ctx.init_imgui();
     ctx.main_loop();

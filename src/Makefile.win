@@ -30,6 +30,7 @@ INCLUDES = ../include
 SOURCES  =	util.cpp         \
 			locator.cpp      \
 			gui.cpp          \
+			login_menu.cpp   \
 			main_menu.cpp    \
 			quickshare.cpp
 

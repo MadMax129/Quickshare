@@ -1,6 +1,7 @@
 #include "locator.hpp"
 #include "config.hpp"
 #include <cstring>
+#include <thread>
 
 bool Locator::init()
 {
@@ -12,26 +13,67 @@ bool Locator::init()
 
     LOG("Connected to Qs Server...\n");
 
-    state.set(INACTIVE);
-
     return true;
 }
 
-bool Locator::locate()
+void Locator::c_loop(Key k)
+{
+    (void)k;
+}
+
+void Locator::end(State s)
+{
+    state = s;
+    conn.close();
+    lc.unlock();
+}
+
+void Locator::l_loop(Key k)
 {
     Ip_Msg msg;
-    msg.type = Ip_Msg::ADD;
-    std::strcpy(msg.request.my_ip, "192.168.1.2");
-    std::strcpy(msg.request.net_name, "my_net_123");
+    if (!init()) {
+        end(CONN_FAILED);
+        return;
+    }
+    
+    msg.type = Ip_Msg::REQUEST;
+    std::snprintf(msg.request.net_name, NET_NAME_LEN, "%s", k);
 
-    assert(conn.send(conn.me(), &msg));
-    assert(conn.recv(conn.me(), &msg));
-    assert(msg.type != Ip_Msg::INVALID);
+    if (!conn.send(conn.me(), &msg)) {
+        end(CONN_FAILED);
+        return;
+    }
 
-    return true;
+    if (!conn.recv(conn.me(), &msg)) {
+        end(CONN_FAILED);
+        return;
+    }
+
+    if (msg.type != Ip_Msg::RESPONSE) {
+        end(INVALID_KEY);
+        return;
+    }
+    else {
+        snprintf(response, sizeof(response), "%s", msg.response.ip);
+    }
+    
+    end(SUCCESS);
 }
 
-void Locator::cleanup()
+void Locator::locate(Key k)
 {
-    conn.close();
+    if (lc.try_lock()) {
+        state = WORKING;
+        std::thread l_th(&Locator::l_loop, this, k);
+        l_th.detach();
+    }
+}
+
+void Locator::create(Key k)
+{
+    if (lc.try_lock()) {
+        state = WORKING;
+        std::thread c_th(&Locator::c_loop, this, k);
+        c_th.detach();
+    }
 }
