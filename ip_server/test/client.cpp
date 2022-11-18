@@ -6,7 +6,7 @@
 #include <cerrno>
 #include <cstring>
 #include <assert.h>
-#include "../ip_server.hpp"
+#include "../include/ip_server.hpp"
 
 int main(int argc, const char** argv)
 {
@@ -23,7 +23,7 @@ int main(int argc, const char** argv)
     assert(connect(sock, (sockaddr*)&addr, sizeof(addr)) >= 0);
 
     Ip_Msg msg;
-    msg.type = Ip_Msg::REQUEST;
+    msg.type = Ip_Msg::CREATE;
 
     std::strcpy(msg.request.net_name, "me");
     std::strcpy(msg.request.my_ip, "192.168.1.1");

@@ -25,7 +25,8 @@ bool Hosts::create_sql()
 
 void Hosts::cleaner()
 {
-    static uint32_t num_cleans = 0;
+    uint32_t num_cleans = 0;
+    
     while (global_state.load(std::memory_order_relaxed) == ONLINE) {
         std::unique_lock<std::mutex> lk(c_mtx);
         cond.wait_for(lk, std::chrono::minutes(5));
@@ -78,7 +79,7 @@ void Hosts::find_entry(const char* net_name, Ip_Msg* msg)
             std::strncpy(
                 msg->response.ip, 
                 (char*)sqlite3_column_text(stmt, 1), 
-                MAX_IP_LEN-1
+                IP_ADDR_LEN
             );
             break;
         }
@@ -121,7 +122,7 @@ void Hosts::create_entry(const char* net_name, const char* ip, Ip_Msg* msg)
         std::strncpy(
             msg->response.ip, 
             ip, 
-            MAX_IP_LEN-1
+            SESSION_KEY_LEN
         );
     }
     sqlite3_mutex_leave(sqlite3_db_mutex(db));

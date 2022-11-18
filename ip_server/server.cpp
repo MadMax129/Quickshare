@@ -9,11 +9,11 @@ bool Server::init_server()
         return false;
 
     addr.sin_family = AF_INET;
-    addr.sin_addr.s_addr = inet_addr(QS_PUBLIC_IP);
-	addr.sin_port = htons(QS_PUBLIC_PORT);
+    addr.sin_addr.s_addr = inet_addr(STATIC_QS_SERVER_IP);
+	addr.sin_port = htons(STATIC_QS_SERVER_PORT);
 
     if (bind(sock, (struct sockaddr*)&addr, sizeof(addr)) < 0) {
-        std::printf("Failed to bind '%s':%d\n", QS_PUBLIC_IP, QS_PUBLIC_PORT);
+        std::printf("Failed to bind '%s':%d\n", STATIC_QS_SERVER_IP, STATIC_QS_SERVER_PORT);
         return false;
     }
 
@@ -83,8 +83,8 @@ void Server::handle_msg(Ip_Msg& msg)
     const char* msg_name = "";
     if (msg.type == Ip_Msg::REQUEST) 
         msg_name = "REQUEST";
-    else if (msg.type == Ip_Msg::ADD) 
-        msg_name = "ADD";
+    else if (msg.type == Ip_Msg::CREATE) 
+        msg_name = "CREATE";
 
     std::printf(
         "Request:\n"
@@ -109,7 +109,7 @@ void Server::handle_msg(Ip_Msg& msg)
             break;
         }
 
-        case Ip_Msg::ADD: {
+        case Ip_Msg::CREATE: {
             hosts.create_entry(msg.request.net_name, msg.request.my_ip, &answer);
             send_msg(&answer);
             break;

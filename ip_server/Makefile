@@ -8,7 +8,7 @@ SRC = database.cpp \
 	  server.cpp \
 	  ip_server.cpp
 SRC_OBJS = $(addprefix $(BUILD_DIR)/, $(addsuffix .o, $(basename $(SRC))))
-CXXFLAGS += -O2 -Wall -Werror -Wextra -std=c++17 -pedantic-errors
+CXXFLAGS += -O2 -Wall -Werror -Wextra -std=c++17 -pedantic-errors -I./include
 LIBS = -lpthread -lsqlite3
 
 dir:
