@@ -58,9 +58,13 @@ void Quickshare::end()
 
 void Quickshare::main()
 {
-    Locator loc;
-    Context ctx(loc);
-    assert(ctx.create_window(WINDOW_WIDTH, WINDOW_HEIGHT, "Quickshare"));
+    Context ctx;
+
+    if (!ctx.create_window(WINDOW_WIDTH, WINDOW_HEIGHT, "Quickshare")) {
+        P_ERROR("Failed to create window...");
+        return;
+    }
+
     ctx.init_imgui();
     ctx.main_loop();
 

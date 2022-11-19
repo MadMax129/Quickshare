@@ -4,7 +4,6 @@
 #include <GLFW/glfw3.h>
 #include "main_menu.hpp"
 #include "login_menu.hpp"
-#include "locator.hpp"
 #include <memory>
 
 struct Context {
@@ -15,13 +14,12 @@ public:
         S_MAIN_MENU
     };
 
-    Context(Locator& loc);
+    Context();
     bool create_window(int width, int height, const char* name);
     void init_imgui();
     void main_loop();
     void menu_bar();
 
-    Locator& loc;
 private:
     void error_window();
     void init_style();

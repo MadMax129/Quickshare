@@ -5,6 +5,7 @@
 #include <cstdio>
 #include <mutex>
 
+#ifndef RELEASE_MODE
 static std::mutex log_mtx;
 
 void _colored_print(void* color, const char* str, ...)
@@ -30,3 +31,5 @@ void _colored_print(void* color, const char* str, ...)
 	va_end(ap);
     log_mtx.unlock();
 }
+
+#endif

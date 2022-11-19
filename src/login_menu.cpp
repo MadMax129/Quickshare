@@ -7,6 +7,7 @@ Login_Menu::Login_Menu(Context* context)
 {
 	ctx = context;
 	std::memset(key, 0, sizeof(Key));
+	login_state = false;
 }
 
 void Login_Menu::draw()
@@ -46,12 +47,12 @@ void Login_Menu::draw()
 
 void Login_Menu::draw_inner()
 {
-	const float window_x = ImGui::GetWindowSize().x > MAX_INNER_SIZE ? 
-		MAX_INNER_SIZE : 
+	const float window_x = ImGui::GetWindowSize().x > MAX_INNER_LENGTH ? 
+		MAX_INNER_LENGTH : 
 		ImGui::GetWindowSize().x;
 	
-	const float window_y = ImGui::GetWindowSize().y > MAX_INNER_SIZE ?
-		MAX_INNER_SIZE : 
+	const float window_y = ImGui::GetWindowSize().y > MAX_INNER_HEIGHT ?
+		MAX_INNER_HEIGHT : 
 		ImGui::GetWindowSize().y;
 
 	inner_size = {
@@ -62,7 +63,7 @@ void Login_Menu::draw_inner()
 	// Inner square background and border color
 	ImGui::PushStyleColor(ImGuiCol_ChildBg, ImVec4(27.0f/255.0f, 27.0f/255.0f, 27.0f/255.0f, 255));
 	ImGui::PushStyleColor(ImGuiCol_Border, ImVec4(27.0f/255.0f, 27.0f/255.0f, 27.0f/255.0f, 255));
-	ImGui::PushStyleVar(ImGuiStyleVar_ChildRounding, 3.0f);
+	ImGui::PushStyleVar(ImGuiStyleVar_ChildRounding, 4.0f);
 
 	// Align the inner menu to the center of the screen
 	ImGui::SetCursorPos(
@@ -95,6 +96,9 @@ void Login_Menu::draw_inner()
 		// Draw enter button
 		draw_enter();
 
+		// Draw bottom text
+		draw_text();
+
 		ImGui::EndChild();
 	}
 
@@ -126,6 +130,14 @@ void Login_Menu::draw_key()
 
 void Login_Menu::draw_enter()
 {
+	static bool working = false;
+	const char* button_text;
+
+	if (!login_state)
+		button_text = "Enter";
+	else
+		button_text = "Create";
+
 	ImGui::SetCursorPos(
 		ImVec2(
 			KEY_TEXT_LEFT_MARGIN, // Same margin as key
@@ -139,22 +151,64 @@ void Login_Menu::draw_enter()
 	};
 
 	ImGui::PushStyleVar(ImGuiStyleVar_FrameRounding, 3.f);
-	if (ImGui::Button("Enter", enter_size))
+	if (ImGui::Button(button_text, enter_size))
 	{
 		if (strnlen(key, IM_ARRAYSIZE(key) - 1) > 0) {
-			std::printf("%s [%d]\n", key, key[sizeof(Key)-1]);
-			ctx->loc.locate(key);
+			if (!working) {
+				std::printf("-->%s\n", key);
+				loc.locate(key);
+				working = true;
+			}
 		}
 	}
 	ImGui::PopStyleVar();
 
-	if (ctx->loc.get_lock().try_lock()) {
-		if (ctx->loc.get_state() != Locator::WORKING && ctx->loc.get_state() != Locator::INACTIVE)
-			printf("Got lock... %d\n", ctx->loc.get_state());
-		ctx->loc.get_lock().unlock();
-	}
+	switch (loc.state.get(std::memory_order_acquire))
+	{
+		case Locator::INACTIVE:
+		case Locator::WORKING:
+			break;
 
-	// ImGui::SetCursorPos(ImVec2(22, 240));
-	// ImGui::TextDisabled("Don't have a key? Create one!");
-}
+		case Locator::CONN_FAILED:
+		case Locator::FAILED:
+			working = false;
 			
+			ImGui::SetCursorPosX(KEY_TEXT_LEFT_MARGIN);
+			ImGui::TextColored(ImVec4(1.0f, 0.0f, 0.0f, 1.0f), "Connection failed...");
+
+			break;
+
+		case Locator::SUCCESS:
+			break;
+	}
+}
+		
+void Login_Menu::draw_text()
+{
+	ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(27.0f/255.0f, 27.0f/255.0f, 27.0f/255.0f, 1.0f));
+	ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(27.0f/255.0f, 27.0f/255.0f, 27.0f/255.0f, 1.0f));
+	ImGui::PushStyleColor(ImGuiCol_ButtonActive, ImVec4(27.0f/255.0f, 27.0f/255.0f, 27.0f/255.0f, 255));
+	
+	if (!login_state) {
+		ImGui::SetCursorPos(
+			ImVec2(
+				(inner_size.x / 2.0f) - (ImGui::CalcTextSize("Don't have a key? Create one!").x / 2.0f), 
+				ImGui::GetCursorPosY() + 10.0f
+			)
+		);
+		if (ImGui::SmallButton("Don't have a key? Create one!"))
+			login_state = true;
+	}
+	else {
+		ImGui::SetCursorPos(
+			ImVec2(
+				(inner_size.x / 2.0f) - (ImGui::CalcTextSize("Already have a key? Enter it!").x / 2.0f), 
+				ImGui::GetCursorPosY() + 10.0f
+			)
+		);
+		
+		if (ImGui::SmallButton("Already have a key? Enter it!"))
+			login_state = false;
+	}
+	ImGui::PopStyleColor(3);
+}

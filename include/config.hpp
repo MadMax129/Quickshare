@@ -29,8 +29,8 @@
 #define STATIC_SERVER_PORT 8345
 
 /********** gui.hpp **********/
-#define WINDOW_HEIGHT 500
-#define WINDOW_WIDTH 300
+#define WINDOW_HEIGHT 600
+#define WINDOW_WIDTH 600
 #define ICON_PATH "../images/logo.png"
 #define FONT_SIZE 15.0f
 
@@ -43,7 +43,8 @@
 #define MENU_BOTTOM_MARGIN 35.0f
 
 /********** login_menu.hpp **********/
-#define MAX_INNER_SIZE 500.0f
+#define MAX_INNER_LENGTH 500.0f
+#define MAX_INNER_HEIGHT 350.0f
 #define INNER_LOGIN_MARGIN 50.0f
 #define WELCOME_TEXT_MARGIN 20.0f
 #define SESSION_TEXT_MARGIN 3.0f

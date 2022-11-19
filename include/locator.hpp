@@ -1,12 +1,12 @@
 #pragma once
 
 #include "connection.hpp"
-#include "../ip_server/ip_msg.hpp"
+#include "../ip_server/include/ip_msg.hpp"
 #include "state.hpp"
 #include <mutex>
 
 using Locator_Conn = Connection<Ip_Msg>;
-using Key = char[NET_NAME_LEN];
+using Key = char[SESSION_KEY_LEN];
 
 struct Locator {
 	enum State {
@@ -17,26 +17,21 @@ struct Locator {
 		/* Failed to connect to QS Server */
 		CONN_FAILED,
 		/* Invalid session key */
-		INVALID_KEY,
-		/* Cannot create a session */
-		KEY_FAILED,
+		FAILED,
 		/* Success completed request */
 		SUCCESS
 	};
 
-	void create(Key k);
-	void locate(Key k);
-	inline std::mutex& get_lock() { return lc; }
-	inline State get_state() { return state; }
+	Locator();
+	void locate(Key key);
+	void create(Key key);
+
+	State_Manager<State> state;
 
 private:
-	void c_loop(Key k);
-	void l_loop(Key k);
-	void end(State s);
-	bool init();
+	bool init_conn();
+	void create_thread(Key key);
 
-	std::mutex lc;
-	State state{INACTIVE};
-	char response[MAX_IP_LEN];
 	Locator_Conn conn;
+	char response[IP_ADDR_LEN];
 };
