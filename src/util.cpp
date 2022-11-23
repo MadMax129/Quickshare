@@ -4,6 +4,7 @@
 #endif
 #include <cstdio>
 #include <mutex>
+#include <cstring>
 
 #ifndef RELEASE_MODE
 static std::mutex log_mtx;
@@ -33,3 +34,14 @@ void _colored_print(void* color, const char* str, ...)
 }
 
 #endif
+
+void safe_strcpy(char* dest, const char* src, size_t size)
+{
+    std::memcpy(
+        static_cast<void*>(dest),
+        static_cast<const void*>(src),
+        size
+    );
+
+    dest[size - 1] = '\0';
+}

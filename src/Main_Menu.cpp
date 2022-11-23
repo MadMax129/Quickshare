@@ -1,4 +1,4 @@
-#include "gui.hpp"
+#include "context.hpp"
 #include "config.hpp"
 #include "util.hpp"
 #include <string>
@@ -148,7 +148,11 @@ void Main_Menu::draw_backlog()
 
 	if (ImGui::BeginListBox("##Backlog", backlog_size))
 	{
-		add_event(T_RECV, "File size: 2000 bytes Sets the list box size based on the number of items that you want to make visible Size default to hold ~7.25 items. We add +25% worth of item height to allow the user to see at a glance if there are more items up/down, without looking at the scrollbar. We don't add this extra bit if items_count <= height_in_items. It is slightly dodgy, because it means a dynamic list of items will make the widget resize occasionally when it crosses that size.", "tsb.png");
+		// for (int i = 0; i < 100; i++) {
+			// Transfer_Type t = (Transfer_Type)(rand() % 3);
+			add_event(T_RECV, "Ftle size: 2000 bytes Sets the list box size based on the number of items that you want to make visible Size default to hold ~7.25 items. We add +25% worth of item height to allow the user to see at a glance if there are more items up/down, without looking at the scrollbar. We don't add this extra bit if items_count <= height_in_items. It is slightly dodgy, because it means a dynamic list of items will make the widget resize occasionally when it crosses that size.", "tsb.png");
+			add_event(T_ERROR, "File size: 2000 bytes", "pic.png");
+		// }
 		ImGui::EndListBox();
 	}
 	ImGui::PopStyleColor();
@@ -221,10 +225,10 @@ void Main_Menu::draw_users()
 
 void Main_Menu::add_event(Transfer_Type type, const char *desc, const char *fname)
 {
-	static bool selectable = false;
+	// static bool selectable = false;
 
-	ImGui::Selectable("(?)", &selectable);
-	(void)desc;
+	ImGui::Text("(?)");
+	// ImGui::Selectable("(?)", &selectable);
 	// if (selectable)
 	// {
 	// 	// ImGui::SetNextWindowFocus
@@ -241,30 +245,27 @@ void Main_Menu::add_event(Transfer_Type type, const char *desc, const char *fnam
 		ImGui::PopTextWrapPos();
 		ImGui::EndTooltip();
 	}
+
+	ImGui::SameLine(0, 5);
+
 	switch(type)
 	{
 		case T_RECV:
-		{
-			ImGui::SameLine(0, 5);
-			ImGui::TextColored(ImVec4(0.0178, 0.716, 0.890, 1.0f), "Recieved");   
-			ImGui::SameLine(0,5);
-			ImGui::TextWrapped("'%s'", fname);
-			break;               
-		}
-		case T_SENT:
-		{
-			ImGui::SameLine(0,5);
-			ImGui::TextColored(ImVec4(0.0178, 0.890, 0.105,1.0f), "Sent");
-			ImGui::SameLine(0,5);
-			ImGui::Text("'%s'", fname);
+			ImGui::TextColored(ImVec4(0.0178f, 0.716f, 0.890f, 1.0f), "Recieved");   
 			break;
-		}
+
+		case T_SENT:
+			ImGui::TextColored(ImVec4(0.0178f, 0.890f, 0.105f, 1.0f), "Sent");
+			break;
 
 		case T_ERROR:
-		{
+			ImGui::TextColored(ImVec4(0.9f, 0.290f, 0.105f, 1.0f), "Error");
 			break;
-		}
+
 	}
+
+	ImGui::SameLine(0,5);
+	ImGui::TextWrapped("'%s'", fname);
 }
 
 const char* Main_Menu::open_file()

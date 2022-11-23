@@ -28,8 +28,12 @@ FILE_DIALOG_OBJ     = ../lib/nativefiledialog/build/obj/x64/Release/nfd/nfd_comm
 
 INCLUDES = ../include
 SOURCES  =	util.cpp         \
+			database.cpp     \
 			locator.cpp      \
-			gui.cpp          \
+			server.cpp       \
+			client.cpp       \
+			network.cpp      \
+			context.cpp      \
 			login_menu.cpp   \
 			main_menu.cpp    \
 			quickshare.cpp
@@ -45,7 +49,7 @@ DEPS = $(addprefix build\, $(SOURCES:.cpp=.d))
 SRC_INC_DIR = -I$(INCLUDES) -I$(IMGUI_DIR) -I$(IMGUI_DIR)/backends -I$(FILE_DIALOG_INCLUDE)
 CXXFLAGS += -O2 -Wall -std=c++17 -pedantic-errors -Werror -Wextra
 IMGUI_FLAGS = -Wall -Wformat
-LIBS = -limm32 -lws2_32 -lglfw3 -lgdi32 -lopengl32 -lm -lkernel32 -lole32 -luuid -L$(FILE_DIALOG_LIB) -lnfd
+LIBS = -limm32 -lws2_32 -lglfw3 -lgdi32 -lopengl32 -lm -lkernel32 -lole32 -luuid -lIphlpapi -L$(FILE_DIALOG_LIB) -lnfd
 
 ifeq ($(TYPE), RELEASE)
 	CXXFLAGS += -DRELEASE_MODE

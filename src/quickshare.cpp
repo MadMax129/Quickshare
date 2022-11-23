@@ -18,9 +18,9 @@
  */ 
 
 #include "util.hpp"
-#include "allocation.hpp"
 #include "locator.hpp"
-#include "gui.hpp"
+#include "context.hpp"
+#include "config.hpp"
 
 #ifdef SYSTEM_WIN_64
 #   include <windows.h>
@@ -35,7 +35,6 @@ private:
 };
 
 Quickshare qs;
-Allocation memory;
 
 bool Quickshare::init_all() 
 {
@@ -45,7 +44,8 @@ bool Quickshare::init_all()
         return false;
     }
 #endif
-    return memory.try_allocate();
+    return true;
+    // return memory.try_allocate();
 }
 
 void Quickshare::end()
@@ -53,7 +53,7 @@ void Quickshare::end()
 #ifdef SYSTEM_WIN_64
     WSACleanup();
 #endif
-    memory.free();
+    // memory.free();
 }
 
 void Quickshare::main()

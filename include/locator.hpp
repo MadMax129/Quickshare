@@ -22,14 +22,25 @@ struct Locator {
 		SUCCESS
 	};
 
+	enum Mode {
+		/* Request to see if session id exists */
+		LOCATE,
+		/* Request to create new session id*/
+		CREATE
+	};
+
 	Locator();
-	void locate(Key key);
-	void create(Key key);
+
+	void start(Mode mode, Key key);
 
 	State_Manager<State> state;
 
+	inline const char* get_ip() const { return response; }
+
 private:
 	bool init_conn();
+	bool contact(Ip_Msg* msg);
+	void locate_thread(Key key);
 	void create_thread(Key key);
 
 	Locator_Conn conn;

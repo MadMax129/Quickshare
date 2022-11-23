@@ -37,6 +37,8 @@ typedef std::uint16_t u16;
 typedef std::uint32_t u32;
 typedef unsigned long long int u64;
 
+typedef time_t UserId;
+
 #ifdef SYSTEM_WIN_64
 #   define PATH_TO_DATA "C:\\Users\\%s\\Downloads"
 #elif defined(SYSTEM_UNX)
@@ -83,10 +85,11 @@ typedef unsigned long long int u64;
 #   undef LOGF
 #   undef P_ERROR
 #   undef P_ERRORF
-#   define LOG (str)
+#   define LOG(str)
 #   define LOGF(str, ...)
 #   define P_ERROR(str)
 #   define P_ERRORF(str, ...)
 #endif
 
 void _colored_print(void* color, const char* str, ...);
+void safe_strcpy(char* dest, const char* src, size_t size);

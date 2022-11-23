@@ -1,9 +1,8 @@
-#include <GLFW/glfw3.h> 
-#include "imgui.h"
+#include "context.hpp"
 #include "imgui_impl_glfw.h"
 #include "imgui_impl_opengl3.h"
-#include "gui.hpp"
 #include "config.hpp"
+#include "gui.hpp"
 #include "util.hpp"
 #define STB_IMAGE_IMPLEMENTATION
 #include "../lib/stb_image.h"
@@ -14,7 +13,7 @@ static void glfw_error_callback(int error, const char* description)
     fprintf(stderr, "Glfw Error %d: %s\n", error, description);
 }
 
-Context::Context() : f_menu(this), l_menu(this)
+Context::Context() : net(loc), f_menu(this), l_menu(*this)
 {
     window = NULL;
     glsl_version = NULL;
@@ -167,6 +166,19 @@ void Context::menu_bar()
     }
 }
 
+void Context::render()
+{
+    // ImGui Rendering
+    ImGui::Render();
+    int display_w, display_h;
+    glfwGetFramebufferSize(window, &display_w, &display_h);
+    glViewport(0, 0, display_w, display_h);
+    glClearColor(clear_color.x * clear_color.w, clear_color.y * clear_color.w, clear_color.z * clear_color.w, clear_color.w);
+    glClear(GL_COLOR_BUFFER_BIT);
+    ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
+    glfwSwapBuffers(window);
+}
+
 void Context::main_loop() 
 {
     // app_state = S_MAIN_MENU;
@@ -193,15 +205,7 @@ void Context::main_loop()
 
         ImGui::ShowDemoWindow();
 
-        // Rendering
-        ImGui::Render();
-        int display_w, display_h;
-        glfwGetFramebufferSize(window, &display_w, &display_h);
-        glViewport(0, 0, display_w, display_h);
-        glClearColor(clear_color.x * clear_color.w, clear_color.y * clear_color.w, clear_color.z * clear_color.w, clear_color.w);
-        glClear(GL_COLOR_BUFFER_BIT);
-        ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
-        glfwSwapBuffers(window);
+        render();
     }
 
     // Cleanup

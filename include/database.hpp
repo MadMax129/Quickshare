@@ -1,31 +1,40 @@
 #pragma once
 
-#include "msg.hpp"
+#include <array>
+#include "util.hpp"
+#include "connection.hpp"
+#include "config.hpp"
 
-struct Client {
-    // enum {
-    //     EMPTY,
-    //     OPEN,
-    //     COMPLETE
-    // } state;
-    // UserId id;
-    // char name[CLIENT_NAME_LEN];
-    // struct sockaddr_in addr;
-    // socket_t socket;
+struct Slot {
+    enum {
+        /* Slot unused */
+        EMPTY,
+        /* Slot occupied by client, incomplete */
+        OPENED,
+        /* Active client under slot */
+        COMPLETE
+    } state;
+
+    /* Unique id but also user created timestamp 
+        used for determining dead users 
+    */
+    UserId id;
+    char name[CLIENT_NAME_LEN];
+    struct sockaddr_in addr;
+    socket_t socket;
 };
 
-struct Database {
-    // Database();
+using Client_List = std::array<Slot, MAX_CLIENTS>;
 
-    // void cleanup();
-    // inline bool full() const { return client_count == MAX_CLIENTS; }
-    // UserId get_id() const;
-    // Client* new_client(struct sockaddr_in* addr, socket_t sock);
-    // void remove_client(socket_t sock);
-    // Client* get_client(socket_t sock);
-    // Client* get_client_by_id(UserId id);
-    // void debug_clients() const;
-    // void create_msg(Msg* msg, const Client* cli);
-    // std::array<Client, MAX_CLIENTS> client_list;
-    // u32 client_count;
+class Database {
+    Database();
+
+    inline bool full() const { return client_count == MAX_CLIENTS; }
+
+    void cleanup();
+    UserId get_id() const;
+
+private:
+    Client_List client_list;
+    u32 client_count;
 };

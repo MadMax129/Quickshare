@@ -27,6 +27,7 @@ struct Connection {
     bool recv(socket_t sock, T* buf) const;
     bool send(socket_t sock, const T* buf) const;
     bool connect() const;
+    bool send_and_recv(socket_t sock, T* buf) const;
     Sock_Info accept() const;
 
     void close_socket(socket_t sock);
@@ -115,6 +116,18 @@ bool Connection<T>::send(socket_t sock, const T* buf) const
         to_send -= s_bytes;
         buf_ptr += s_bytes;
     }
+
+    return true;
+}
+
+template<typename T>
+bool Connection<T>::send_and_recv(socket_t sock, T* buf) const 
+{
+    if (!send(sock, buf))
+        return false;
+    
+    if (!recv(sock, buf))
+        return false;
 
     return true;
 }
