@@ -1,6 +1,7 @@
 #pragma once
 
 #include <cstdint>
+#include "../../include/util.hpp"
 
 /* Max length of unique session key 14 bytes
 Example: abcd1234
