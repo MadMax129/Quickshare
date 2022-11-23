@@ -9,7 +9,7 @@ SRC = util.cpp        \
 	  server.cpp      \
 	  ip_server.cpp
 SRC_OBJS = $(addprefix $(BUILD_DIR)/, $(addsuffix .o, $(basename $(SRC))))
-CXXFLAGS += -O2 -Wall -Werror -Wextra -std=c++17 -pedantic-errors -I./include
+CXXFLAGS += -O2 -Wall -Werror -Wextra -std=c++17 -pedantic-errors -I./include -I../include
 LIBS = -lpthread -lsqlite3
 
 dir:
@@ -23,7 +23,7 @@ all: clean dir $(EXE)
 	@echo Complete
 
 $(BUILD_DIR)/util.o:
-	$(CXX) $(CXXFLAGS) -c -o $@ ../src/util.cpp -I../include/
+	$(CXX) $(CXXFLAGS) -c -o $@ ../src/util.cpp
 
 $(BUILD_DIR)/%.o:%.cpp
 	$(CXX) $(CXXFLAGS) -c -o $@ $<

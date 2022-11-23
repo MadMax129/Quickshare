@@ -17,6 +17,7 @@
 #include <condition_variable>
 #include <atomic>
 #include "ip_msg.hpp"
+#include "util.hpp"
 
 #define DATABASE_PATH "./database/ip_list_db"
 
