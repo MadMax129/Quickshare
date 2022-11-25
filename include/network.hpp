@@ -25,7 +25,10 @@
 #include "locator.hpp"
 #include "state.hpp"
 #include "connection.hpp"
+#include "thread_manager.hpp"
 #include <thread>
+
+extern Thread_Manager thread_manager;
 
 using Net_Con = Connection<Server_Msg>;
 
@@ -49,7 +52,7 @@ public:
     const Locator& loc;
 
 private:
-    void loop(bool is_server);
+    void loop(bool is_server, Status& status);
     bool conn_setup(bool is_server);
     
     Client client;

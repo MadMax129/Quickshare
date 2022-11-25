@@ -1,7 +1,12 @@
 #include "network.hpp"
 #include "config.hpp"
 
-Network::Network(Locator& loc) : loc(loc), client(*this), server(*this, client) {}
+Thread_Manager thread_manager;
+
+Network::Network(Locator& loc) : loc(loc), client(*this), server(*this, client) 
+{
+	state.set(INACTIVE);
+}
 
 bool Network::get_ip(char ip_buffer[16])
 {
@@ -24,10 +29,11 @@ void Network::init_network(bool is_server)
 {
 	LOGF("Initializing Client/Server %s:%d\n", loc.get_ip(), STATIC_SERVER_PORT);
 
-	network_thread = std::thread(&Network::loop, this, is_server);
+	(void)thread_manager.new_thread("Network", &Network::loop, this, is_server);
+	// network_thread = std::thread(&Network::loop, this, is_server);
 }
 
-void Network::loop(bool is_server)
+void Network::loop(bool is_server, Status& status)
 {
 	if (!conn_setup(is_server)) {
 		state.set(INIT_FAILED);
@@ -35,9 +41,11 @@ void Network::loop(bool is_server)
 	}
 
 	if (is_server)
-		server.loop();
+		server.loop(status);
 	else
 		client.loop();
+
+	conn.close();
 }
 
 bool Network::conn_setup(bool is_server)

@@ -5,14 +5,17 @@
 #include "main_menu.hpp"
 #include "login_menu.hpp"
 #include "network.hpp"
+#include "state.hpp"
+#include "thread_manager.hpp"
 #include <memory>
 
 struct Context {
 public:
-    enum App_State {
-        S_ERROR,
-        S_LOGIN,
-        S_MAIN_MENU
+    enum State {
+        ERROR_WINDOW,
+        LOGIN,
+        MAIN_MENU,
+        CLOSE
     };
 
     Context();
@@ -20,7 +23,9 @@ public:
     void init_imgui();
     void main_loop();
     void menu_bar();
-    inline void set_appstate(App_State state) { app_state = state; }
+
+    inline void set_appstate(State state) { app_state.set(state); }
+    inline State get_appstate() { return app_state.get(); }
 
     Locator loc;
     Network net;
@@ -34,7 +39,7 @@ private:
     Login_Menu l_menu;
 
     const char* error;
-    App_State app_state;
+    State_Manager<State> app_state;
     GLFWwindow* window;
     char* glsl_version;
     ImVec4 clear_color;

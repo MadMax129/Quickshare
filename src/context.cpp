@@ -17,7 +17,8 @@ Context::Context() : net(loc), f_menu(this), l_menu(*this)
 {
     window = NULL;
     glsl_version = NULL;
-    app_state = S_LOGIN;
+    app_state.set(LOGIN);
+    error = "";
 }
 
 void Context::init_style()
@@ -181,25 +182,28 @@ void Context::render()
 
 void Context::main_loop() 
 {
-    // app_state = S_MAIN_MENU;
+    app_state.set(ERROR_WINDOW);
     while (!glfwWindowShouldClose(window))
     {
         glfwPollEvents();
         IMGUI_NEW_FRAME();
 
         menu_bar();
-        switch (app_state)
+        switch (app_state.get())
         {
-            case S_ERROR:
+            case ERROR_WINDOW:
                 error_window();
                 break;
             
-            case S_LOGIN:
+            case LOGIN:
                 l_menu.draw();
                 break;
 
-            case S_MAIN_MENU:
+            case MAIN_MENU:
                 f_menu.draw();
+                break;
+
+            default:
                 break;
         }
 
@@ -207,6 +211,9 @@ void Context::main_loop()
 
         render();
     }
+
+    app_state.set(CLOSE);
+    LOG("Shutting down cleanly...\n");
 
     // Cleanup
     IMGUI_CLEANUP();

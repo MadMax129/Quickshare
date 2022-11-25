@@ -9,7 +9,7 @@
 
 /********** locator.hpp **********/
 #define STATIC_QS_SERVER_IP "192.168.1.31"
-#define STATIC_QS_SERVER_PORT 8080
+#define STATIC_QS_SERVER_PORT 8081
 
 /********** msg.hpp **********/
 /* Defines the size of a packet send through the network. */

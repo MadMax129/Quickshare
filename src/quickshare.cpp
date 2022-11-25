@@ -34,7 +34,7 @@ private:
     WSAData wsa_data;
 };
 
-Quickshare qs;
+static Quickshare qs;
 
 bool Quickshare::init_all() 
 {
@@ -68,7 +68,8 @@ void Quickshare::main()
     ctx.init_imgui();
     ctx.main_loop();
 
-    // Run locator first
+    thread_manager.close_all();
+    LOG("All threads closed...\n");
 }
 
 #ifdef SYSTEM_WIN_64

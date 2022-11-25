@@ -30,8 +30,6 @@ struct Connection {
     bool send_and_recv(socket_t sock, T* buf) const;
     Sock_Info accept() const;
 
-    void close_socket(socket_t sock);
-    void set_sock_timeout(socket_t sock, u32 sec);
     void close();
     inline socket_t me() { return my_sock; }
 
@@ -39,6 +37,12 @@ private:
     socket_t my_sock;
     sockaddr_in my_addr;
 };
+
+#ifdef SYSTEM_WIN_64
+#   define CLOSE_SOCKET(sock) ::closesocket(sock)
+#elif defined(SYSTEM_UNX)
+#   define CLOSE_SOCKET(sock) ::close(sock)
+#endif
 
 template <typename T>
 bool Connection<T>::create_socket(const char* ip, u16 port)
@@ -165,18 +169,8 @@ Sock_Info Connection<T>::accept() const
     return info;
 }
 
-template<typename T>
-void Connection<T>::close_socket(socket_t sock)
-{
-#ifdef SYSTEM_WIN_64
-    ::closesocket(sock);
-#elif defined(SYSTEM_UNX)
-    ::close(sock);
-#endif
-}
-
 template <typename T>
 void Connection<T>::close()
 {
-    close_socket(my_sock);
+    CLOSE_SOCKET(my_sock);
 }

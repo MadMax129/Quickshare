@@ -15,7 +15,9 @@ void Locator::start(Mode mode, Key key)
     LOG("Locator Started!\n");
     state.set(WORKING);
 
-    auto func = (mode == LOCATE) ? &Locator::locate_thread : &Locator::create_thread;
+    auto func = (mode == LOCATE) ? 
+        &Locator::locate_thread : 
+        &Locator::create_thread;
     std::thread th(func, this, key);
     th.detach();
 }
