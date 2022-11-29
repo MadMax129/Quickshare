@@ -15,6 +15,15 @@ public:
 
 private:
     void accept_client();
+    void read_msgs(fd_set& worker);
+    void recv_msg(const socket_t sock);
+    void close_client(socket_t sock);
+    bool is_to_server(const Server_Msg& msg);
+    void send_to_client(const Server_Msg& msg);
+
+    /* Server Messages */
+    void analize_msg(const socket_t sock, Server_Msg& msg);
+    void init_req(const socket_t sock, Server_Msg& msg);
 
     Database db;
     fd_set master; // TODO Consider alloctating these later on

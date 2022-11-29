@@ -6,6 +6,11 @@
 
 Login_Menu::Login_Menu(Context& context) : ctx(context)
 {
+	clean();
+}
+
+void Login_Menu::clean()
+{
 	std::memset(key, 0, sizeof(Key));
 	login_state = false;
 	error = "";
@@ -207,6 +212,13 @@ void Login_Menu::net_check()
 			error = "Cannot connect to host... Try again...";
 			state = IDLE;
 			break;
+
+		case Network::State::SUCCESS:
+			ctx.set_appstate(Context::MAIN_MENU);
+			break;
+
+		// Never can get here
+		case Network::State::FAIL_OCCURED: break;
 	}
 }
 

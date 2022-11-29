@@ -39,11 +39,15 @@ public:
         INACTIVE,
         /* Initilization to server unsuccessful */
         INIT_FAILED,
+        /* Success, network is online */
+        SUCCESS,
+        /* Faliure occured once online */
+        FAIL_OCCURED
     };
 
     Network(Locator& loc);
 
-    static bool get_ip(char* ip_buffer);
+    static bool get_ip(char ip_buffer[IP_ADDR_LEN]);
 
     void init_network(bool is_server);
 
@@ -57,6 +61,4 @@ private:
     
     Client client;
     Server server;
-
-    std::thread network_thread;
 };

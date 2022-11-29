@@ -4,10 +4,7 @@
 #include <string>
 #include "nfd.h"
 
-Main_Menu::Main_Menu(Context* context)
-{
-    ctx = context;
-}
+Main_Menu::Main_Menu(Context& context) : ctx(context) {}
 
 void Main_Menu::draw()
 {
@@ -27,9 +24,20 @@ void Main_Menu::draw()
 
     if (ImGui::Begin("Main_Menu", NULL, flags)) 
     {
+		// Draw path button
         draw_path();
+
+		// Draw request grid
 		draw_request();
+
+		// Draw 3 menus
 		draw_menus();
+
+		// Check network state
+		if (ctx.net.state.get() == Network::FAIL_OCCURED) {
+			P_ERROR("Network fail occured... Exiting back to login\n");
+			ctx.set_appstate(Context::LOGIN);
+		}
 
         ImGui::End();
     }

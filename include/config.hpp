@@ -52,3 +52,6 @@
 #define KEY_TEXT_TOP_MARGIN 20.0f
 #define ENTER_BUTTON_MARGIN 20.0f
 #define ENTER_BUTTON_HEIGHT 30.0f
+
+/********** thread_manager.hpp **********/
+#define MAX_THREAD_NUMBER 8

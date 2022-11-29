@@ -13,7 +13,7 @@ static void glfw_error_callback(int error, const char* description)
     fprintf(stderr, "Glfw Error %d: %s\n", error, description);
 }
 
-Context::Context() : net(loc), f_menu(this), l_menu(*this)
+Context::Context() : net(loc), f_menu(*this), l_menu(*this)
 {
     window = NULL;
     glsl_version = NULL;
@@ -156,13 +156,20 @@ void Context::error_window()
 void Context::menu_bar()
 {
     if (ImGui::BeginMainMenuBar()) {
-        if (ImGui::BeginMenu("Settings")) {
+        if (ImGui::BeginMenu("Options")) {
             if (ImGui::BeginMenu("Background Color")) {
                 ImGui::ColorEdit3("MyColor##1", (float*)&clear_color);
                 ImGui::EndMenu();
             }
+            // ! NOT SECURE (Clean up network)
+            // if (ImGui::Selectable("End")) {
+            //     thread_manager.close_all();
+            //     net.state.set(Network::INACTIVE);
+            //     set_appstate(LOGIN);
+            // }
             ImGui::EndMenu();
         }
+        ImGui::Text("Session Key: sGFSDNMesgnjfdl34nESNJf");
         ImGui::EndMainMenuBar();
     }
 }
@@ -180,9 +187,27 @@ void Context::render()
     glfwSwapBuffers(window);
 }
 
+void Context::set_appstate(State state) 
+{ 
+    switch (state)
+    {
+        case LOGIN:
+            l_menu.clean();
+            break;
+        
+        case MAIN_MENU:
+            break;
+
+        default:
+            break;
+    }
+
+    app_state.set(state);
+}
+
 void Context::main_loop() 
 {
-    app_state.set(ERROR_WINDOW);
+    // app_state.set(MAIN_MENU);
     while (!glfwWindowShouldClose(window))
     {
         glfwPollEvents();

@@ -10,7 +10,7 @@ public:
         T_RECV
     };
 
-    Main_Menu(Context* context);
+    Main_Menu(Context& context);
     ~Main_Menu() = default;
 
     void draw();
@@ -26,5 +26,5 @@ private:
     const char* open_file();
 
     bool open;
-    Context* ctx;
+    Context& ctx;
 };

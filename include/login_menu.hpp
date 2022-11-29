@@ -8,7 +8,9 @@ struct Context;
 struct Login_Menu {
 public: 
     Login_Menu(Context& context);
+    
     void draw();
+    void clean();
 
 private:
     void draw_inner();

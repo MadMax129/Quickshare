@@ -31,7 +31,9 @@ struct Quickshare {
     void main();
     void end();
 private:
+#ifdef SYSTEM_WIN_64
     WSAData wsa_data;
+#endif
 };
 
 static Quickshare qs;
@@ -92,9 +94,13 @@ int main(const int argc, const char* argv[])
         qs.main();
     }
     else {
-        LOG("Failed to start Quickshare...\n");
+    #ifdef SYSTEM_WIN_64
+        MessageBox(NULL, "Failed to initialize Quickshare...", "Quickshare", MB_ICONERROR | MB_OK);
+    #endif
+        P_ERROR("Failed to start Quickshare...\n");
     }
 
     qs.end();
+
     return 0;
 }

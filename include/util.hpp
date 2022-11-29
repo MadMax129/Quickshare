@@ -93,3 +93,4 @@ typedef time_t UserId;
 
 void _colored_print(void* color, const char* str, ...);
 void safe_strcpy(char* dest, const char* src, size_t size);
+void get_computer_name(char* buffer);

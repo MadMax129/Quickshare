@@ -30,6 +30,8 @@ struct Connection {
     bool send_and_recv(socket_t sock, T* buf) const;
     Sock_Info accept() const;
 
+    void set_sock_timeout(socket_t sock, u32 sec);
+
     void close();
     inline socket_t me() { return my_sock; }
 
@@ -77,7 +79,7 @@ bool Connection<T>::bind_and_listen() const
 }
 
 template <typename T>
-bool Connection<T>::recv( socket_t sock, T* buf) const
+bool Connection<T>::recv(const socket_t sock, T* buf) const
 {
     ssize_t to_read = sizeof(T);
     char* buf_ptr = reinterpret_cast<char*>(buf);
@@ -90,7 +92,7 @@ bool Connection<T>::recv( socket_t sock, T* buf) const
             0
         );
 
-        if (r_bytes <= 0)
+        if (r_bytes <= 0) // ? could interupt happen during this loop??
             return false;
 
         to_read -= r_bytes;
@@ -101,7 +103,7 @@ bool Connection<T>::recv( socket_t sock, T* buf) const
 }
 
 template<typename T>
-bool Connection<T>::send(socket_t sock, const T* buf) const
+bool Connection<T>::send(const socket_t sock, const T* buf) const
 {
     ssize_t to_send = sizeof(T);
     const char* buf_ptr = reinterpret_cast<const char*>(buf);
@@ -125,7 +127,7 @@ bool Connection<T>::send(socket_t sock, const T* buf) const
 }
 
 template<typename T>
-bool Connection<T>::send_and_recv(socket_t sock, T* buf) const 
+bool Connection<T>::send_and_recv(const socket_t sock, T* buf) const 
 {
     if (!send(sock, buf))
         return false;
@@ -173,4 +175,16 @@ template <typename T>
 void Connection<T>::close()
 {
     CLOSE_SOCKET(my_sock);
+}
+
+template <typename T>
+void Connection<T>::set_sock_timeout(const socket_t sock, const u32 sec)
+{
+#ifdef SYSTEM_WIN_64
+    DWORD timeout = sec * 1000;
+    setsockopt(sock, SOL_SOCKET, SO_RCVTIMEO, (char*)&timeout, sizeof(timeout));
+#elif
+#   error "Unsupported target"
+#endif
+
 }

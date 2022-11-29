@@ -43,6 +43,9 @@ public:
     }
 
     void new_client(sockaddr_in* addr, socket_t sock);
+    UserId complete_client(socket_t sock, const char name[CLIENT_NAME_LEN]);
+    void remove_client(socket_t sock);
+    
     void cleanup();
     UserId get_id() const;
 

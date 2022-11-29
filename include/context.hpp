@@ -24,7 +24,7 @@ public:
     void main_loop();
     void menu_bar();
 
-    inline void set_appstate(State state) { app_state.set(state); }
+    void set_appstate(State state);
     inline State get_appstate() { return app_state.get(); }
 
     Locator loc;
