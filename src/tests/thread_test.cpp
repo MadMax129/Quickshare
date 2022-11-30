@@ -5,7 +5,6 @@
 #include "state.hpp"
 #include "unistd.h"
 
-
 void func(Status& state)
 {
     while (state.get() == true) ;
@@ -13,18 +12,11 @@ void func(Status& state)
 
 int main()
 {
-
     Thread_Manager th;
-
-
-    Status& s = th.new_thread("Test", func);
-
-    sleep(1);
-    s.set(false);
-    sleep(1);
+    th.new_thread(func);
 
     th.close_all();
 
-    colored_print(CL_GREEN, "[ Ok ] ");
-    printf("Thread Test\n");
+    colored_print(CL_GREEN, "[ OK ] ");
+    printf("thread_test.cpp 'Thread Manager Working'\n");
 }   

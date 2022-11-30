@@ -11,6 +11,10 @@ struct Server_Msg {
         INIT_REQUEST,
         /* Server init response */
         INIT_RESPONSE,
+        /* New client update */
+        NEW_CLIENT,
+        /* Disconnected client */
+        DELETE_CLIENT,
     };
 
     Server_Msg() = default;
@@ -22,6 +26,11 @@ struct Server_Msg {
         struct {
             char client_name[CLIENT_NAME_LEN];
         } init_req;
+
+        struct {
+            char client_name[CLIENT_NAME_LEN];
+            UserId id;
+        } cli_update;
     };
 
     Type type;

@@ -4,6 +4,8 @@
 #include <string>
 #include <thread>
 #include "state.hpp"
+#include "util.hpp"
+#include "config.hpp"
 
 using Status = State_Manager<bool>;
 

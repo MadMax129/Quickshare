@@ -32,6 +32,7 @@ public:
     Database();
 
     inline bool full() const { return client_count == MAX_CLIENTS; }
+    inline u32 size() const { return client_count; };
 
     void iterate(std::function<void(Slot&)> const& func)
     {
@@ -42,9 +43,12 @@ public:
         );
     }
 
-    void new_client(sockaddr_in* addr, socket_t sock);
-    UserId complete_client(socket_t sock, const char name[CLIENT_NAME_LEN]);
-    void remove_client(socket_t sock);
+    void new_client(const sockaddr_in* addr, const socket_t sock);
+    void complete_client(const socket_t sock, 
+                         const char name[CLIENT_NAME_LEN], 
+                         const UserId id);
+    const Slot* get_client(const socket_t sock);
+    void remove_client(const socket_t sock);
     
     void cleanup();
     UserId get_id() const;

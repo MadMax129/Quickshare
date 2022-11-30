@@ -98,18 +98,51 @@ void Server::analize_msg(const socket_t sock, Server_Msg& msg)
 
 void Server::init_req(const socket_t sock, Server_Msg& msg)
 {
-	const UserId id = db.complete_client(sock, msg.init_req.client_name);
-
+	// Generate a new user id for client
+	const UserId id = db.get_id();
+	
+	// Send back clients id
 	msg.type = Server_Msg::INIT_RESPONSE;
 	msg.to = id;
-
-	if (!net.conn.send(sock, &msg))
+	if (!net.conn.send(sock, &msg)) {
 		close_client(sock);
+		return;
+	}
+	
+	// send all active clients 
+	// if done then complete and update the rest of clients
+	db.complete_client(sock, msg.init_req.client_name, id);
+	// echo
 }
 
-void Server::close_client(socket_t sock)
+void Server::close_client(const socket_t sock)
 {
+	const Slot client_slot = *db.get_client(sock);
+
 	CLOSE_SOCKET(sock);
 	FD_CLR(sock, &master);
 	db.remove_client(sock);
+
+	/* Conditions
+		1. If client was not complete DO NOT send DELETE_CLIENT 
+		2. If no more clients then also DO NOT send
+	*/
+	if (client_slot.state == Slot::COMPLETE && db.size() > 0)
+		send_delete_client(client_slot);
+}
+
+void Server::send_delete_client(const Slot& client_slot)
+{
+	Server_Msg msg(Server_Msg::DELETE_CLIENT);
+	safe_strcpy(msg.cli_update.client_name, client_slot.name, CLIENT_NAME_LEN);
+	msg.cli_update.id = client_slot.id;
+	
+	auto update = [&](Slot& db_slot) {
+		if (db_slot.state == Slot::COMPLETE) {
+			if (!net.conn.send(db_slot.sock, &msg))
+				close_client(db_slot.sock);
+		}
+	};
+
+	db.iterate(update);
 }

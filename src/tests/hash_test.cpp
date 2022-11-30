@@ -16,25 +16,30 @@ int main()
     key.e.timestamp = time(NULL);
     std::strcpy(key.e.ip, "255.255.255.255");
 
-    printf("Original String: ");
+    // printf("Original String: ");
 
-    for (int i = 0; i < 24; i++) 
-        printf("%d ", key.bytes[i]);
-    puts("");
+    // for (int i = 0; i < 24; i++) 
+    //     printf("%d ", key.bytes[i]);
+    // puts("");
 
-    printf("Base64 Encoded: ");
+    // printf("Base64 Encoded: ");
 
     std::string encoded = base64_encode((const unsigned char*)key.bytes, 24);
-        printf("%s\n", (encoded.c_str()));
-
-
-    printf("Base64 Decoded: ");
+    
+    //printf("%s\n", (encoded.c_str()));
+    // printf("Base64 Decoded: ");
 
     std::string decoded = base64_decode(encoded);
-    for (int i = 0; i < 24; i++)
-        printf("%d ", (decoded.c_str()[i]));
-    puts("");
+    // for (int i = 0; i < 24; i++)
+    //     printf("%d ", (decoded.c_str()[i]));
+    // puts("");
 
-    colored_print(CL_GREEN, "[ Ok ] ");
-    printf("Base64 Hash Passed\n");
+    if (!std::strcmp(key.bytes, decoded.c_str())) {
+        colored_print(CL_GREEN, "[ OK ] ");
+        printf("hash_test.cpp 'Hashes Equal!'\n");
+    }
+    else {
+        colored_print(CL_RED, "[ FAILED ] ");
+        printf("hash_test.cpp 'Hashes Not Equal!'\n");
+    }
 }

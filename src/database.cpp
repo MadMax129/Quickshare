@@ -32,7 +32,7 @@ UserId Database::get_id() const
     return id;
 }
 
-void Database::new_client(sockaddr_in* addr, socket_t sock)
+void Database::new_client(const sockaddr_in* addr, const socket_t sock)
 {
     assert(!full());
 
@@ -53,7 +53,22 @@ void Database::new_client(sockaddr_in* addr, socket_t sock)
     ++client_count;
 }
 
-UserId Database::complete_client(socket_t sock, const char name[CLIENT_NAME_LEN])
+const Slot* Database::get_client(const socket_t sock)
+{
+    const auto slot = std::find_if(
+        std::begin(client_list),
+        std::end(client_list),
+        [&] (const Slot& s) {
+            return s.sock == sock;
+        }
+    );
+
+    return slot;
+}
+
+void Database::complete_client(const socket_t sock, 
+                               const char name[CLIENT_NAME_LEN], 
+                               const UserId id)
 {
     auto slot = std::find_if(
         std::begin(client_list),
@@ -68,7 +83,7 @@ UserId Database::complete_client(socket_t sock, const char name[CLIENT_NAME_LEN]
 
     slot->state = Slot::COMPLETE;
     safe_strcpy(slot->name, name, CLIENT_NAME_LEN);
-    slot->id = get_id();
+    slot->id = id;
     
     LOGF("Client Complete %s:%d\n\tName: %s\n\tUserId: %lld\n", 
         inet_ntoa(slot->addr.sin_addr), 
@@ -76,11 +91,9 @@ UserId Database::complete_client(socket_t sock, const char name[CLIENT_NAME_LEN]
         name, 
         slot->id
     );
-
-    return slot->id;
 }
 
-void Database::remove_client(socket_t sock)
+void Database::remove_client(const socket_t sock)
 {
     auto slot = std::find_if(
         std::begin(client_list),
@@ -102,4 +115,5 @@ void Database::remove_client(socket_t sock)
     );
 
     slot->state = Slot::EMPTY;
+    --client_count;
 }

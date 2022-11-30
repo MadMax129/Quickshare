@@ -47,7 +47,7 @@ void server()
         const Sock_Info i = conn.accept();
         if (i.has_value()) {
             if (conn.recv(i.value().first, &got)) {
-                conn.close_socket(i.value().first);
+                CLOSE_SOCKET(i.value().first);
                 conn.close();
                 return;
             }

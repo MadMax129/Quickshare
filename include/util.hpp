@@ -64,15 +64,11 @@ typedef time_t UserId;
 #define colored_print(color, str) \
     _colored_print((void*)color, str)
 
-#define LOG(str) { \
-    colored_print(CL_YELLOW, "[ LOG ] "); \
-    std::printf(str); \
-}
+#define LOG(str) \
+    colored_print(CL_YELLOW, "[ LOG ] " str);
 
-#define LOGF(str, ...) { \
-    colored_print(CL_YELLOW, "[ LOG ] "); \
-    std::printf(str, __VA_ARGS__); \
-}
+#define LOGF(str, ...) \
+    colored_printf(CL_YELLOW, "[ LOG ] " str, __VA_ARGS__);
 
 #define P_ERROR(str) \
     colored_print(CL_RED, str)

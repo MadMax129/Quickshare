@@ -13,7 +13,7 @@ public:
     void loop(Status& status);
 
 private:
-    bool init();
+    bool init(Server_Msg& msg);
     void analize_msg(Server_Msg& msg);
     
     /* Server Message Analysis */

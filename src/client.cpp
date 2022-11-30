@@ -6,13 +6,13 @@ Client::Client(Network& net) : net(net) {}
 
 void Client::loop(Status& status)
 {
-    if (!init()) {
+    Server_Msg msg;
+
+    if (!init(msg)) {
         P_ERROR("Client init msg failed to sent...\n");
         net.state.set(Network::FAIL_OCCURED);
         return;
     }
-
-    Server_Msg msg;
 
     while (status.get()) {
         bool good = net.conn.recv(net.conn.me(), &msg);
@@ -32,9 +32,9 @@ void Client::loop(Status& status)
     }
 }
 
-bool Client::init()
+bool Client::init(Server_Msg& msg)
 {
-    Server_Msg msg(Server_Msg::INIT_REQUEST);
+    msg.type = Server_Msg::INIT_REQUEST;
     get_computer_name(msg.init_req.client_name);
 
     return net.conn.send(net.conn.me(), &msg);
@@ -46,6 +46,10 @@ void Client::analize_msg(Server_Msg& msg)
     {
         case Server_Msg::INIT_RESPONSE:
             init_res(msg);
+            break;
+
+        case Server_Msg::DELETE_CLIENT:
+            printf("Got delete client\n");
             break;
 
         default:
