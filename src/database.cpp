@@ -9,8 +9,10 @@ Database::Database()
 
 void Database::cleanup()
 {
+    std::lock_guard<std::mutex> guard(mtx);
     client_list.fill({});
     client_count = 0;
+    update.store(0, std::memory_order_relaxed);
 }
 
 UserId Database::get_id() const 
@@ -32,9 +34,19 @@ UserId Database::get_id() const
     return id;
 }
 
+void Database::iterate(std::function<void(Slot&)> const& func)
+{
+    std::for_each(
+        std::begin(client_list),
+        std::end(client_list),
+        func
+    );
+}
+
 void Database::new_client(const sockaddr_in* addr, const socket_t sock)
 {
     assert(!full());
+    std::lock_guard<std::mutex> guard(mtx);
 
     auto slot = std::find_if(
         std::begin(client_list), 
@@ -44,7 +56,11 @@ void Database::new_client(const sockaddr_in* addr, const socket_t sock)
         }
     );
 
-    LOGF("Client Accepted %s:%d\n", inet_ntoa(addr->sin_addr), addr->sin_port);
+    LOGF("Client Accepted %s:%d [%d]\n", 
+        inet_ntoa(addr->sin_addr), 
+        addr->sin_port,
+        slot - client_list.cbegin()
+    );
 
     slot->id = get_id();
     slot->addr = *addr;
@@ -53,9 +69,9 @@ void Database::new_client(const sockaddr_in* addr, const socket_t sock)
     ++client_count;
 }
 
-const Slot* Database::get_client(const socket_t sock)
+void Database::get_client(Slot& slot, const socket_t sock)
 {
-    const auto slot = std::find_if(
+    const auto client = std::find_if(
         std::begin(client_list),
         std::end(client_list),
         [&] (const Slot& s) {
@@ -63,13 +79,14 @@ const Slot* Database::get_client(const socket_t sock)
         }
     );
 
-    return slot;
+    slot = *client;
 }
 
 void Database::complete_client(const socket_t sock, 
                                const char name[CLIENT_NAME_LEN], 
                                const UserId id)
 {
+    std::lock_guard<std::mutex> guard(mtx);
     auto slot = std::find_if(
         std::begin(client_list),
         std::end(client_list),
@@ -78,7 +95,7 @@ void Database::complete_client(const socket_t sock,
         }
     );
 
-    // Client should already be accepted
+    /* Client should already be accepted */
     assert(slot != std::end(client_list));
 
     slot->state = Slot::COMPLETE;
@@ -91,10 +108,12 @@ void Database::complete_client(const socket_t sock,
         name, 
         slot->id
     );
+    update.fetch_add(1, std::memory_order_relaxed);
 }
 
 void Database::remove_client(const socket_t sock)
 {
+    std::lock_guard<std::mutex> guard(mtx);
     auto slot = std::find_if(
         std::begin(client_list),
         std::end(client_list),
@@ -116,4 +135,15 @@ void Database::remove_client(const socket_t sock)
 
     slot->state = Slot::EMPTY;
     --client_count;
+    update.fetch_add(1, std::memory_order_relaxed);
+}
+
+void Database::copy(Client_GUI_List& list)
+{
+    list.clear();
+
+    for (const Slot& slot : client_list) {
+        if (slot.state == Slot::COMPLETE)
+            list.emplace_back(slot.id, slot.name);
+    }
 }

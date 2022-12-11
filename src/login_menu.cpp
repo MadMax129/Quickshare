@@ -165,11 +165,11 @@ void Login_Menu::draw_enter()
 		if (strnlen(key, IM_ARRAYSIZE(key) - 1) > 0) {
 			if (state == IDLE) {
 				ctx.loc.start(
-					login_state ? Locator::Mode::CREATE : 
-								  Locator::Mode::LOCATE,
+					login_state ? 
+					Locator::Mode::CREATE : 
+					Locator::Mode::LOCATE,
 					key			  
 				);
-				/* Move into locator state */
 				state = LOCATOR;
 			}
 		}
@@ -194,7 +194,9 @@ void Login_Menu::loc_check()
 			break;
 
 		case Locator::SUCCESS:
-			ctx.net.init_network(login_state);
+			ctx.net.init_network(login_state, ctx.loc.get_ip());
+			/* Reset the locator */
+			ctx.loc.reset();
 			state = NETWORK;
 			break;
 	}
@@ -209,6 +211,7 @@ void Login_Menu::net_check()
 			break;
 
 		case Network::State::INIT_FAILED:
+		case Network::State::FAIL_OCCURED:
 			error = "Cannot connect to host... Try again...";
 			state = IDLE;
 			break;
@@ -216,9 +219,6 @@ void Login_Menu::net_check()
 		case Network::State::SUCCESS:
 			ctx.set_appstate(Context::MAIN_MENU);
 			break;
-
-		// Never can get here
-		case Network::State::FAIL_OCCURED: break;
 	}
 }
 
@@ -226,17 +226,9 @@ void Login_Menu::check_state()
 {
 	switch (state)
 	{
-		case IDLE:
-			// No states to check
-			break;
-
-		case LOCATOR:
-			loc_check();
-			break;
-		
-		case NETWORK:
-			net_check();
-			break;
+		case IDLE: break;
+		case LOCATOR: loc_check(); break;
+		case NETWORK: net_check(); break;
 	}
 }
 		
@@ -245,24 +237,16 @@ void Login_Menu::draw_text()
 	ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(27.0f/255.0f, 27.0f/255.0f, 27.0f/255.0f, 1.0f));
 	ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(27.0f/255.0f, 27.0f/255.0f, 27.0f/255.0f, 1.0f));
 	ImGui::PushStyleColor(ImGuiCol_ButtonActive, ImVec4(27.0f/255.0f, 27.0f/255.0f, 27.0f/255.0f, 255));
-	
-	const char* text;
 
-	if (!login_state) {
-		text = "Don't have a key? Create one!";
-		X_CENTER_ALIGN(inner_size.x, text);
-		SHIFT_VERTICAL(10.0f);
-		if (ImGui::SmallButton(text))
-			login_state = true;
-	}
-	else {
-		text = "Already have a key? Enter it!";
-		X_CENTER_ALIGN(inner_size.x, text);
-		SHIFT_VERTICAL(10.0f);
-		
-		if (ImGui::SmallButton(text))
-			login_state = false;
-	}
+	const char* text = login_state ? 
+		"Already have a key? Enter it!" :
+		"Don't have a key? Create one!";
+
+	X_CENTER_ALIGN(inner_size.x, text);
+	SHIFT_VERTICAL(10.0f);
+	if (ImGui::SmallButton(text))
+		login_state = !login_state;
+
 	ImGui::PopStyleColor(3);
 
 	// Error message

@@ -19,10 +19,10 @@ public:
     };
 
     Context();
+
     bool create_window(int width, int height, const char* name);
     void init_imgui();
     void main_loop();
-    void menu_bar();
 
     void set_appstate(State state);
     inline State get_appstate() { return app_state.get(); }
@@ -31,9 +31,12 @@ public:
     Network net;
 
 private:
+    void menu_bar();
     void error_window();
     void init_style();
     void render();
+    void cleanup();
+    bool load_icon();
 
     Main_Menu f_menu;
     Login_Menu l_menu;

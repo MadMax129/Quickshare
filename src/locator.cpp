@@ -6,7 +6,6 @@
 
 Locator::Locator()
 {
-    LOG("Locator Initialized...\n");
     state.set(INACTIVE);
 }
 
@@ -65,7 +64,7 @@ void Locator::create_thread(Key key)
         case Ip_Msg::Type::RESPONSE:
             LOGF("Created key '%s'\n", key);
             safe_strcpy(response, ip, IP_ADDR_LEN);
-            state.set(SUCCESS);
+            state.set(SUCCESS, std::memory_order_release);
             break;
 
         default:

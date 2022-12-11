@@ -33,7 +33,8 @@ struct Connection {
     void set_sock_timeout(socket_t sock, u32 sec);
 
     void close();
-    inline socket_t me() { return my_sock; }
+    inline socket_t me() const { return my_sock; }
+    inline const sockaddr_in& get_addr() const { return my_addr; };
 
 private:
     socket_t my_sock;

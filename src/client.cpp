@@ -3,14 +3,12 @@
 
 Client::Client(Network& net) : net(net) {}
 
-
 void Client::loop(Status& status)
 {
     Server_Msg msg;
 
     if (!init(msg)) {
-        P_ERROR("Client init msg failed to sent...\n");
-        net.state.set(Network::FAIL_OCCURED);
+        net.fail("Client failed to send init msg...\n");
         return;
     }
 
@@ -23,8 +21,7 @@ void Client::loop(Status& status)
             continue;
 
         if (!good) {
-            P_ERROR("Recv failed...\n");
-            net.state.set(Network::FAIL_OCCURED);
+            net.fail("Recv failed...\n");
             return;
         }
 
@@ -52,6 +49,10 @@ void Client::analize_msg(Server_Msg& msg)
             printf("Got delete client\n");
             break;
 
+        case Server_Msg::NEW_CLIENT:
+            printf("Got new client '%s'\n", msg.cli_update.client_name);
+            break;
+
         default:
             break;
     }
@@ -59,5 +60,5 @@ void Client::analize_msg(Server_Msg& msg)
 
 void Client::init_res(const Server_Msg& msg)
 {
-    my_id = msg.to;
+    my_id = msg.response.to;
 }

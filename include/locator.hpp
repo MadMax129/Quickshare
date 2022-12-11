@@ -32,6 +32,7 @@ struct Locator {
 	Locator();
 
 	void start(Mode mode, Key key);
+	inline void reset() { state.set(INACTIVE); }
 
 	State_Manager<State> state;
 

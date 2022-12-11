@@ -13,7 +13,7 @@ static void glfw_error_callback(int error, const char* description)
     fprintf(stderr, "Glfw Error %d: %s\n", error, description);
 }
 
-Context::Context() : net(loc), f_menu(*this), l_menu(*this)
+Context::Context() : f_menu(*this), l_menu(*this)
 {
     window = NULL;
     glsl_version = NULL;
@@ -87,24 +87,14 @@ bool Context::create_window(int width, int height, const char* name)
     glsl_version = (char*)"#version 130";
     glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
     glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 0);
-    // glfwWindowHint(GLFW_RESIZABLE, GLFW_TRUE);
     
     window = glfwCreateWindow(width, height, name, NULL, NULL);
 
     if (window == NULL)
         return false;
 
-    GLFWimage images;
-    images.width = 630;
-    images.height = 630;
-
-    images.pixels = stbi_load(ICON_PATH, &images.width, &images.height, 0, 4);
-    if (!images.pixels) {
-        P_ERRORF("Failed to load icon '%s'\n", ICON_PATH);
+    if (!load_icon())
         return false;
-    }
-    glfwSetWindowIcon(window, 1, &images); 
-    stbi_image_free(images.pixels);
 
     glfwMakeContextCurrent(window);
     glfwSwapInterval(1);
@@ -112,15 +102,40 @@ bool Context::create_window(int width, int height, const char* name)
     return true;
 }
 
+bool Context::load_icon()
+{
+    GLFWimage images;
+    images.width  = 630;
+    images.height = 630;
+
+    images.pixels = stbi_load(
+        ICON_PATH, 
+        &images.width, 
+        &images.height, 
+        0, 
+        4
+    );
+
+    if (!images.pixels) {
+        P_ERRORF("Failed to load icon '%s'\n", ICON_PATH);
+        return false;
+    }
+
+    glfwSetWindowIcon(window, 1, &images); 
+    stbi_image_free(images.pixels);
+
+    return true;
+}
+
 void Context::init_imgui() 
 {
-    // Init ImGui
+    /* Init ImGui */
     IMGUI_CHECKVERSION();
     ImGui::CreateContext();
 
     init_style();
 
-    // Glfw Backend setup
+    /* Glfw Backend Setup */
     ImGui_ImplGlfw_InitForOpenGL(window, true);
     ImGui_ImplOpenGL3_Init(glsl_version);
     
@@ -129,7 +144,7 @@ void Context::init_imgui()
         FONT_SIZE
     );
     
-    // Default Background color
+    /* Default Background color */
     clear_color = ImVec4(0.45f, 0.55f, 0.60f, 1.00f);
 }
 
@@ -142,7 +157,9 @@ void Context::error_window()
             ImGui::GetIO().DisplaySize.y
         )
     );
-    ImGui::Begin("Error", NULL, ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoTitleBar);
+    ImGui::Begin("Error", NULL, ImGuiWindowFlags_NoResize   | 
+                                ImGuiWindowFlags_NoCollapse | 
+                                ImGuiWindowFlags_NoTitleBar);
     ImGui::SetWindowSize(ImVec2(300,100));
 
     ImGui::TextColored(ImVec4(1.0f, 0.0, 0.0, 1.0f), "Error occured... '%s'", error);
@@ -161,12 +178,6 @@ void Context::menu_bar()
                 ImGui::ColorEdit3("MyColor##1", (float*)&clear_color);
                 ImGui::EndMenu();
             }
-            // ! NOT SECURE (Clean up network)
-            // if (ImGui::Selectable("End")) {
-            //     thread_manager.close_all();
-            //     net.state.set(Network::INACTIVE);
-            //     set_appstate(LOGIN);
-            // }
             ImGui::EndMenu();
         }
         ImGui::Text("Session Key: sGFSDNMesgnjfdl34nESNJf");
@@ -181,10 +192,22 @@ void Context::render()
     int display_w, display_h;
     glfwGetFramebufferSize(window, &display_w, &display_h);
     glViewport(0, 0, display_w, display_h);
-    glClearColor(clear_color.x * clear_color.w, clear_color.y * clear_color.w, clear_color.z * clear_color.w, clear_color.w);
+    glClearColor(
+        clear_color.x * clear_color.w, 
+        clear_color.y * clear_color.w, 
+        clear_color.z * clear_color.w, 
+        clear_color.w
+    );
     glClear(GL_COLOR_BUFFER_BIT);
     ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
     glfwSwapBuffers(window);
+}
+
+void Context::cleanup()
+{
+    IMGUI_CLEANUP();
+    glfwDestroyWindow(window);
+    glfwTerminate();
 }
 
 void Context::set_appstate(State state) 
@@ -207,7 +230,6 @@ void Context::set_appstate(State state)
 
 void Context::main_loop() 
 {
-    // app_state.set(MAIN_MENU);
     while (!glfwWindowShouldClose(window))
     {
         glfwPollEvents();
@@ -238,10 +260,7 @@ void Context::main_loop()
     }
 
     app_state.set(CLOSE);
-    LOG("Shutting down cleanly...\n");
+    LOG("Application Shutting down...\n");
 
-    // Cleanup
-    IMGUI_CLEANUP();
-    glfwDestroyWindow(window);
-    glfwTerminate();
+    cleanup();
 }

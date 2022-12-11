@@ -31,6 +31,7 @@ BASE64_SOURCE  = ../lib/cpp-base64/base64.cpp
 
 INCLUDES = ../include
 SOURCES  =	util.cpp         \
+			mem_pool.cpp     \
 			database.cpp     \
 			locator.cpp      \
 			server.cpp       \
@@ -73,7 +74,7 @@ endif
 
 all: directory compile
 ifneq ($(OS), Windows_NT)
-	$(error Makefile only compatible for Windows system)
+	$(error Makefile only compatible for Windows)
 endif
 	@echo Build Complete!
 

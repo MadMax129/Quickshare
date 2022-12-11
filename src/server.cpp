@@ -1,58 +1,82 @@
 #include "network.hpp"
 #include "config.hpp"
 
-Server::Server(Network& net, const Client& cli) : net(net), cli(cli) {}
+Server::Server(Network& net, const Client* cli) : net(net), cli(cli), 
+	db(net.get_db()), my_id(db.get_id()) {}
 
-void Server::loop(Status& status)
+void Server::cleanup()
+{
+	LOG("Server cleanup...\n");
+	auto close_all = [](const Slot& slot) {
+		if (slot.state != Slot::EMPTY) {
+			LOGF("Closing Client '%s'\n", 
+				slot.state == Slot::COMPLETE ? slot.name : ""
+			);
+			CLOSE_SOCKET(slot.sock);
+		}
+	};
+	db.iterate(close_all);
+}
+
+void Server::init()
 {
 	FD_ZERO(&master);
 	FD_SET(net.conn.me(), &master);
+}
 
+void Server::loop(Status& status)
+{
 	for (;;) {
-		fd_set worker = master;
+		worker = master;
 
 		timeval timeout = {1, 0};
 		const i32 nready = select(FD_SETSIZE, &worker, NULL, NULL, &timeout);
 
 		if (nready < 0) {
-			P_ERROR("Error occured in select...\n");
+			net.fail("Error occured in select...\n");
+			return;
 		}
-		else {
-			if (status.get() == false) {
-				LOG("Exiting server loop...\n");
-				return;
-			}
+		else if (status.get() == false) {
+			LOG("Server loop close request... Exiting...\n");
+			return;
 		}
 
 		for (i32 i = 0; i < nready; i++) {
 			if (FD_ISSET(net.conn.me(), &worker)) 
 				accept_client();		
 			else
-				read_msgs(worker);
+				read_msgs();
 		}		
 	}
 }
 
 void Server::accept_client()
 {
-	struct sockaddr_in addr = {};
-	socklen_t len = sizeof(addr);
+	Sock_Info cli_info = net.conn.accept();
 
-	socket_t client_fd = accept(net.conn.me(), (sockaddr*)&addr, &len);
+	if (!cli_info.has_value()) {
+		net.fail("Accept failed\n");
+		CLOSE_SOCKET(cli_info.value().first);
+		return;
+	}
 
 	if (db.full()) {
-		LOGF("Client rejected '%s:%d'\n", inet_ntoa(addr.sin_addr), addr.sin_port);
-		CLOSE_SOCKET(client_fd);
+		LOG("Client rejected, server full\n");
+		CLOSE_SOCKET(cli_info.value().first);
 	}
 	else {
-		FD_SET(client_fd, &master);
-		db.new_client(&addr, client_fd);
+		FD_SET(cli_info.value().first, &master);
+		db.new_client(
+			&cli_info.value().second, 
+			cli_info.value().first
+		);
 	}
 }
 
-void Server::read_msgs(fd_set& worker)
+void Server::read_msgs()
 {
-	auto can_recv = [&](Slot& slot) {
+	// ? Optimize this evenutally
+	auto can_recv = [&](const Slot& slot) {
 		if (slot.state != Slot::EMPTY && FD_ISSET(slot.sock, &worker))
 			recv_msg(slot.sock);
 	};
@@ -98,26 +122,58 @@ void Server::analize_msg(const socket_t sock, Server_Msg& msg)
 
 void Server::init_req(const socket_t sock, Server_Msg& msg)
 {
-	// Generate a new user id for client
 	const UserId id = db.get_id();
-	
-	// Send back clients id
+	char temp_name[CLIENT_NAME_LEN];
+
+	safe_strcpy(temp_name, msg.init_req.client_name, CLIENT_NAME_LEN);
+
+	/* First confirm with client on ID */
 	msg.type = Server_Msg::INIT_RESPONSE;
-	msg.to = id;
+	msg.response.to = id;
 	if (!net.conn.send(sock, &msg)) {
 		close_client(sock);
 		return;
 	}
-	
-	// send all active clients 
-	// if done then complete and update the rest of clients
-	db.complete_client(sock, msg.init_req.client_name, id);
-	// echo
+
+	/* Once confirmed create entry in DB and infrom others */
+	db.complete_client(sock, temp_name, id);
+	send_client_list(sock, msg);
+	// ! ECHO BACK TO REST OF CLIENTS
+}
+
+void Server::send_client_list(const socket_t sock, Server_Msg& msg)
+{
+	msg.type = Server_Msg::NEW_CLIENT;
+
+	/* Also manually send the server as a client */
+	msg.cli_update.id = my_id;
+	safe_strcpy(msg.cli_update.client_name, "Server", CLIENT_NAME_LEN);
+	if (!net.conn.send(sock, &msg)) {
+		close_client(sock);
+		return;
+	}
+
+	auto send_new_clients = [&](const Slot& slot) {
+		if (slot.state == Slot::COMPLETE && slot.sock != sock) {
+			msg.cli_update.id = slot.id;
+			safe_strcpy(
+				msg.cli_update.client_name,
+				slot.name,
+				CLIENT_NAME_LEN
+			);
+
+			if (!net.conn.send(sock, &msg))
+				close_client(sock);
+		}
+	};
+
+	db.iterate(send_new_clients);
 }
 
 void Server::close_client(const socket_t sock)
 {
-	const Slot client_slot = *db.get_client(sock);
+	Slot client_slot;
+	db.get_client(client_slot, sock);
 
 	CLOSE_SOCKET(sock);
 	FD_CLR(sock, &master);

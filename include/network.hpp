@@ -45,20 +45,26 @@ public:
         FAIL_OCCURED
     };
 
-    Network(Locator& loc);
+    Network();
 
     static bool get_ip(char ip_buffer[IP_ADDR_LEN]);
 
-    void init_network(bool is_server);
+    void init_network(bool is_server, const char ip[IP_ADDR_LEN]);
+    void fail(const char* str);
+
+    inline void reset() { state.set(INACTIVE); }
+    inline Database& get_db() { return db; }
 
     State_Manager<State> state;
     Net_Con conn;
-    const Locator& loc;
 
 private:
     void loop(bool is_server, Status& status);
     bool conn_setup(bool is_server);
+    void end();
     
-    Client client;
-    Server server;
+    Client* client;
+    Server* server;
+    Database db;
+    char ip[IP_ADDR_LEN];
 };

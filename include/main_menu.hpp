@@ -1,5 +1,7 @@
 #pragma once
 
+#include "database.hpp"
+
 struct Context;
 
 struct Main_Menu {
@@ -11,20 +13,28 @@ public:
     };
 
     Main_Menu(Context& context);
-    ~Main_Menu() = default;
-
     void draw();
 
 private:
-    void add_event(Transfer_Type type,  const char *desc,  const char *fname);
+    void add_event(Transfer_Type type, 
+                   const char *desc,
+                   const char *fname);
+    
     void draw_menus();
-    void draw_path();
     void draw_request();
     void draw_session();
     void draw_backlog();
-    void draw_users();
+    void draw_send();
+    
+    void draw_path();
     const char* open_file();
+    
+    void draw_users();
+    void check_net();
+    void read_users();
+    void render_users();
 
+    Client_GUI_List client_list;
     bool open;
     Context& ctx;
 };

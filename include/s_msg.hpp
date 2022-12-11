@@ -20,8 +20,6 @@ struct Server_Msg {
     Server_Msg() = default;
     inline Server_Msg(Type type) : type(type) {}
 
-    UserId from, to;
-
     union {
         struct {
             char client_name[CLIENT_NAME_LEN];
@@ -31,8 +29,14 @@ struct Server_Msg {
             char client_name[CLIENT_NAME_LEN];
             UserId id;
         } cli_update;
+
+        struct {
+            UserId from, to;
+        } response;
     };
 
     Type type;
 
 } __attribute__((packed));
+
+// static_assert(sizeof(Server_Msg) == 32);

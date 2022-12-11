@@ -21,6 +21,7 @@
 #include "locator.hpp"
 #include "context.hpp"
 #include "config.hpp"
+#include "mem_pool.hpp"
 
 #ifdef SYSTEM_WIN_64
 #   include <windows.h>
@@ -37,6 +38,8 @@ private:
 };
 
 static Quickshare qs;
+Thread_Manager thread_manager;
+Memory_Pool mem_pool;
 
 bool Quickshare::init_all() 
 {
@@ -46,8 +49,7 @@ bool Quickshare::init_all()
         return false;
     }
 #endif
-    return true;
-    // return memory.try_allocate();
+    return mem_pool.init();
 }
 
 void Quickshare::end()
@@ -55,7 +57,7 @@ void Quickshare::end()
 #ifdef SYSTEM_WIN_64
     WSACleanup();
 #endif
-    // memory.free();
+    mem_pool.cleanup();
 }
 
 void Quickshare::main()
@@ -92,6 +94,7 @@ int main(const int argc, const char* argv[])
     if (qs.init_all()) {
         LOG("Starting Quickshare...\n");
         qs.main();
+        qs.end();
     }
     else {
     #ifdef SYSTEM_WIN_64
@@ -99,8 +102,6 @@ int main(const int argc, const char* argv[])
     #endif
         P_ERROR("Failed to start Quickshare...\n");
     }
-
-    qs.end();
 
     return 0;
 }

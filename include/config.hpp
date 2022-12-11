@@ -55,3 +55,6 @@
 
 /********** thread_manager.hpp **********/
 #define MAX_THREAD_NUMBER 8
+
+/********** mem_pool.hpp **********/
+#define BLOCK_SIZE (1024 * 1024)

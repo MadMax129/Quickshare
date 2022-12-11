@@ -3,6 +3,7 @@
 #include "util.hpp"
 #include <string>
 #include "nfd.h"
+#include "gui.hpp"
 
 Main_Menu::Main_Menu(Context& context) : ctx(context) {}
 
@@ -34,13 +35,20 @@ void Main_Menu::draw()
 		draw_menus();
 
 		// Check network state
-		if (ctx.net.state.get() == Network::FAIL_OCCURED) {
-			P_ERROR("Network fail occured... Exiting back to login\n");
-			ctx.set_appstate(Context::LOGIN);
-		}
+		check_net();
 
         ImGui::End();
     }
+}
+
+void Main_Menu::check_net()
+{
+	if (ctx.net.state.get() == Network::FAIL_OCCURED) {
+		P_ERROR("Network fail occured... Exiting back to login\n");
+		ctx.set_appstate(Context::LOGIN);
+		thread_manager.close_all();
+		ctx.net.reset();
+	}
 }
 
 void Main_Menu::draw_path()
@@ -121,17 +129,25 @@ void Main_Menu::draw_request()
 
 void Main_Menu::draw_menus()
 {
-	// Align both menus along Y-axis
-	ImGui::SetCursorPosY(ImGui::GetCursorPosY() + TWO_MENUS_Y_MARGIN);
+	/* Align both menus along Y-axis */
+	SHIFT_VERTICAL(TWO_MENUS_Y_MARGIN);
 	const ImVec2 menu_start = ImGui::GetCursorPos();
 
 	draw_backlog();
 
-	// Move back on Y to draw left top/bottom menu
+	/* Move back on Y to draw left top/bottom menu */
 	ImGui::SetCursorPos(menu_start);
 	draw_session();
+
 	ImGui::SetCursorPos(menu_start);
 	draw_users();
+
+	draw_send();
+}
+
+void Main_Menu::draw_send()
+{
+	ImGui::Button("Send");
 }
 
 void Main_Menu::draw_backlog()
@@ -201,7 +217,7 @@ void Main_Menu::draw_users()
 	const ImVec2 user_size = {
 		(ImGui::GetWindowSize().x * 0.5f) - (MENUS_SIDE_MARGIN * 1.5f), 
 		((ImGui::GetWindowSize().y - ImGui::GetCursorPosY()) / 2.0f) - 
-		(MENU_BOTTOM_MARGIN * 0.5f) - ImGui::GetTextLineHeight()
+		(MENU_BOTTOM_MARGIN * 0.5f) - ImGui::GetTextLineHeight() - 30.0f
 	};
 
 	// Align users text 
@@ -218,17 +234,47 @@ void Main_Menu::draw_users()
 	ImGui::Text("User List");
 
 	// Align bottom right menu list box
-	ImGui::SetCursorPosX((ImGui::GetWindowSize().x / 2.0f) + (MENUS_SIDE_MARGIN * 0.5f));
+	ImGui::SetCursorPosX(
+		(ImGui::GetWindowSize().x / 2.0f) + 
+		(MENUS_SIDE_MARGIN * 0.5f)
+	);
 
 	ImGui::PushStyleColor(ImGuiCol_FrameBg, ImVec4(0.32941f, 0.33333f, 0.42353f, 1.0f)); 
     ImGui::PushStyleVar(ImGuiStyleVar_FrameRounding, 5.0f);
 
 	if (ImGui::BeginListBox("##Users", user_size))
 	{
+		read_users();
+		render_users();
 		ImGui::EndListBox();
 	}
 	ImGui::PopStyleColor();
 	ImGui::PopStyleVar();
+}
+
+void Main_Menu::read_users()
+{
+	Database& db = ctx.net.get_db();
+	static bool try_get = false;
+	const u32 update = db.get_update();
+
+	/* Change has been made to Database */
+	if (update > 0)
+		try_get = true;
+
+	if (try_get && db.lock().try_lock()) {
+		db.copy(client_list);
+		db.got_update(update);
+		db.lock().unlock();
+		try_get = false;
+	}
+}
+
+void Main_Menu::render_users()
+{
+	for (const auto& c : client_list) {
+		ImGui::Text("%s", c.name);
+	}
 }
 
 void Main_Menu::add_event(Transfer_Type type, const char *desc, const char *fname)
