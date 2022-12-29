@@ -164,6 +164,11 @@ void Login_Menu::draw_enter()
 	{
 		if (strnlen(key, IM_ARRAYSIZE(key) - 1) > 0) {
 			if (state == IDLE) {
+				if (!std::strcmp(key, "test")) {
+					// ! TEST KEY
+					ctx.set_appstate(Context::MAIN_MENU);
+					goto end;
+				}
 				ctx.loc.start(
 					login_state ? 
 					Locator::Mode::CREATE : 
@@ -174,6 +179,7 @@ void Login_Menu::draw_enter()
 			}
 		}
 	}
+end:
 	ImGui::PopStyleVar();
 }
 

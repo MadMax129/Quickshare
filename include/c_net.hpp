@@ -8,17 +8,18 @@ class Network;
 
 class Client {
 public:
-    Client(Network& net);
+    Client(Network& net, Server_Msg* msg);
 
     void loop(Status& status);
 
 private:
-    bool init(Server_Msg& msg);
-    void analize_msg(Server_Msg& msg);
+    bool init();
+    void analize_msg();
     
     /* Server Message Analysis */
-    void init_res(const Server_Msg& msg);
+    void init_res();
 
     UserId my_id;
     Network& net;
+    Server_Msg* const msg_buf;
 };

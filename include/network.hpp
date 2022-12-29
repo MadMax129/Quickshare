@@ -66,5 +66,6 @@ private:
     Client* client;
     Server* server;
     Database db;
+    Server_Msg* msg_buffer;
     char ip[IP_ADDR_LEN];
 };

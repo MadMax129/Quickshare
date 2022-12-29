@@ -1,19 +1,18 @@
 #include "network.hpp"
 #include "config.hpp"
 
-Client::Client(Network& net) : net(net) {}
+Client::Client(Network& net, Server_Msg* msg_buf) 
+    : net(net), msg_buf(msg_buf) {}
 
 void Client::loop(Status& status)
 {
-    Server_Msg msg;
-
-    if (!init(msg)) {
+    if (!init()) {
         net.fail("Client failed to send init msg...\n");
         return;
     }
 
     while (status.get()) {
-        bool good = net.conn.recv(net.conn.me(), &msg);
+        bool good = net.conn.recv(net.conn.me(), msg_buf);
         
         // Timeout
         // TODO ADD LINUX SUPPORT in connection
@@ -25,24 +24,24 @@ void Client::loop(Status& status)
             return;
         }
 
-        analize_msg(msg);
+        analize_msg();
     }
 }
 
-bool Client::init(Server_Msg& msg)
+bool Client::init()
 {
-    msg.type = Server_Msg::INIT_REQUEST;
-    get_computer_name(msg.init_req.client_name);
+    new (msg_buf) Server_Msg(Server_Msg::INIT_REQUEST);
+    get_computer_name(msg_buf->d.init_req.client_name);
 
-    return net.conn.send(net.conn.me(), &msg);
+    return net.conn.send(net.conn.me(), msg_buf);
 }
 
-void Client::analize_msg(Server_Msg& msg)
+void Client::analize_msg()
 {
-    switch (msg.type)
+    switch (msg_buf->type)
     {
         case Server_Msg::INIT_RESPONSE:
-            init_res(msg);
+            init_res();
             break;
 
         case Server_Msg::DELETE_CLIENT:
@@ -50,7 +49,7 @@ void Client::analize_msg(Server_Msg& msg)
             break;
 
         case Server_Msg::NEW_CLIENT:
-            printf("Got new client '%s'\n", msg.cli_update.client_name);
+            printf("Got new client '%s'\n", msg_buf->d.cli_update.client_name);
             break;
 
         default:
@@ -58,7 +57,7 @@ void Client::analize_msg(Server_Msg& msg)
     }
 }
 
-void Client::init_res(const Server_Msg& msg)
+void Client::init_res()
 {
-    my_id = msg.response.to;
+    my_id = msg_buf->d.response.to;
 }

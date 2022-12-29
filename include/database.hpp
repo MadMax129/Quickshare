@@ -32,11 +32,13 @@ struct Slot {
 struct GUI_Slot {
     GUI_Slot(UserId id, const char name[]) {
         this->id = id;
+        this->selected = false;
         safe_strcpy(this->name, name, CLIENT_NAME_LEN);
     }
 
     UserId id;
     char name[CLIENT_NAME_LEN];
+    bool selected;
 };
 
 using Client_GUI_List = std::vector<GUI_Slot>;

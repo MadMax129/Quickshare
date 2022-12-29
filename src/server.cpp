@@ -1,15 +1,17 @@
 #include "network.hpp"
 #include "config.hpp"
+#include "mem_pool.hpp"
 
-Server::Server(Network& net, const Client* cli) : net(net), cli(cli), 
-	db(net.get_db()), my_id(db.get_id()) {}
+Server::Server(Network& net, const Client* cli, Server_Msg* msg_buf) 
+	: msg_buf(msg_buf), net(net), cli(cli), 
+	  db(net.get_db()), my_id(db.get_id()) {}
 
 void Server::cleanup()
 {
 	LOG("Server cleanup...\n");
 	auto close_all = [](const Slot& slot) {
 		if (slot.state != Slot::EMPTY) {
-			LOGF("Closing Client '%s'\n", 
+			LOGF("\tClosing Client '%s'\n", 
 				slot.state == Slot::COMPLETE ? slot.name : ""
 			);
 			CLOSE_SOCKET(slot.sock);
@@ -85,34 +87,32 @@ void Server::read_msgs()
 }
 
 void Server::recv_msg(const socket_t sock)
-{
-	Server_Msg msg;
-	
-	if (!net.conn.recv(sock, &msg)) {
+{	
+	if (!net.conn.recv(sock, msg_buf)) {
 		close_client(sock);
 		return;
 	}
 
-	if (is_to_server(msg))
-		analize_msg(sock, msg);
+	if (is_to_server())
+		analize_msg(sock);
 	else {
 		// pass msg to client
 		;
 	}
 }
 
-bool Server::is_to_server(const Server_Msg& msg)
+bool Server::is_to_server()
 {
-	(void)msg;
+	// (void)msg;
 	return true;
 }
 
-void Server::analize_msg(const socket_t sock, Server_Msg& msg)
+void Server::analize_msg(const socket_t sock)
 {
-	switch (msg.type)
+	switch (msg_buf->type)
 	{
 		case Server_Msg::INIT_REQUEST:
-			init_req(sock, msg);
+			init_req(sock);
 			break;
 
 		default: 
@@ -120,49 +120,58 @@ void Server::analize_msg(const socket_t sock, Server_Msg& msg)
 	}
 }
 
-void Server::init_req(const socket_t sock, Server_Msg& msg)
+void Server::init_req(const socket_t sock)
 {
 	const UserId id = db.get_id();
 	char temp_name[CLIENT_NAME_LEN];
 
-	safe_strcpy(temp_name, msg.init_req.client_name, CLIENT_NAME_LEN);
+	safe_strcpy(
+		temp_name, 
+		msg_buf->d.init_req.client_name, 
+		CLIENT_NAME_LEN
+	);
 
 	/* First confirm with client on ID */
-	msg.type = Server_Msg::INIT_RESPONSE;
-	msg.response.to = id;
-	if (!net.conn.send(sock, &msg)) {
+	new (msg_buf) Server_Msg(Server_Msg::INIT_RESPONSE);
+	msg_buf->d.response.to = id;
+	if (!net.conn.send(sock, msg_buf)) {
 		close_client(sock);
 		return;
 	}
 
 	/* Once confirmed create entry in DB and infrom others */
 	db.complete_client(sock, temp_name, id);
-	send_client_list(sock, msg);
+	send_client_list(sock);
 	// ! ECHO BACK TO REST OF CLIENTS
 }
 
-void Server::send_client_list(const socket_t sock, Server_Msg& msg)
+void Server::send_client_list(const socket_t sock)
 {
-	msg.type = Server_Msg::NEW_CLIENT;
+	new (msg_buf) Server_Msg(Server_Msg::NEW_CLIENT);
 
 	/* Also manually send the server as a client */
-	msg.cli_update.id = my_id;
-	safe_strcpy(msg.cli_update.client_name, "Server", CLIENT_NAME_LEN);
-	if (!net.conn.send(sock, &msg)) {
+	msg_buf->d.cli_update.id = my_id;
+	safe_strcpy(
+		msg_buf->d.cli_update.client_name, 
+		"Server", 
+		CLIENT_NAME_LEN
+	);
+
+	if (!net.conn.send(sock, msg_buf)) {
 		close_client(sock);
 		return;
 	}
 
 	auto send_new_clients = [&](const Slot& slot) {
 		if (slot.state == Slot::COMPLETE && slot.sock != sock) {
-			msg.cli_update.id = slot.id;
+			msg_buf->d.cli_update.id = slot.id;
 			safe_strcpy(
-				msg.cli_update.client_name,
+				msg_buf->d.cli_update.client_name,
 				slot.name,
 				CLIENT_NAME_LEN
 			);
 
-			if (!net.conn.send(sock, &msg))
+			if (!net.conn.send(sock, msg_buf))
 				close_client(sock);
 		}
 	};
@@ -189,13 +198,19 @@ void Server::close_client(const socket_t sock)
 
 void Server::send_delete_client(const Slot& client_slot)
 {
-	Server_Msg msg(Server_Msg::DELETE_CLIENT);
-	safe_strcpy(msg.cli_update.client_name, client_slot.name, CLIENT_NAME_LEN);
-	msg.cli_update.id = client_slot.id;
+	new (msg_buf) Server_Msg(Server_Msg::DELETE_CLIENT);
+
+	safe_strcpy(
+		msg_buf->d.cli_update.client_name, 
+		client_slot.name, 
+		CLIENT_NAME_LEN
+	);
+
+	msg_buf->d.cli_update.id = client_slot.id;
 	
 	auto update = [&](Slot& db_slot) {
 		if (db_slot.state == Slot::COMPLETE) {
-			if (!net.conn.send(db_slot.sock, &msg))
+			if (!net.conn.send(db_slot.sock, msg_buf))
 				close_client(db_slot.sock);
 		}
 	};

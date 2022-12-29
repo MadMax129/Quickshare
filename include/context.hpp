@@ -8,8 +8,9 @@
 #include "state.hpp"
 #include "thread_manager.hpp"
 #include <memory>
+#include "share_manager.hpp"
 
-struct Context {
+class Context {
 public:
     enum State {
         ERROR_WINDOW,
@@ -29,6 +30,7 @@ public:
 
     Locator loc;
     Network net;
+    Share_Manager share;
 
 private:
     void menu_bar();

@@ -45,8 +45,8 @@ void Database::iterate(std::function<void(Slot&)> const& func)
 
 void Database::new_client(const sockaddr_in* addr, const socket_t sock)
 {
-    assert(!full());
     std::lock_guard<std::mutex> guard(mtx);
+    assert(!full());
 
     auto slot = std::find_if(
         std::begin(client_list), 

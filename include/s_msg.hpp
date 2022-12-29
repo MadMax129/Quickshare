@@ -3,7 +3,8 @@
 #include "config.hpp"
 #include "util.hpp"
 
-#define SERVER_MSG_PACKET_SIZE 64 
+#define SERVER_MSG_PACKET_SIZE 512
+#define FILE_NAME_LEN 256
 
 struct Server_Msg {
     enum Type : u8 {
@@ -15,6 +16,8 @@ struct Server_Msg {
         NEW_CLIENT,
         /* Disconnected client */
         DELETE_CLIENT,
+        /* File share request */
+        FILE_SHARE_REQ,
     };
 
     Server_Msg() = default;
@@ -33,10 +36,21 @@ struct Server_Msg {
         struct {
             UserId from, to;
         } response;
-    };
+
+        struct {
+            UserId from, to;
+            u64 file_size;
+            char file_name[FILE_NAME_LEN]; 
+        } f_share_req;
+    
+    } d;
 
     Type type;
 
+    char padding[SERVER_MSG_PACKET_SIZE - 
+                sizeof(d) - 
+                sizeof(Type)];
+
 } __attribute__((packed));
 
-// static_assert(sizeof(Server_Msg) == 32);
+static_assert(sizeof(Server_Msg) == SERVER_MSG_PACKET_SIZE);

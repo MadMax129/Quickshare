@@ -13,7 +13,7 @@ static void glfw_error_callback(int error, const char* description)
     fprintf(stderr, "Glfw Error %d: %s\n", error, description);
 }
 
-Context::Context() : f_menu(*this), l_menu(*this)
+Context::Context() : share(net), f_menu(*this), l_menu(*this)
 {
     window = NULL;
     glsl_version = NULL;

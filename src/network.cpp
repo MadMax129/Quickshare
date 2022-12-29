@@ -6,11 +6,15 @@ Network::Network()
 {
 	state.set(INACTIVE);
 
-	server = reinterpret_cast<Server*>(mem_pool.alloc(sizeof(Server)));
-	client = reinterpret_cast<Client*>(mem_pool.alloc(sizeof(Client)));
+	server = reinterpret_cast<Server*>
+		(mem_pool.alloc(sizeof(Server)));
+	client = reinterpret_cast<Client*>
+		(mem_pool.alloc(sizeof(Client)));
+	msg_buffer = reinterpret_cast<Server_Msg*>
+		(mem_pool.alloc(sizeof(Server_Msg)));
 
-	new (server) Server(*this, client);
-	new (client) Client(*this);
+	new (server) Server(*this, client, msg_buffer);
+	new (client) Client(*this, msg_buffer);
 }
 
 bool Network::get_ip(char ip_buffer[IP_ADDR_LEN])

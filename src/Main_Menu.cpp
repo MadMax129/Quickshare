@@ -72,8 +72,8 @@ void Main_Menu::draw_path()
     if (ImGui::Button(buffer, button_size)) {
         const char* path = open_file();
 		if (path) {
-			sprintf(buffer, "%s###Path", path);
-			free((void*)path);
+			std::sprintf(buffer, "%s###Path", path);
+			std::free((void*)path);
 		}
     }
     ImGui::PopStyleColor();
@@ -82,49 +82,64 @@ void Main_Menu::draw_path()
 void Main_Menu::draw_request()
 {
 	const char* const text = "Incoming Requests";
-	ImVec2 req_size = ImVec2(ImGui::GetWindowSize().x * 0.5f, ImGui::GetTextLineHeightWithSpacing() * 3);
+	const ImVec2 req_size = {
+		ImGui::GetWindowSize().x * 0.8f,
+		ImGui::GetTextLineHeightWithSpacing() * 3
+	};
 
-	// Center align text
-    ImGui::SetCursorPos(
-		ImVec2(
-			(ImGui::GetWindowSize().x - ImGui::CalcTextSize(text).x) * 0.5f,
-			ImGui::GetCursorPosY() + REQUEST_MARGIN
-		)
-	);
+	/* Center align text */
+	X_CENTER_ALIGN(ImGui::GetWindowSize().x, text);
+	SHIFT_VERTICAL(REQUEST_MARGIN);
 	ImGui::Text(text);
 
 	// Sizing strech Prop FLAG???
 
-	// Center align request box
-	ImGui::SetCursorPosX((ImGui::GetWindowSize().x / 2.0f) - (req_size.x / 2.0f));
+	/* Center align request box */
+	ImGui::SetCursorPosX((ImGui::GetWindowSize().x / 2.0f) - 
+						 (req_size.x / 2.0f));
 
-	constexpr ImGuiTableFlags flags = ImGuiTableFlags_ScrollY      | 
-									  ImGuiTableFlags_RowBg        | 
-									  ImGuiTableFlags_BordersOuter | 
-									  ImGuiTableFlags_BordersV;
+	// constexpr ImGuiTableFlags flags = ImGuiTableFlags_ScrollY      | 
+	// 								  ImGuiTableFlags_RowBg        | 
+	// 								  ImGuiTableFlags_BordersOuter | 
+	// 								  ImGuiTableFlags_BordersV;
 	
 	// ! TABLE SHOULD FIT USER_NAME_LEN CHaracters on left most colum
 
-	if (ImGui::BeginTable("Requests", 3, flags, req_size))
-	{
-		// TODO: ADD read form queue here 
-		for (int row = 0; row < 2; row++)
-		{
-			ImGui::TableNextRow();
-			
-			ImGui::TableSetColumnIndex(0);
-			ImGui::Text("DESKTOP-2WG534");
-			ImGui::TableSetColumnIndex(1);
+	if (ImGui::BeginListBox("##Requests", req_size)) {
+		for (int i = 0; i < 10; i++) {
+			ImGui::Text("DESKTOP-2WG534"); ImGui::SameLine(150);
+			ImGui::Text("'test_file.txt'"); ImGui::SameLine();
 			ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.0884, 0.680, 0.128, 1.0f));
 			ImGui::SmallButton("Accept");
 			ImGui::PopStyleColor();
-			ImGui::TableSetColumnIndex(2);
+			ImGui::SameLine();
 			ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.910, 0.246, 0.246, 1.0f));
 			ImGui::SmallButton("Deny");
 			ImGui::PopStyleColor();
 		}
-		ImGui::EndTable();
+
+		ImGui::EndListBox();
 	}
+	// if (ImGui::BeginTable("Requests", 4, flags, req_size)) { 
+	// 	for (int row = 0; row < 2; row++)
+	// 	{
+	// 		ImGui::TableNextRow();
+			
+	// 		ImGui::TableSetColumnIndex(0);
+	// 		ImGui::Text("DESKTOP-2WG534");
+	// 		ImGui::TableSetColumnIndex(1);
+	// 		ImGui::Text("test.txt");
+	// 		ImGui::TableSetColumnIndex(2);
+	// 		ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.0884, 0.680, 0.128, 1.0f));
+	// 		ImGui::SmallButton("Accept");
+	// 		ImGui::PopStyleColor();
+	// 		ImGui::TableSetColumnIndex(3);
+	// 		ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.910, 0.246, 0.246, 1.0f));
+	// 		ImGui::SmallButton("Deny");
+	// 		ImGui::PopStyleColor();
+	// 	}
+	// 	ImGui::EndTable();
+	// }
 }
 
 void Main_Menu::draw_menus()
@@ -141,13 +156,6 @@ void Main_Menu::draw_menus()
 
 	ImGui::SetCursorPos(menu_start);
 	draw_users();
-
-	draw_send();
-}
-
-void Main_Menu::draw_send()
-{
-	ImGui::Button("Send");
 }
 
 void Main_Menu::draw_backlog()
@@ -233,11 +241,16 @@ void Main_Menu::draw_users()
 	);
 	ImGui::Text("User List");
 
-	// Align bottom right menu list box
+	/* Align bottom right menu list box */
 	ImGui::SetCursorPosX(
 		(ImGui::GetWindowSize().x / 2.0f) + 
 		(MENUS_SIDE_MARGIN * 0.5f)
 	);
+
+	const ImVec2 save_center = {
+		ImGui::GetCursorPosX(),
+		ImGui::GetCursorPosY() + user_size.y + 10.0f
+	};
 
 	ImGui::PushStyleColor(ImGuiCol_FrameBg, ImVec4(0.32941f, 0.33333f, 0.42353f, 1.0f)); 
     ImGui::PushStyleVar(ImGuiStyleVar_FrameRounding, 5.0f);
@@ -248,6 +261,11 @@ void Main_Menu::draw_users()
 		render_users();
 		ImGui::EndListBox();
 	}
+
+	ImGui::SetCursorPos(save_center);
+
+	ImGui::Button("Send", {user_size.x, 20.0f});
+
 	ImGui::PopStyleColor();
 	ImGui::PopStyleVar();
 }
@@ -272,8 +290,10 @@ void Main_Menu::read_users()
 
 void Main_Menu::render_users()
 {
-	for (const auto& c : client_list) {
-		ImGui::Text("%s", c.name);
+	for (auto& c : client_list) {
+		char label[CLIENT_NAME_LEN];
+		safe_strcpy(label, c.name, CLIENT_NAME_LEN);
+		ImGui::Selectable(label, &c.selected);
 	}
 }
 

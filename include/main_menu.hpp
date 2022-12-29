@@ -24,7 +24,6 @@ private:
     void draw_request();
     void draw_session();
     void draw_backlog();
-    void draw_send();
     
     void draw_path();
     const char* open_file();
