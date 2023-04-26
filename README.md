@@ -23,10 +23,7 @@ Quickshare is a tool that intends to simplify and speed up the process of sharin
 # Built With
 
 <img src="https://upload.wikimedia.org/wikipedia/commons/1/18/ISO_C%2B%2B_Logo.svg" width=100 height=100>
-
-<img src="https://cloud.githubusercontent.com/assets/8225057/9825766/8b0de6c8-58cd-11e5-960f-0eeed4004d6c.png" width=300 height=100>
-<br />
-<br />
+<img src="https://pythonfix.com/pkg/i/imgui/imgui-banner.webp" width=300 height=200>
 
 <!-- GETTING STARTED -->
 # Getting Started
