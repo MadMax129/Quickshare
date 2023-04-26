@@ -26,6 +26,7 @@
 #include <cstdint>
 #include <cstdio>
 #include <assert.h>
+#include <ctime>
 
 typedef std::int8_t i8;
 typedef std::int16_t i16;

@@ -184,7 +184,13 @@ void Connection<T>::set_sock_timeout(const socket_t sock, const u32 sec)
 #ifdef SYSTEM_WIN_64
     DWORD timeout = sec * 1000;
     setsockopt(sock, SOL_SOCKET, SO_RCVTIMEO, (char*)&timeout, sizeof(timeout));
-#elif
+#elif defined(SYSTEM_UNX)
+    struct timeval timeout;
+    timeout.tv_sec = sec;
+    timeout.tv_usec = 0;
+    setsockopt(sock, SOL_SOCKET, SO_RCVTIMEO, &timeout, sizeof(timeout));
+    setsockopt(sock, SOL_SOCKET, SO_SNDTIMEO, &timeout, sizeof(timeout));
+#else
 #   error "Unsupported target"
 #endif
 
