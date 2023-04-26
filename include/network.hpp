@@ -19,99 +19,53 @@
 
 #pragma once
 
-#include "quickshare.hpp"
-#ifdef SYSTEM_UNX
-#   include <sys/socket.h>
-#   include <unistd.h>
-#   include <arpa/inet.h>
-#endif
-#include <atomic>
+#include "s_msg.hpp"
+#include "s_net.hpp"
+#include "c_net.hpp"
+#include "locator.hpp"
+#include "state.hpp"
+#include "connection.hpp"
+#include "thread_manager.hpp"
 #include <thread>
-#include "msg.hpp"
-#include "database.hpp"
-#include "net_gui.hpp"
-#include "../lib/SPSCQueue.h"
 
-/* Arbitrary server port that defines the central server location on local network */
-#define STATIC_SERVER_PORT 8345
+extern Thread_Manager thread_manager;
 
-struct File_Sharing;
-struct Client;
-struct Database;
+using Net_Con = Connection<Server_Msg>;
 
-struct Network {
+class Network {
 public:
-
-    Network(File_Sharing* f);
-    ~Network();
-
-    /* Initialize network socket and return sucess */
-    bool init_socket();
-
-    /* Loop function interface */
-    void network_loop();
-
-    /* Close socket */
-    void close_connection(socket_t socket);
-
-    /* Send message api call */
-    bool send_to_id(Msg* msg, UserId to);
-
-    /* Get network's state */
-    u32 get_state() const;
-
-    /* Id of network instance */
-    UserId my_id;
-
-    /* Communicate with gui */
-    rigtorp::SPSCQueue<Net_Gui_Msg> gui_msg;
-    
-    enum {
+    enum State {
+        /* Idle default state */
         INACTIVE,
-        CLOSE,
-        FAILED_CONNECTION,
-        CONNECTED
+        /* Initilization to server unsuccessful */
+        INIT_FAILED,
+        /* Success, network is online */
+        SUCCESS,
+        /* Faliure occured once online */
+        FAIL_OCCURED
     };
 
+    Network();
+
+    static bool get_ip(char ip_buffer[IP_ADDR_LEN]);
+
+    void init_network(bool is_server, const char ip[IP_ADDR_LEN]);
+    void fail(const char* str);
+
+    inline void reset() { state.set(INACTIVE); }
+    inline Database& get_db() { return db; }
+
+    State_Manager<State> state;
+    Net_Con conn;
+
 private:
-    /* Clean up all network resources */
-    void cleanup();
-
-    /* Attempts to connect to server, exits only if connected */
-    void try_connect();
+    void loop(bool is_server, Status& status);
+    bool conn_setup(bool is_server);
+    void end();
     
-    /* Main threads for client or server networks */
-    void cli_loop();
-    void server_loop();
-    
-    /* Server functions */
-    void server_analize_msg(const Msg* msg, socket_t socket);
-    void client_list_msg(const Msg* msg, Client* cli);
-    void send_client_list();
-    void analize_request(const Msg* msg, Client* cli);
-    void analize_packet(const Msg* msg, Client* cli);
-    void accept_client();
-    void create_server_client();
-    void recv_msg(socket_t sock);
-
-    /* Message handlers */
-    void handle_request(const Msg* msg, Client* cli);
-    void handle_packet(const Msg* msg, Client* cli);
-
-    /* Debug / Util */
-    bool send_msg(const Msg* const msg, const Client* target);
-    void set_sock_timeout(u32 sec);
-
-    bool is_server;
-#ifdef SYSTEM_WIN_64
-    WSAData wsa_data;
-#endif
-    Database* db;
-    File_Sharing* const f_manager;
-    fd_set master_fds, work_fds;
-    socket_t tcp_socket;
-    Msg* temp_msg_buf;
-    sockaddr_in server_addr;
-    std::atomic<u32> state{INACTIVE};
-    std::thread conn_thread;
+    Client* client;
+    Server* server;
+    Database db;
+    Server_Msg* msg_buffer;
+    char ip[IP_ADDR_LEN];
 };

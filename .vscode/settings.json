@@ -61,5 +61,9 @@
         "limits.h": "c",
         "syslimits.h": "c",
         "iostream": "cpp"
-    }
+    },
+    "C_Cpp.default.cppStandard": "c++17",
+    "C_Cpp.default.cStandard": "c11",
+    "C_Cpp.errorSquiggles": "Disabled",
+    "editor.cursorSmoothCaretAnimation": "off"
 }

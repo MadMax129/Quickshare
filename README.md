@@ -1,10 +1,10 @@
 # Quickshare
 > Creating a network which brings all your necessities together
 
-<!-- [![Contributors][contributors-shield]][contributors-url]
+[![Contributors][contributors-shield]][contributors-url]
 [![Stargazers][stars-shield]][stars-url]
 [![Issues][issues-shield]][issues-url]
-[![MIT License][license-shield]][license-url] -->
+[![MIT License][license-shield]][license-url]
 
 <img src="images/logo.png" width="250" height="290"/>
 <br />
@@ -14,9 +14,9 @@
 # About The Project
 
 <!-- Add screen shot of gui -->
-[![Product Name Screen Shot][product-screenshot]](https://example.com)
+![QS Screen Shot][product-screenshot]
 
-Quickshare is a tool that intends to simplify and speed up the process of sharing files, especially on local networks. The reoccuring issue of needing a fast way of file sharing know can come to an end with Quickshare. By creating a user friendly gui, Quickshare allows for easily selecting what to send and where with only a click of a button.
+**Quickshare** is a tool that intends to simplify and speed up the process of sharing files, especially on local networks. Quickshare aims to eliminate the reoccuring issue of needing a fast and simple way to share files between multiple devices. Forget using ancient file sharing systems/tools and instead use Quickshare which has cross compatability build-in, no setup required, and simple GUI.
 <br />
 <br />
 
@@ -68,12 +68,12 @@ Don't forget to give the project a star! Thanks again!
 5. Open a Pull Request
 
 <!-- LICENSE -->
-## License
+# License
 
 Distributed under the Apache 2.0 License. See `LICENSE` for more information.
 
 <!-- CONTACT -->
-## Contact
+# Contact
 
 Maks S. - email@example.com
 

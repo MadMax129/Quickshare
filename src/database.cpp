@@ -1,17 +1,18 @@
-#include "network.hpp"
+#include "database.hpp"
 #include <algorithm>
 #include <iterator>
-#include <cstring>
 
-Database::Database()
+Database::Database() 
 {
     cleanup();
 }
 
 void Database::cleanup()
 {
+    std::lock_guard<std::mutex> guard(mtx);
     client_list.fill({});
     client_count = 0;
+    update.store(0, std::memory_order_relaxed);
 }
 
 UserId Database::get_id() const 
@@ -23,7 +24,7 @@ UserId Database::get_id() const
         if (std::find_if(
             std::begin(client_list), 
             std::end(client_list), 
-            [&] (const Client& c) { 
+            [&] (const Slot& c) { 
                 return c.id == id;
             }
         ) == std::end(client_list))
@@ -33,108 +34,116 @@ UserId Database::get_id() const
     return id;
 }
 
-Client* Database::new_client(struct sockaddr_in* addr, socket_t sock)
+void Database::iterate(std::function<void(Slot&)> const& func)
 {
-    auto cli = std::find_if(
-            std::begin(client_list), 
-            std::end(client_list),
-            [] (const Client &c) { 
-                return c.state == Client::EMPTY; 
-            }
+    std::for_each(
+        std::begin(client_list),
+        std::end(client_list),
+        func
+    );
+}
+
+void Database::new_client(const sockaddr_in* addr, const socket_t sock)
+{
+    std::lock_guard<std::mutex> guard(mtx);
+    assert(!full());
+
+    auto slot = std::find_if(
+        std::begin(client_list), 
+        std::end(client_list),
+        [] (const Slot &s) { 
+            return s.state == Slot::EMPTY; 
+        }
     );
 
-    cli->id = get_id();
-    cli->addr = *addr;
-    cli->socket = sock;
-    cli->state = Client::OPEN;
+    LOGF("Client Accepted %s:%d [%d]\n", 
+        inet_ntoa(addr->sin_addr), 
+        addr->sin_port,
+        slot - client_list.cbegin()
+    );
+
+    slot->id = get_id();
+    slot->addr = *addr;
+    slot->sock = sock;
+    slot->state = Slot::OPENED;
     ++client_count;
-
-    LOGF("[%lld] Client created '%s:%d'\n", 
-        cli->id,
-        inet_ntoa(cli->addr.sin_addr), 
-        cli->addr.sin_port);
-
-    assert(cli != std::end(client_list));
-
-    return cli;
 }
 
-Client* Database::get_client_by_id(UserId id)
+void Database::get_client(Slot& slot, const socket_t sock)
 {
-    auto cli = std::find_if(
+    const auto client = std::find_if(
         std::begin(client_list),
         std::end(client_list),
-        [&] (const Client& c) { return c.id == id; }
+        [&] (const Slot& s) {
+            return s.sock == sock;
+        }
     );
 
-    if (cli == std::end(client_list))
-        return NULL;
-    else 
-        return cli;
+    slot = *client;
 }
 
-Client* Database::get_client(socket_t sock)
+void Database::complete_client(const socket_t sock, 
+                               const char name[CLIENT_NAME_LEN], 
+                               const UserId id)
 {
-    auto cli = std::find_if(
+    std::lock_guard<std::mutex> guard(mtx);
+    auto slot = std::find_if(
         std::begin(client_list),
         std::end(client_list),
-        [&] (const Client& c) { return c.socket == sock; }
+        [&] (const Slot& s) {
+            return s.sock == sock;
+        }
     );
 
-    if (cli == std::end(client_list))
-        return NULL;
-    else 
-        return cli;
-}
+    /* Client should already be accepted */
+    assert(slot != std::end(client_list));
 
-void Database::remove_client(socket_t sock)
-{
-    Client* cli = get_client(sock);
-
-    assert(cli);
-
-    LOGF("[%lld] Client \"%s\" disconnected '%s:%d'\n", 
-        cli->id, 
-        (char*)cli->name, 
-        inet_ntoa(cli->addr.sin_addr), 
-        cli->addr.sin_port);
+    slot->state = Slot::COMPLETE;
+    safe_strcpy(slot->name, name, CLIENT_NAME_LEN);
+    slot->id = id;
     
-    std::memset(cli, 0, sizeof(Client));
-    --client_count;
+    LOGF("Client Complete %s:%d\n\tName: %s\n\tUserId: %lld\n", 
+        inet_ntoa(slot->addr.sin_addr), 
+        slot->addr.sin_port,
+        name, 
+        slot->id
+    );
+    update.fetch_add(1, std::memory_order_relaxed);
 }
 
-void Database::create_msg(Msg* msg, const Client* cli)
+void Database::remove_client(const socket_t sock)
 {
-    memset(msg, 0, sizeof(Msg));
-    msg->hdr.type = Msg::CLIENT_LIST;
-    msg->hdr.recipient_id = cli->id;
-    u32 i = 0;
- 
-    for (const Client& c : client_list) {
-        if (c.state == Client::COMPLETE && c.id != cli->id) {
-            msg->list.clients[i].id = c.id;
-            std::strncpy(msg->list.clients[i].name, c.name, CLIENT_NAME_LEN);
-            ++i;
+    std::lock_guard<std::mutex> guard(mtx);
+    auto slot = std::find_if(
+        std::begin(client_list),
+        std::end(client_list),
+        [&] (const Slot& s) {
+            return s.sock == sock;
         }
+    );
+
+    if (slot == std::end(client_list)) {
+        P_ERROR("Removing non-existent client\n");
+        return;
     }
-    msg->list.client_count = client_count - 1;
+
+    LOGF("Client '%s' disconnected %s:%d\n",
+        slot->state == Slot::OPENED ? "" : slot->name,
+        inet_ntoa(slot->addr.sin_addr), 
+        slot->addr.sin_port
+    );
+
+    slot->state = Slot::EMPTY;
+    --client_count;
+    update.fetch_add(1, std::memory_order_relaxed);
 }
 
-void Database::debug_clients() const
+void Database::copy(Client_GUI_List& list)
 {
-    printf("Client amount: %u\n", client_count);
-    for (const Client& cli : client_list) {
-        if (cli.state != Client::EMPTY) {
-            if (cli.state == Client::OPEN) {
-                colored_printf(CL_BLUE, "<...>: #%lld\n", cli.id);
-                colored_print(CL_YELLOW, "\tState: Open\n");
-            
-            }
-            else if (cli.state == Client::COMPLETE) {
-                colored_printf(CL_BLUE, "%s: #%lld\n", cli.name, cli.id);
-                colored_print(CL_GREEN, "\tState: Completed\n");
-            }
-            printf("\t'%s:%d'\n", inet_ntoa(cli.addr.sin_addr), cli.addr.sin_port);
-        }
+    list.clear();
+
+    for (const Slot& slot : client_list) {
+        if (slot.state == Slot::COMPLETE)
+            list.emplace_back(slot.id, slot.name);
     }
 }

@@ -1,6 +1,7 @@
 #pragma once
 
 #include <cstdint>
+#include "util.hpp"
 
 /* Max length of unique session key 14 bytes
 Example: abcd1234
@@ -11,7 +12,7 @@ Example: abcd1234
 
 /* Max length of standard local ip
     255.255.255.255
-    - Also null terminated
+    - Must be null terminated
 */
 #define IP_ADDR_LEN 16
 
@@ -38,6 +39,20 @@ struct Ip_Msg
             char ip[IP_ADDR_LEN];
         } response;
     };
+
+    Ip_Msg() = default;
+
+    Ip_Msg(Type type, char* key, char* ip) 
+    {
+        this->type = type;
+        if (type == CREATE) {
+            safe_strcpy(request.net_name, key, SESSION_KEY_LEN);
+            safe_strcpy(request.my_ip, ip, IP_ADDR_LEN);
+        }
+        else if (type == REQUEST) {
+            safe_strcpy(request.net_name, key, SESSION_KEY_LEN);
+        }
+    }
 } __attribute__((packed));
 
 static_assert(sizeof(Ip_Msg) == 32);

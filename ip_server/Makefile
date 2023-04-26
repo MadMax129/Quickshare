@@ -4,11 +4,12 @@ CXX = g++
 EXE = qs_ip
 BUILD_DIR = build
 
-SRC = database.cpp \
-	  server.cpp \
+SRC = util.cpp        \
+	  database.cpp    \
+	  server.cpp      \
 	  ip_server.cpp
 SRC_OBJS = $(addprefix $(BUILD_DIR)/, $(addsuffix .o, $(basename $(SRC))))
-CXXFLAGS += -O2 -Wall -Werror -Wextra -std=c++17 -pedantic-errors -I./include
+CXXFLAGS += -O2 -Wall -Werror -Wextra -std=c++17 -pedantic-errors -I./include -I../include
 LIBS = -lpthread -lsqlite3
 
 dir:
@@ -20,6 +21,9 @@ clean:
 
 all: clean dir $(EXE)
 	@echo Complete
+
+$(BUILD_DIR)/util.o:
+	$(CXX) $(CXXFLAGS) -c -o $@ ../src/util.cpp
 
 $(BUILD_DIR)/%.o:%.cpp
 	$(CXX) $(CXXFLAGS) -c -o $@ $<

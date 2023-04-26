@@ -1,35 +1,8 @@
-/** @file quickshare.hpp
- * 
- * @brief Main quickshare header
- *      
- * Copyright (c) 2022 Maks S.
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- * http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */ 
-
 #pragma once
-
-#include <cstdio>
-#include <stdarg.h>
-#include <string>
 
 #if defined(_WIN64)
 #   define SYSTEM_WIN_64
 #   define SYSTEM_NAME "Win64"
-#   include <WS2tcpip.h>
-#   include <winsock2.h>
-#   include <windows.h>
-#   include <iphlpapi.h>
 #elif defined(__APPLE__) || defined(__MACH__)
 #   define SYSTEM_MAC_64
 #   define SYSTEM_NAME "Mac64"
@@ -51,7 +24,9 @@
 #endif
 
 #include <cstdint>
+#include <cstdio>
 #include <assert.h>
+#include <ctime>
 
 typedef std::int8_t i8;
 typedef std::int16_t i16;
@@ -63,11 +38,7 @@ typedef std::uint16_t u16;
 typedef std::uint32_t u32;
 typedef unsigned long long int u64;
 
-#ifdef SYSTEM_WIN_64
-    typedef SOCKET socket_t;
-#elif defined(SYSTEM_UNX)
-    typedef int socket_t;
-#endif
+typedef time_t UserId;
 
 #ifdef SYSTEM_WIN_64
 #   define PATH_TO_DATA "C:\\Users\\%s\\Downloads"
@@ -94,15 +65,11 @@ typedef unsigned long long int u64;
 #define colored_print(color, str) \
     _colored_print((void*)color, str)
 
-#define LOG(str) { \
-    colored_print(CL_YELLOW, "[ LOG ] "); \
-    std::printf(str); \
-}
+#define LOG(str) \
+    colored_print(CL_YELLOW, "[ LOG ] " str);
 
-#define LOGF(str, ...) { \
-    colored_print(CL_YELLOW, "[ LOG ] "); \
-    std::printf(str, __VA_ARGS__); \
-}
+#define LOGF(str, ...) \
+    colored_printf(CL_YELLOW, "[ LOG ] " str, __VA_ARGS__);
 
 #define P_ERROR(str) \
     colored_print(CL_RED, str)
@@ -110,14 +77,17 @@ typedef unsigned long long int u64;
 #define P_ERRORF(str, ...) \
     colored_printf(CL_RED, str, __VA_ARGS__)
 
+#ifdef RELEASE_MODE
+#   undef LOG
+#   undef LOGF
+#   undef P_ERROR
+#   undef P_ERRORF
+#   define LOG(str)
+#   define LOGF(str, ...)
+#   define P_ERROR(str)
+#   define P_ERRORF(str, ...)
+#endif
+
 void _colored_print(void* color, const char* str, ...);
-
-struct QuickShare {
-    QuickShare();
-    std::string dir_path;
-};
-
-struct Allocation;
-
-extern QuickShare qs;
-extern Allocation memory;
+void safe_strcpy(char* dest, const char* src, size_t size);
+void get_computer_name(char* buffer);

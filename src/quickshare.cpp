@@ -17,28 +17,64 @@
  * limitations under the License.
  */ 
 
-#include "file_manager.hpp"
-#include "network.hpp"
-#include "gui.hpp"
-#include <string>
-#include "nfd.h"
+#include "util.hpp"
+#include "locator.hpp"
+#include "context.hpp"
+#include "config.hpp"
+#include "mem_pool.hpp"
 
-QuickShare::QuickShare() 
-{
-    char temp[256];
 #ifdef SYSTEM_WIN_64
-    char user_name[32];
-    DWORD size = sizeof(user_name);
-    if (GetUserName((TCHAR*)user_name, &size) == 0)
-        P_ERROR("User name length error\n");
-    std::snprintf(temp, sizeof(char[256])-1, PATH_TO_DATA, user_name);
-    CreateDirectory(reinterpret_cast<TCHAR*>(temp), NULL);
+#   include <windows.h>
 #endif
-    dir_path = std::string(temp);
+
+struct Quickshare {
+    bool init_all();
+    void main();
+    void end();
+private:
+#ifdef SYSTEM_WIN_64
+    WSAData wsa_data;
+#endif
+};
+
+static Quickshare qs;
+Thread_Manager thread_manager;
+Memory_Pool mem_pool;
+
+bool Quickshare::init_all() 
+{
+#ifdef SYSTEM_WIN_64
+    if (WSAStartup(MAKEWORD(2,2), &wsa_data) != 0) {
+        P_ERROR("Failed to init 'WSAStartup'\n");
+        return false;
+    }
+#endif
+    return mem_pool.init();
 }
 
-QuickShare qs{};
-Allocation memory;
+void Quickshare::end()
+{
+#ifdef SYSTEM_WIN_64
+    WSACleanup();
+#endif
+    mem_pool.cleanup();
+}
+
+void Quickshare::main()
+{
+    Context ctx;
+
+    if (!ctx.create_window(WINDOW_WIDTH, WINDOW_HEIGHT, "Quickshare")) {
+        P_ERROR("Failed to create window...");
+        return;
+    }
+
+    ctx.init_imgui();
+    ctx.main_loop();
+
+    thread_manager.close_all();
+    LOG("All threads closed...\n");
+}
 
 #ifdef SYSTEM_WIN_64
 int WINAPI WinMain(HINSTANCE hInstance,
@@ -54,42 +90,21 @@ int main(const int argc, const char* argv[])
     (void)hPrevInstance;
     (void)lpCmdLine;
     (void)nCmdShow;
+#elif defined(SYSTEM_UNX)
+    (void)argc;
+    (void)argv;
 #endif
-
-    if (!memory.try_allocate()) {
-        memory.free();
-        return 1;
+    if (qs.init_all()) {
+        LOG("Starting Quickshare...\n");
+        qs.main();
+        qs.end();
     }
-
-    File_Sharing f_manager{};
-    Network net(&f_manager);
-    Context ctx(&net);
-    f_manager.add_network(&net);
-
-    net.network_loop();
-    // if (ctx.create_window(WINDOW_WIDTH, WINDOW_HEIGHT, "Quickshare")) {
-    //     ctx.init_imgui();
-    //     ctx.main_loop();
-    // }
-
-    for (;;)
-    {    
-        int c = getchar();
-        
-        switch (c) {
-            case 'e': return 0;
-            case 's': {
-                UserId id;
-                char fname[] = "../test_files/4kimage.jpg";
-                (void)scanf("%lld", &id);
-                Users_List a = {std::make_pair(id, Msg::INVALID)};
-                printf("Sending '%s' to '%lld'\n", fname, id);
-                assert(f_manager.create_send(fname, a));
-            }
-        }
+    else {
+    #ifdef SYSTEM_WIN_64
+        MessageBox(NULL, "Failed to initialize Quickshare...", "Quickshare", MB_ICONERROR | MB_OK);
+    #endif
+        P_ERROR("Failed to start Quickshare...\n");
     }
-
-    memory.free();
 
     return 0;
 }

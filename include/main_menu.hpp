@@ -1,44 +1,39 @@
 #pragma once
 
-#include <array>
-#include "net_gui.hpp"
+#include "database.hpp"
 
 struct Context;
-
-#define MENU_BAR_MARGIN 20
-#define BACKLOG_WIN_SIZE ImVec2(120, 250)
-#define USERS_WIN_SIZE ImVec2(120, 250)
-#define REQUESTS_WIN_SIZE ImVec2(200, 100)
 
 struct Main_Menu {
 public:
     enum Transfer_Type {
-        Error,
-        Sent,
-        Incoming
+        T_ERROR,
+        T_SENT,
+        T_RECV
     };
 
-    Main_Menu(Context* context);
-    ~Main_Menu() = default;
-
+    Main_Menu(Context& context);
     void draw();
-    void set_state(bool state);
-    bool get_state() const;
-    void add_clients();
-    bool open_file();
-    void add_event(Transfer_Type type,  const char *desc,  const char *fname);
-    void incoming_request(const char *desc, const char *fname);
-    void more_info(const char* desc);
 
 private:
-    void draw_path();
+    void add_event(Transfer_Type type, 
+                   const char *desc,
+                   const char *fname);
+    
+    void draw_menus();
     void draw_request();
+    void draw_session();
     void draw_backlog();
+    
+    void draw_path();
+    const char* open_file();
+    
     void draw_users();
+    void check_net();
+    void read_users();
+    void render_users();
 
+    Client_GUI_List client_list;
     bool open;
-    Context* ctx;
-    Msg::Client_List list;
-    std::string sSelectedFile;
-    std::string sFilePath;
+    Context& ctx;
 };

@@ -88,10 +88,6 @@ int main(int argc, const char** argv) {
      addr.sin_addr.s_addr = ipMask;
 
     printf("C to '%s'\n", inet_ntoa(addr.sin_addr));
-
-    if (connect(sock, (struct sockaddr*)&addr, sizeof(addr)) != SOCKET_ERROR) {
-      printf("Server found at %s\n", inet_ntoa(addr.sin_addr));
-    }
   };
 
   std::thread ths[256];
