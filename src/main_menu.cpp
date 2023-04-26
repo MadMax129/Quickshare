@@ -315,7 +315,7 @@ void Main_Menu::add_event(Transfer_Type type, const char *desc, const char *fnam
 	{
 		ImGui::BeginTooltip();
 		ImGui::PushTextWrapPos(ImGui::GetWindowSize().x);
-		ImGui::Text(desc);
+		ImGui::Text("%s", desc);
 		ImGui::PopTextWrapPos();
 		ImGui::EndTooltip();
 	}

@@ -7,6 +7,7 @@
 #include <cstdio>
 #include <mutex>
 #include <cstring>
+#include <cstdarg>
 
 #include "config.hpp"
 

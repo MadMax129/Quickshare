@@ -27,8 +27,10 @@ bool Network::get_ip(char ip_buffer[IP_ADDR_LEN])
 		return false;
 
 	safe_strcpy(ip_buffer, FixedInfo.IpAddressList.IpAddress.String, IP_ADDR_LEN);
-
-#elif 
+#elif defined(SYSTEM_UNX)
+	(void)ip_buffer;
+	return true;
+#else
 #   error "Unimplemented 'get_ip' on this system client"
 #endif
 	return true;

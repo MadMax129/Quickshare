@@ -1,5 +1,6 @@
 #include "mem_pool.hpp"
 #include "config.hpp"
+#include <cstdlib>
 
 bool Memory_Pool::init()
 {

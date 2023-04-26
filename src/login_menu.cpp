@@ -258,6 +258,6 @@ void Login_Menu::draw_text()
 	// Error message
 	X_CENTER_ALIGN(inner_size.x, error);
 	SHIFT_VERTICAL(10.0f);
-	ImGui::TextColored(ImVec4(1.0f, 0.0f, 0.0f, 1.0f), error);
+	ImGui::TextColored(ImVec4(1.0f, 0.0f, 0.0f, 1.0f), "%s", error);
 
 }

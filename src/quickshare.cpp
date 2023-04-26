@@ -90,6 +90,9 @@ int main(const int argc, const char* argv[])
     (void)hPrevInstance;
     (void)lpCmdLine;
     (void)nCmdShow;
+#elif defined(SYSTEM_UNX)
+    (void)argc;
+    (void)argv;
 #endif
     if (qs.init_all()) {
         LOG("Starting Quickshare...\n");

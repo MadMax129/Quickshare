@@ -16,9 +16,13 @@ void Client::loop(Status& status)
         
         // Timeout
         // TODO ADD LINUX SUPPORT in connection
+#ifdef SYSTEM_WIN_64
         if (!good && WSAGetLastError() == WSAETIMEDOUT) 
             continue;
-
+#elif defined(SYSTEM_UNX)
+        if (!good && (errno == EAGAIN || errno == EWOULDBLOCK))
+            continue;
+#endif
         if (!good) {
             net.fail("Recv failed...\n");
             return;
