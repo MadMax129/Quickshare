@@ -44,7 +44,7 @@ SRC_OBJS = $(addprefix $(BUILD_DIR)/, $(addsuffix .o, $(basename $(notdir $(SOUR
 IMGUI_OBJS = $(addprefix $(BUILD_DIR)/, $(addsuffix .o, $(basename $(notdir $(IMGUI_SOURCES)))))
 ALL_OBJS = $(IMGUI_OBJS) $(SRC_OBJS) $(FILE_DIALOG_OBJ)
 
-DEPS = $(addprefix build\, $(SOURCES:.cpp=.d))
+DEPS = $(addprefix build/, $(SOURCES:.cpp=.d))
 SRC_INC_DIR = -I$(INCLUDES) -I$(IMGUI_DIR) -I$(IMGUI_DIR)/backends -I$(FILE_DIALOG_INCLUDE)
 CXXFLAGS += -O2 -Wall -std=c++17 -pedantic-errors -Werror -Wextra
 LIBS = -lGL `pkg-config --static --libs glfw3` -lpthread -L$(FILE_DIALOG_LIB_PATH) -lnfd `pkg-config --libs gtk+-3.0`

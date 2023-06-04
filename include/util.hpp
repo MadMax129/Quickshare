@@ -23,19 +23,25 @@
 #   error Unsupported arch
 #endif
 
-#include <cstdint>
-#include <cstdio>
+#ifdef __cplusplus
+#   include <cstdint>
+#   include <cstdio>
+#   include <ctime>
+#else
+#   include <stdint.h>
+#   include <stdio.h>
+#   include <time.h>
+#endif
 #include <assert.h>
-#include <ctime>
 
-typedef std::int8_t i8;
-typedef std::int16_t i16;
-typedef std::int32_t i32;
+typedef int8_t i8;
+typedef int16_t i16;
+typedef int32_t i32;
 typedef long long int i64;
 
-typedef std::uint8_t u8;
-typedef std::uint16_t u16;
-typedef std::uint32_t u32;
+typedef uint8_t u8;
+typedef uint16_t u16;
+typedef uint32_t u32;
 typedef unsigned long long int u64;
 
 typedef time_t UserId;
