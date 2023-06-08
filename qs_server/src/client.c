@@ -10,21 +10,21 @@ void client_list_init(Client_List* clist)
     if (!clist->list)
         die("Failed alloc clients");
 
-    clist->n_cli = 0;
-}
+    for (unsigned int i = 0; i < MAX_CLIENTS; i++) {
+        clist->list[i].p_buf = (Packet*)malloc(sizeof(Packet));
 
-void client_queue_write(Client* client, const char *buf, size_t len)
-{
-    client->w_buf = (char*)realloc(client->w_buf, client->w_len + len);
-    memcpy(client->w_buf + client->w_len, buf, len);
-    client->w_len += len;
+        if (!clist->list[i].p_buf)
+            die("Failed packet malloc");
+    }
+
+    clist->n_cli = 0;
 }
 
 void client_list_free(Client_List* clist)
 {
     for (unsigned int i = 0; i < MAX_CLIENTS; i++) {
-        free(clist->list[i].w_buf);
-        // free secure
+        free(clist->list[i].p_buf);
+        // !free secure
     }
     free(clist->list);
 }
@@ -35,8 +35,10 @@ Client* client_init(Client_List* clist)
         return NULL;
 
     for (unsigned int i = 0; i < MAX_CLIENTS; i++) {
-        if (!clist->list[i].used) {
-            clist->list[i].used = true;
+        if (clist->list[i].state == C_EMPTY) {
+            clist->list[i].state = C_CONNECTED;
+            clist->list[i].p_len = 0;
+
             secure_init(&clist->list[i].secure);
             ++clist->n_cli;
             return &clist->list[i];
@@ -63,11 +65,10 @@ Client* client_close(Client_List* clist, int fd)
     if (!client)
         return NULL;
 
-    client->used = false;
+    client->state = C_EMPTY;
     --clist->n_cli;
     secure_free(&client->secure);
-    memset(client->w_buf, 0, client->w_len);
-    printf("Here\n");
+    memset(client->secure.encrypted_buf, 0, client->secure.e_len);
 
     return client;
 }

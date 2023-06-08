@@ -31,7 +31,6 @@ SOURCES  =	util.cpp         \
 			mem_pool.cpp     \
 			database.cpp     \
 			locator.cpp      \
-			server.cpp       \
 			client.cpp       \
 			network.cpp      \
 			context.cpp      \

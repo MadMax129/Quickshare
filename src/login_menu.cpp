@@ -200,7 +200,7 @@ void Login_Menu::loc_check()
 			break;
 
 		case Locator::SUCCESS:
-			ctx.net.init_network(login_state, ctx.loc.get_ip());
+			ctx.net.init_network(ctx.loc.get_ip());
 			/* Reset the locator */
 			ctx.loc.reset();
 			state = NETWORK;

@@ -4,6 +4,8 @@
     This means that server is either used or not
 */
 
+#include "thread_manager.hpp"
+
 class Network;
 
 class Client {

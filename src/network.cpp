@@ -6,14 +6,11 @@ Network::Network()
 {
 	state.set(INACTIVE);
 
-	server = reinterpret_cast<Server*>
-		(mem_pool.alloc(sizeof(Server)));
 	client = reinterpret_cast<Client*>
 		(mem_pool.alloc(sizeof(Client)));
 	msg_buffer = reinterpret_cast<Server_Msg*>
 		(mem_pool.alloc(sizeof(Server_Msg)));
 
-	new (server) Server(*this, client, msg_buffer);
 	new (client) Client(*this, msg_buffer);
 }
 
@@ -42,12 +39,12 @@ void Network::fail(const char* str)
 	state.set(Network::FAIL_OCCURED);
 }
 
-void Network::init_network(bool is_server, const char ip[IP_ADDR_LEN])
+void Network::init_network(const char ip[IP_ADDR_LEN])
 {
 	LOGF("Initializing Client/Server %s:%d\n", ip, STATIC_SERVER_PORT);
 	safe_strcpy(this->ip, ip, IP_ADDR_LEN);
 
-	thread_manager.new_thread(&Network::loop, this, is_server);
+	thread_manager.new_thread(&Network::loop, this);
 }
 
 void Network::end()
@@ -56,45 +53,46 @@ void Network::end()
 	conn.close();
 }
 
-void Network::loop(bool is_server, Status& status)
+void Network::loop(Status& status)
 {
-	if (!conn_setup(is_server)) {
-		state.set(INIT_FAILED);
-		return;
-	}
+	(void)status;
+	// if (!conn_setup(is_server)) {
+	// 	state.set(INIT_FAILED);
+	// 	return;
+	// }
 
-	state.set(SUCCESS);
+	// state.set(SUCCESS);
 
-	if (is_server) {
-		server->init();
-		server->loop(status);
-		server->cleanup();
-	}
-	else {
-		client->loop(status);
-	}
+	// if (is_server) {
+	// 	server->init();
+	// 	server->loop(status);
+	// 	server->cleanup();
+	// }
+	// else {
+	// 	client->loop(status);
+	// }
 
-	/* Cleanup network once loop exists */
-	end();
+	// /* Cleanup network once loop exists */
+	// end();
 }
 
-bool Network::conn_setup(bool is_server)
+bool Network::conn_setup()
 {
-	if (conn.create_socket(ip, STATIC_SERVER_PORT)) {
-		if (is_server && conn.bind_and_listen()) {
-			return true;
-		}
-		else if (!is_server && conn.connect()) {
-			conn.set_sock_timeout(conn.me(), 1);
-			return true;
-		}
-	}
-	else {
-		return false;
-	}
+	// if (conn.create_socket(ip, STATIC_SERVER_PORT)) {
+	// 	if (is_server && conn.bind_and_listen()) {
+	// 		return true;
+	// 	}
+	// 	else if (conn.connect()) {
+	// 		conn.set_sock_timeout(conn.me(), 1);
+	// 		return true;
+	// 	}
+	// }
+	// else {
+	// 	return false;
+	// }
 
-	P_ERROR("Failed connection setup\n");
-	conn.close();
+	// P_ERROR("Failed connection setup\n");
+	// conn.close();
 
 	return false;
 }

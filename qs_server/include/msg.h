@@ -5,6 +5,10 @@
 
 #define MTU_SIZE 1440
 
+// enum {
+
+// };
+
 typedef struct {
     struct Header {
         uint8_t type;

@@ -20,7 +20,7 @@
 #pragma once
 
 #include "s_msg.hpp"
-#include "s_net.hpp"
+#include "database.hpp"
 #include "c_net.hpp"
 #include "locator.hpp"
 #include "state.hpp"
@@ -49,7 +49,7 @@ public:
 
     static bool get_ip(char ip_buffer[IP_ADDR_LEN]);
 
-    void init_network(bool is_server, const char ip[IP_ADDR_LEN]);
+    void init_network(const char ip[IP_ADDR_LEN]);
     void fail(const char* str);
 
     inline void reset() { state.set(INACTIVE); }
@@ -59,12 +59,11 @@ public:
     Net_Con conn;
 
 private:
-    void loop(bool is_server, Status& status);
-    bool conn_setup(bool is_server);
+    void loop(Status& status);
+    bool conn_setup();
     void end();
     
     Client* client;
-    Server* server;
     Database db;
     Server_Msg* msg_buffer;
     char ip[IP_ADDR_LEN];

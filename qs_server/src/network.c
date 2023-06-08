@@ -1,6 +1,7 @@
 #include "server.h"
 #include <memory.h>
 #include <unistd.h>
+#include <errno.h>
 
 void create_socket(Server* s, const char* ip, const short port)
 {
@@ -117,87 +118,108 @@ static void close_client(Server* s, int fd)
         client->addr.sin_port
     );
 
+    assert(new_client_event(s, EPOLL_CTL_DEL, fd));
+
     /* Echo to session client disconnected */
 
-    assert(new_client_event(s, EPOLL_CTL_DEL, fd));
+    close(client->fd);
 }
 
-static bool decode(Packet* packet, ssize_t len)
+static Secure_State complete_handshake(Client* c)
 {
+    Secure_State status;
+
+    int n = SSL_do_handshake(c->secure.ssl);
     
+    printf("SSL Handshake State: %s\n", 
+        SSL_state_string_long(c->secure.ssl)
+    );
+
+    if (n) c->state = C_SECURE;
+
+    status = get_sslstate(&c->secure, n);
+
+    if (status == STATUS_MORE_IO)
+        return ssl_want_more(&c->secure);
+
+    return status;
+}
+
+static bool decode_packet(Packet* packet, ssize_t len, Client* c)
+{
+    char* packet_bytes = (char*)packet;
+    int n = 0;
+
+    assert(c);
+
+    while (len > 0) {
+        n = BIO_write(c->secure.r_bio, (void*)packet_bytes, len);
+
+        if (n <= 0)
+            return false;
+        
+        packet_bytes += n;
+        len          -= n;
+
+        /* Check if handshake has finished */
+        if (!SSL_is_init_finished(c->secure.ssl)) {
+            if (complete_handshake(c) == STATUS_FAIL)
+                return false;
+            /* Handshake not finished yet */
+            if (!SSL_is_init_finished(c->secure.ssl))
+                return true;
+        }
+
+        /* Begin decrypting data */
+        do {
+            n = SSL_read(
+                c->secure.ssl, 
+                ((char*)c->p_buf) + c->p_len, 
+                sizeof(Packet)    - c->p_len
+            );
+
+            if (n > 0) {
+                c->p_len += n;
+
+                printf("read = %d\n", n);
+            }
+        } while (n > 0);
+
+        Secure_State status = get_sslstate(&c->secure, n);
+
+        if (status == STATUS_MORE_IO)
+            return ssl_want_more(&c->secure) == STATUS_OK;
+        else if (status == STATUS_FAIL)
+            return false;
+    }
+
     return true;
 }
 
 static void read_data(Server* s, int fd)
 {
     static Packet packet;
-    int n = read(fd, (void*)&packet, sizeof(Packet));
+    ssize_t n = read(fd, (void*)&packet, sizeof(Packet));
 
     if (n > 0) {
-        assert(decode(&packet, n));
+        if (decode_packet(
+                &packet, 
+                n, 
+                client_find(&s->clients, fd)
+            ))
+            return;
     }
-    else {
-        printf("Print error\n");
-    }
 
-
-
-    Client* c = client_find(&s->clients, fd);
-
-    printf("===>%d\n", n);
-
-    n = BIO_write(c->secure.r_bio, (void*)&packet, n);
-
-
-    printf("===>%d\n", n);
-    if (n <= 0)
-      return; /* assume bio write failure is unrecoverable */
-
-    // src += n;
-    // len -= n;
-
-    // if (!SSL_is_init_finished(client.ssl)) {
-    //   if (do_ssl_handshake() == SSLSTATUS_FAIL)
-    //     return -1;
-    //   if (!SSL_is_init_finished(client.ssl)) {
-    //     printf("Not finished\n");
-    //     return 0;
-    //   }
-    // }
-
-    /* The encrypted data is now in the input bio so now we can perform actual
-     * read of unencrypted data. */
-
-    do {
-      n = SSL_read(c->secure.ssl, (void*)&packet, sizeof(Packet));
-      printf("SSL_read = %d\n", n);
-      if (n > 0)
-        printf("==>%s\n", (char*)&packet);
-    } while (n > 0);
-
-    int error = SSL_get_error(c->secure.ssl, n);
-
-    if (error == SSL_ERROR_WANT_WRITE || error == SSL_ERROR_WANT_READ) {
-        do {
-            n = BIO_read(c->secure.w_bio, (void*)&packet, sizeof(Packet));
-            printf("==>%d\n", n);
-            if (n > 0) {
-                client_queue_write(c, (void*)&packet, n);
-                printf("Queued %u\n", c->w_len);
-            }
-            else if (!BIO_should_retry(c->secure.w_bio))
-                return;
-        } while (n>0);
-    }
-    else {
-        printf("error\n");
-    }
+    /* Error reading data */
+    
+    printf("read() failed closing client: %s\n", strerror(errno));
+    close_client(s, fd);
 }
 
 static void check_for_write(Server* s)
 {
     for (unsigned int i = 0; i < MAX_CLIENTS; i++) {
-        if (!s->clients.list[i].used)
+        if (s->clients.list[i].state == C_EMPTY)
             continue;
 
         struct epoll_event ev = {
@@ -206,7 +228,7 @@ static void check_for_write(Server* s)
             .data.fd = s->clients.list[i].fd
         };
 
-        if (s->clients.list[i].w_len > 0)
+        if (s->clients.list[i].secure.e_len > 0)
             ev.events |= EPOLLOUT;
 
         epoll_ctl(
@@ -222,12 +244,17 @@ static void write_data(Server* s, int fd)
 {
     Client* c = client_find(&s->clients, fd);
 
-    ssize_t n = write(c->fd, c->w_buf, c->w_len);
+    ssize_t n = write(c->fd, c->secure.encrypted_buf, c->secure.e_len);
     if (n > 0) {
-        if ((size_t)n < c->w_len)
-            memmove(c->w_buf, c->w_buf + n, c->w_len-n);
-        c->w_len -= n;
-        c->w_buf = (char*)realloc(c->w_buf, c->w_len);
+        printf("Writing %ld\n", n);
+        if ((size_t)n < c->secure.e_len)
+            memmove(
+                c->secure.encrypted_buf, 
+                c->secure.encrypted_buf + n, 
+                c->secure.e_len-n
+            );
+        c->secure.e_len -= n;
+        c->secure.encrypted_buf = (char*)realloc(c->secure.encrypted_buf, c->secure.e_len);
     }
     else {
         printf("Write error\n");
