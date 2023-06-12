@@ -73,7 +73,10 @@
         "secure.h": "c",
         "bio.h": "c",
         "stdint.h": "c",
-        "stdint-gcc.h": "c"
+        "stdint-gcc.h": "c",
+        "ringbuffer.h": "c",
+        "database.h": "c",
+        "util.hpp": "c"
     },
     "C_Cpp.default.cppStandard": "c++17",
     "C_Cpp.default.cStandard": "c11",

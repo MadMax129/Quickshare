@@ -16,7 +16,7 @@
 <!-- Add screen shot of gui -->
 ![QS Screen Shot][product-screenshot]
 
-**Quickshare** is a tool that intends to simplify and speed up the process of sharing files, especially on local networks. Quickshare aims to eliminate the reoccuring issue of needing a fast and simple way to share files between multiple devices. Forget using ancient file sharing systems/tools and instead use Quickshare which has cross compatability build-in, no setup required, and simple GUI.
+**Quickshare** is a tool that intends to simplify and speed up the process of sharing files. Quickshare aims to eliminate the reoccuring issue of needing a fast and simple way to share files between multiple devices. Forget using ancient file sharing systems/tools and instead use Quickshare which has cross compatability build-in, no setup required, and simple GUI.
 <br />
 <br />
 

@@ -10,8 +10,9 @@ typedef struct {
     SSL* ssl;
     BIO* r_bio; 
     BIO* w_bio;
-    char* encrypted_buf;
-    unsigned int e_len;
+    char* e_buf;
+    unsigned int e_len, 
+                 e_size;
 } Secure;
 
 typedef enum {
@@ -27,7 +28,6 @@ void secure_init(Secure* s);
 void secure_free(Secure* s);
 void secure_queue_write(Secure* s, const char *buf, size_t len);
 Secure_State get_sslstate(Secure* s, int ret);
-Secure_State ssl_want_more(Secure* c);
 void ssl_free();
 
 #endif /* QS_SECURE */

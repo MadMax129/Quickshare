@@ -1,6 +1,7 @@
 #include "secure.h"
 #include "server.h"
 #include <memory.h>
+#include "util.h"
 
 void ssl_init(const char * certfile, const char* keyfile)
 {
@@ -28,41 +29,23 @@ void ssl_init(const char * certfile, const char* keyfile)
         printf("certificate and private key loaded and verified\n");
     }
 
-    /* Recommended to avoid SSLv2 & SSLv3 */
+    /* Recommended security options */
     SSL_CTX_set_options(
         ssl_ctx, 
-        SSL_OP_ALL      | 
-        SSL_OP_NO_SSLv2 | 
-        SSL_OP_NO_SSLv3
+        SSL_OP_ALL        | 
+        SSL_OP_NO_SSLv2   | 
+        SSL_OP_NO_SSLv3   |
+        SSL_OP_NO_TLSv1   |
+        SSL_OP_NO_TLSv1_1 |
+        SSL_OP_NO_TLSv1_2
     );
 }
 
 void secure_queue_write(Secure* s, const char *buf, size_t len)
 {
-    s->encrypted_buf = (char*)realloc(s->encrypted_buf, s->e_len + len);
-    memcpy(s->encrypted_buf + s->e_len, buf, len);
+    s->e_buf = (char*)realloc(s->e_buf, s->e_len + len);
+    memcpy(s->e_buf + s->e_len, buf, len);
     s->e_len += len;
-}
-
-Secure_State ssl_want_more(Secure* s)
-{
-    char ssl_buffer[64];
-    int n;
-
-    do {
-        n = BIO_read(
-            s->w_bio, 
-            ssl_buffer, 
-            sizeof(ssl_buffer)
-        );
-        
-        if (n > 0)
-            secure_queue_write(s, ssl_buffer, n);
-        else if (!BIO_should_retry(s->w_bio))
-            return STATUS_FAIL;
-    } while (n > 0);
-
-    return STATUS_OK;
 }
 
 Secure_State get_sslstate(Secure* s, int ret)
@@ -96,5 +79,11 @@ void secure_init(Secure* s)
 
 void secure_free(Secure* s)
 {
+    if (SSL_shutdown(s->ssl) == 0)
+        SSL_shutdown(s->ssl);
     SSL_free(s->ssl);
+
+    if (s->e_buf)
+        memset(s->e_buf, 0, s->e_len);
+    s->e_len = 0;
 }

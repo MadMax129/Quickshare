@@ -1,7 +1,10 @@
-#include "server.h"
 #include <memory.h>
 #include <unistd.h>
 #include <errno.h>
+#include <string.h>
+
+#include "server.h"
+#include "util.h"
 
 void create_socket(Server* s, const char* ip, const short port)
 {
@@ -54,6 +57,11 @@ void setup_poll(Server* s)
         die("Failed to alloc epoll events");
 }
 
+void server_free(Server* s)
+{
+    free(s->events);
+}
+
 static inline bool new_client_event(Server* s, int op, int fd)
 {
     struct epoll_event ev;
@@ -85,6 +93,14 @@ static void accept_client(Server* s)
         return;
     }
 
+    // TODO ADD wait list/queue 
+    /* 
+        Once handshake has completed or
+        no handshake has been initiated
+
+        after timeout
+        close connection
+    */
     // SSL_set_fd(client->secure.ssl, conn);
 
     // if (SSL_accept(client->secure.ssl) <= 0) {
@@ -120,9 +136,37 @@ static void close_client(Server* s, int fd)
 
     assert(new_client_event(s, EPOLL_CTL_DEL, fd));
 
+
     /* Echo to session client disconnected */
 
     close(client->fd);
+}
+
+static Secure_State ssl_want_more(Client* c)
+{
+    Secure* s = &c->secure;
+    char buf[64];
+    int n;
+
+    printf("More\n");
+
+    do {
+        n = BIO_read(
+            s->w_bio, 
+            buf, 
+            sizeof(buf)
+        );
+        
+        /* Queue SSL data to write */
+        if (n > 0) {
+            secure_queue_write(&c->secure, buf, n);
+            printf("Encrypted %d\n", n);
+        }
+        else if (!BIO_should_retry(s->w_bio))
+            return STATUS_FAIL;
+    } while (n > 0);
+
+    return STATUS_OK;
 }
 
 static Secure_State complete_handshake(Client* c)
@@ -140,20 +184,138 @@ static Secure_State complete_handshake(Client* c)
     status = get_sslstate(&c->secure, n);
 
     if (status == STATUS_MORE_IO)
-        return ssl_want_more(&c->secure);
+        return ssl_want_more(c);
 
     return status;
 }
 
-static bool decode_packet(Packet* packet, ssize_t len, Client* c)
+static inline void server_resposne(Client* c, int type)
+{
+    Packet* packet = enqueue(&c->msg_queue);
+    assert(packet);
+    packet->hdr.type = type;
+}
+
+static void send_single_user(Client* c, Client* c1)
+{
+    Packet* packet = enqueue(&c->msg_queue);
+    memset((void*)packet, 0, sizeof(Packet));
+    assert(packet);
+
+    packet->hdr.type = P_SERVER_NEW_USERS;
+    packet->d.users.users_len = 1;
+    packet->d.users.ids[0] = c1->session_id;
+    memcpy(
+        &packet->d.users.names[0],
+        c1->name,
+        PC_NAME
+    );
+}
+
+static void send_session_users(Server* s, Client* c)
+{
+    Packet* packet = NULL;
+    uint8_t count = 0;
+
+    for (unsigned int i = 0; i < MAX_CLIENTS; i++) {
+        Client* user = &s->clients.list[i];
+
+        if (user->id != c->id && user->session_id == c->session_id) {
+            printf("Sending\n");
+            if (!packet) {
+                packet = enqueue(&c->msg_queue);
+                assert(packet);
+                memset((void*)packet, 0, sizeof(Packet));
+                packet->hdr.type = P_SERVER_NEW_USERS;
+            }
+
+            memcpy(
+                &packet->d.users.names[count],
+                user->name,
+                16
+            );
+            packet->d.users.ids[count] = user->session_id;
+            ++packet->d.users.users_len;
+
+            send_single_user(user, c);
+        }
+    }
+}
+
+static void packet_intro(Server* s, Client* c)
+{
+    Packet* const p = c->p_buf;
+
+    /* Make sure all data makes sense */
+    if (c->state == C_CONNECTED             ||
+        p->d.intro.id_len >= (SESSION_ID-1) ||
+        p->d.intro.name_len >= (PC_NAME-1)  ||
+        p->d.intro.session > 1) 
+    {
+        /* Abnormal client behavior */
+        server_resposne(c, P_SERVER_DENY);
+        return;
+    }
+
+    p->d.intro.name[p->d.intro.name_len + 1] = '\0';
+    p->d.intro.id[p->d.intro.id_len + 1]     = '\0';
+   
+    printf(
+        "Packet: Intro\n"
+        "  Name:    '%.*s'\n"
+        "  Session: %.*s\n"
+        "  Type:    %s\n",
+        p->d.intro.name_len, p->d.intro.name,
+        p->d.intro.id_len, p->d.intro.id,
+        p->d.intro.session ? "Create" : "Join"
+    );
+
+    long session = 0;
+    if (p->d.intro.session == 0)
+        session = db_get_session(&s->db, p->d.intro.id);
+    else if (p->d.intro.session == 1)
+        session = db_create_session(&s->db, p->d.intro.id);
+
+    if (session == 0) {
+        server_resposne(c, P_SERVER_DENY);
+        return;
+    }
+
+    server_resposne(c, P_SERVER_OK);
+    c->state = C_CONNECTED;
+    c->session_id = session;
+    memcpy(c->name, p->d.intro.name, PC_NAME);
+
+    send_session_users(s, c);
+}
+
+static void analize_packet(Server* s, Client* c)
+{
+    switch(c->p_buf->hdr.type)
+    {
+        case P_CLIENT_INTRO:
+            packet_intro(s, c);
+            break;
+
+        default:
+            printf("Unknown packet type\n");
+            break;
+    }
+}
+
+static bool decode_packet(Server* s, Packet* packet, ssize_t len, Client* c)
 {
     char* packet_bytes = (char*)packet;
     int n = 0;
 
     assert(c);
 
+    printf("Hee\n");
+
     while (len > 0) {
         n = BIO_write(c->secure.r_bio, (void*)packet_bytes, len);
+
+        printf("BIO full write %d == %ld\n", n, len);
 
         if (n <= 0)
             return false;
@@ -178,17 +340,28 @@ static bool decode_packet(Packet* packet, ssize_t len, Client* c)
                 sizeof(Packet)    - c->p_len
             );
 
-            if (n > 0) {
-                c->p_len += n;
+            printf("SSL_RRRR =>%d\n", n);
 
-                printf("read = %d\n", n);
+            if (n > 0) {
+                // printf("%d read = %.*s\n", n, n, ((char*)c->p_buf) + c->p_len);
+                c->p_len += n;
+                if (c->p_len > 3) {
+                    (void)analize_packet;
+                    printf("Read whole packet\n");
+                    server_resposne(c, P_SERVER_OK);
+                    // analize_packet(s, c);
+                    c->p_len = 0;
+                }
+            }
+            else {
+                ERR_print_errors_fp(stderr);
             }
         } while (n > 0);
 
         Secure_State status = get_sslstate(&c->secure, n);
 
         if (status == STATUS_MORE_IO)
-            return ssl_want_more(&c->secure) == STATUS_OK;
+            return ssl_want_more(c) == STATUS_OK;
         else if (status == STATUS_FAIL)
             return false;
     }
@@ -203,6 +376,7 @@ static void read_data(Server* s, int fd)
 
     if (n > 0) {
         if (decode_packet(
+                s,
                 &packet, 
                 n, 
                 client_find(&s->clients, fd)
@@ -212,7 +386,7 @@ static void read_data(Server* s, int fd)
 
     /* Error reading data */
     
-    printf("read() failed closing client: %s\n", strerror(errno));
+    printf("read()=%ld failed: %s\n", n, strerror(errno));
     close_client(s, fd);
 }
 
@@ -228,7 +402,8 @@ static void check_for_write(Server* s)
             .data.fd = s->clients.list[i].fd
         };
 
-        if (s->clients.list[i].secure.e_len > 0)
+        if (!queue_empty(&s->clients.list[i].msg_queue) ||
+            s->clients.list[i].secure.e_len > 0)
             ev.events |= EPOLLOUT;
 
         epoll_ctl(
@@ -240,24 +415,90 @@ static void check_for_write(Server* s)
     }
 }
 
+static bool write_raw_data(int fd, char* data, size_t size)
+{
+    while (size > 0) {
+        ssize_t n = write(
+            fd, 
+            data, 
+            size
+        );
+
+        if (n > 0) {
+            size -= n;
+            data += n;
+        }
+        else {
+            return false;
+        }
+    }
+
+    return true;
+}
+
+static bool write_and_encrypt(Packet* p, Client* c)
+{
+    static Packet buf;
+    size_t size = sizeof(Packet); 
+    char* data  = (char*)p;
+    Secure_State state;
+
+    while (size > 0) {
+        int n = SSL_write(c->secure.ssl, data, size);
+
+        printf("SSL_write %d %ld %lu\n", n, sizeof(Packet), size);
+
+        state = get_sslstate(&c->secure, n);
+
+        if (n > 0) {
+            data += n;
+            size -= n;
+
+            do {
+                n = BIO_read(c->secure.w_bio, (void*)&buf, sizeof(Packet));
+                printf("==>%d\n", n);
+                if (n > 0) {
+                    printf("Writing BIO %d\n", n);
+                    secure_queue_write(&c->secure, (void*)&buf, n);
+                }
+                else if (!BIO_should_retry(c->secure.w_bio)) {
+                    return false;
+                }
+            } while (n > 0);
+        }
+
+        printf("HEREEEE ==>%ld\n", size);
+        if (state == STATUS_FAIL)
+            return false;
+    }
+
+    return true;
+}
+
 static void write_data(Server* s, int fd)
 {
     Client* c = client_find(&s->clients, fd);
+    Queue*  q = &c->msg_queue;
 
-    ssize_t n = write(c->fd, c->secure.encrypted_buf, c->secure.e_len);
-    if (n > 0) {
-        printf("Writing %ld\n", n);
-        if ((size_t)n < c->secure.e_len)
-            memmove(
-                c->secure.encrypted_buf, 
-                c->secure.encrypted_buf + n, 
-                c->secure.e_len-n
-            );
-        c->secure.e_len -= n;
-        c->secure.encrypted_buf = (char*)realloc(c->secure.encrypted_buf, c->secure.e_len);
+    if (c->secure.e_len > 0) {
+        if (!write_raw_data(fd, c->secure.e_buf, c->secure.e_len)) {
+            printf("Failed to send openssl data\n");
+            close_client(s, fd);
+        }
+        printf("Send\n");
+        c->secure.e_len = 0;
     }
-    else {
-        printf("Write error\n");
+
+    if (!queue_empty(q)) {
+        Packet* packet = dequeue(q);
+        assert(packet);
+
+        if (write_and_encrypt(packet, c)) {
+            printf("Out and queue %d\n", q->count);
+            return;
+        }
+        printf("Failed to write and encrypt\n");
+        close_client(s, fd);
     }
 }
 

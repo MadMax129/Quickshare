@@ -5,7 +5,9 @@ EXE = qs_s
 BUILD_DIR = build
 
 SRC = \
-	ringbuffer.c \
+	queue.c       \
+	ringbuffer.c  \
+	database.c    \
 	secure.c      \
 	client.c      \
 	network.c     \
@@ -24,9 +26,12 @@ CXXFLAGS += -O2 -Wall -Werror -Wextra \
 			-std=c11 -pedantic-errors -Wno-error=unused-parameter
 LIBS = -lpthread -lsqlite3 -lssl -lcrypto -luv
 
+PRIVATE_KEY = "./cert/server.key"
+SERVER_CERT = "./cert/server.crt"
+
 # ADD OS CHECK
 
-.PHONY: all clean install_deps
+.PHONY: all clean install_deps tls
 
 all: dir $(EXE)
 	@echo Complete
@@ -39,6 +44,23 @@ install_asio:
 	
 dir:
 	@mkdir -p build
+
+tls:
+	openssl genrsa \
+		-des3 -passout pass:qsServer \
+		-out ./cert/s.pass.key 2048
+	
+	openssl rsa \
+		-passin pass:qsServer -in ./cert/s.pass.key \
+		-out $(PRIVATE_KEY)
+	rm -f ./cert/s.pass.key
+
+	openssl req -new -key $(PRIVATE_KEY) -out ./cert/server.csr
+	openssl x509 \
+		-req -sha256 -days 365 -in \
+		./cert/server.csr -signkey $(PRIVATE_KEY) \
+		-out $(SERVER_CERT)
+	rm -f server.csr
 
 clean:
 	rm -f -r $(BUILD_DIR)
