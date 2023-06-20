@@ -5,19 +5,27 @@ EXE = qs_s
 BUILD_DIR = build
 
 SRC = \
+	mem.c         \
 	queue.c       \
-	ringbuffer.c  \
 	database.c    \
 	secure.c      \
 	client.c      \
+	net_close.c   \
+	net_write.c   \
+	net_packet.c  \
+	net_read.c    \
 	network.c     \
 	qs_server.c
 SRC_OBJS = $(addprefix $(BUILD_DIR)/, $(addsuffix .o, $(basename $(SRC))))
 
-RING_BUF_DIR = ../lib/Ring-Buffer
+SRC_OBJS += build/mem.o
+
+MEM_POOL_DIR = ../../shared/mem_pool
+SHARED_DIR   = ../../shared
 
 SRC_INC_DIR =         \
-	-I$(RING_BUF_DIR) \
+	-I$(MEM_POOL_DIR) \
+	-I$(SHARED_DIR)   \
 	-I../include      \
 	-I../../include
 DEPS = $(addprefix build/, $(SRC:.c=.d))
@@ -66,9 +74,9 @@ clean:
 	rm -f -r $(BUILD_DIR)
 	rm -f $(EXE)
 
-# Build Ring-Buffer
-$(BUILD_DIR)/ringbuffer.o:
-	$(CXX) $(CXXFLAGS) -c -o $@ $(RING_BUF_DIR)/ringbuffer.c
+# Build Memory Pool
+$(BUILD_DIR)/mem.o:
+	$(CXX) $(CXXFLAGS) -MMD -MP -c -o $@ $(MEM_POOL_DIR)/mem.c
 
 # Build App Source
 $(BUILD_DIR)/%.o:%.c

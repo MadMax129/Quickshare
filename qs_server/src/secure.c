@@ -1,6 +1,8 @@
+#include <memory.h>
+#include <assert.h>
+
 #include "secure.h"
 #include "server.h"
-#include <memory.h>
 #include "util.h"
 
 void ssl_init(const char * certfile, const char* keyfile)
@@ -43,8 +45,8 @@ void ssl_init(const char * certfile, const char* keyfile)
 
 void secure_queue_write(Secure* s, const char *buf, size_t len)
 {
-    s->e_buf = (char*)realloc(s->e_buf, s->e_len + len);
-    memcpy(s->e_buf + s->e_len, buf, len);
+    assert(&s->e_buf[s->e_len + len] < (s->e_buf + s->e_size));
+    memcpy(&s->e_buf[s->e_len], buf, len);
     s->e_len += len;
 }
 
@@ -75,6 +77,9 @@ void secure_init(Secure* s)
     SSL_set_accept_state(s->ssl);
 
     SSL_set_bio(s->ssl, s->r_bio, s->w_bio);
+
+    memset(s->e_buf, 0, s->e_size);
+    s->e_len = 0;
 }
 
 void secure_free(Secure* s)
@@ -82,8 +87,4 @@ void secure_free(Secure* s)
     if (SSL_shutdown(s->ssl) == 0)
         SSL_shutdown(s->ssl);
     SSL_free(s->ssl);
-
-    if (s->e_buf)
-        memset(s->e_buf, 0, s->e_len);
-    s->e_len = 0;
 }

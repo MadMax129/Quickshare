@@ -24,6 +24,13 @@ typedef struct {
 void create_socket(Server* s, const char* ip, const short port);
 void setup_poll(Server* s);
 void server_loop(Server* s);
-void server_free(Server* s);
+
+bool new_client_event(Server* s, int op, int fd);
+void send_single_user(Client* recp, Client* c1, int type);
+
+void write_data(Server* s, int fd);
+void read_data(Server* s, int fd);
+void close_client(Server* s, int fd);
+void analize_packet(Server* s, Client* c);
 
 #endif /* QS_SERVER */

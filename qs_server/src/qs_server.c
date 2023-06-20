@@ -4,6 +4,7 @@
 #include "server.h"
 #include "client.h"
 #include "database.h"
+#include "mem.h"
 
 SSL_CTX* ssl_ctx;
 
@@ -28,6 +29,8 @@ int main(const int argc, const char* argv[])
 
 	db_init(&server.db);
 	ssl_init("./cert/server.crt", "./cert/server.key");
+	if (!mem_pool_init(1024 * 1024))
+		die("Memory pool fail");
 
 	client_list_init(&server.clients);
 	create_socket(&server, NULL, 8080);
@@ -37,5 +40,5 @@ int main(const int argc, const char* argv[])
 
 	/* Free Resources */
 	client_list_free(&server.clients);
-	server_free(&server);
+	mem_pool_free();
 }

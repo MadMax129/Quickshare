@@ -2,20 +2,13 @@
 #define QS_MSG
 
 #include <stdint.h>
-
-#define MTU_SIZE 1440
-#define PC_NAME 16
-#define SESSION_ID 16
+#include "config.h"
 
 enum {
-    /* Server OK reply 
+    /* Server reply 
        to client request 
     */
     P_SERVER_OK,
-
-    /* Server DENY reply 
-       to client request 
-    */
     P_SERVER_DENY,
 
     /* Client intro message
@@ -28,26 +21,53 @@ enum {
     */
     P_SERVER_NEW_USERS,
     P_SERVER_DEL_USERS,
+
+    /* Transfer file msgs
+        Valid (S)
+        Invalid (S)
+        Request (C)
+        Reply (S/C)
+        Data (S/C)
+        Cancel (S/C)
+        Complete (S/C) 
+    */
+   P_TRANSFER_VALID,
+   P_TRANSFER_INVALID,
+   P_TRANSFER_REQUEST,
+   P_TRANSFER_REPLY,
+   P_TRANSFER_DATA,
+   P_TRANSFER_CANCEL,
+   P_TRANSFER_COMPLETE
 };
 
+#define PACKET_HDR(ptype, psize, packet) { \
+    packet->hdr.type = ptype; \
+    packet->hdr.size = psize; \
+}
+
 typedef struct {
-    uint8_t type;
-    uint16_t size;
+    uint32_t type;
+    uint32_t size;
 } Packet_Hdr;
 
 typedef struct {
+    Transfer_ID t_id;
+    Client_ID from;
+    Client_ID to[TRANSFER_CLIENTS_MAX];
+} Transfer_Hdr;
+
+typedef struct {
     Packet_Hdr hdr;
-    uint32_t : 32;
     union {
         char data[
-            MTU_SIZE - 
+            PACKET_MAX_SIZE - 
             sizeof(Packet_Hdr) - 
             sizeof(uint32_t)
         ];
 
-        struct {
-            char name[PC_NAME];
-            char id[SESSION_ID];
+        struct Intro {
+            char name[PC_NAME_MAX_LEN];
+            char id[SESSION_ID_MAX_LEN];
             /* 0 - Join | 1 - Create */
             uint8_t session;
             uint8_t name_len;
@@ -55,15 +75,25 @@ typedef struct {
         } intro;
 
         struct {
-            char names[PC_NAME][32];
-            time_t ids[32];
+            char names[PC_NAME_MAX_LEN][CLIENT_LIST_LEN];
+            time_t ids[CLIENT_LIST_LEN];
             uint8_t users_len;
         } users;
+
+        struct {
+            Transfer_Hdr hdr;
+            char file_name[FILE_NAME_LEN];
+            uint64_t file_size;
+        } request;
+
+        struct {
+            Transfer_ID id;
+        } validate;
     } d;
 } __attribute__((packed)) Packet;
 
 _Static_assert(
-    sizeof(Packet) == MTU_SIZE,
+    sizeof(Packet) == PACKET_MAX_SIZE,
     "Packet not MTU size..."
 );
 

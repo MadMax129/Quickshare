@@ -1,6 +1,8 @@
-#include "queue.h"
 #include <memory.h>
 #include <stdlib.h>
+
+#include "queue.h"
+#include "mem.h"
 
 bool queue_init(Queue* q, int size, int length)
 {
@@ -8,7 +10,7 @@ bool queue_init(Queue* q, int size, int length)
     if ((length & (length - 1)) != 0)
         return false;
         
-    q->items = malloc(size * length);
+    q->items = alloc(size * length);
 
     if (!q)
         return false;
@@ -29,12 +31,6 @@ void queue_reset(Queue* q)
     q->head = 0;
     q->tail = 0;
     q->count  = 0;
-}
-
-void queue_free(Queue* q)
-{
-    if (q->items)
-        free(q->items);
 }
 
 bool queue_empty(Queue* q)

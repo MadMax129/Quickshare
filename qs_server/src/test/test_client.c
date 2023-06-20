@@ -76,22 +76,29 @@ int main(int argc, const char** argv) {
 
     /* Send large array of data */
     Packet packet = {
-        .hdr.type = P_CLIENT_INTRO,
-        .hdr.size = 0,
+        .hdr.type = P_CLIENT_INTRO
     };
 
+    packet.hdr.size = sizeof(packet.d.intro);
 
-    packet.d.intro.name_len = 5;
+
+    packet.d.intro.name_len = strlen(argv[1]);
     strcpy(packet.d.intro.name, argv[1]);
-    packet.d.intro.id_len = 6;
+    packet.d.intro.id_len = 1;
     strcpy(packet.d.intro.id, "t");
     packet.d.intro.session = 0;
 
-    int n = SSL_write(ssl, (void*)&packet, sizeof(Packet));
+    int n = SSL_write(ssl, (void*)&packet, sizeof(Packet_Hdr) + sizeof(packet.d.intro));
 
+    //gcc test_client.c -o t1 -lcrypto -lssl -I"../../../shared"
     for (;;) {
-        n = SSL_read(ssl, (void*)&packet, sizeof(Packet));
-        printf("Read %d\n", n);
+        n = SSL_read(ssl, (void*)&packet, sizeof(Packet_Hdr));
+
+        if (packet.hdr.size > 0) {
+            printf("Read more\n");
+            n = SSL_read(ssl, (char*)&packet + n, packet.hdr.size);
+        }
+
         if (n <= 0) {
             int error = SSL_get_error(ssl, n);
             if (error ==  SSL_ERROR_WANT_READ || error == SSL_ERROR_WANT_WRITE) {
@@ -114,15 +121,45 @@ int main(int argc, const char** argv) {
             case P_SERVER_DENY:
                 printf("Session DENY\n");
                 break;
+
+            case P_TRANSFER_VALID:
+                printf("Transfer valid %ld\n", packet.d.validate.id);
+                break;
+
+            case P_TRANSFER_INVALID:
+                printf("Transfer invalid\n");
+                break;
             
             case P_SERVER_NEW_USERS:
                 printf("New users\n");
+                Client_ID id;
                 for (int i = 0 ; i < packet.d.users.users_len; i++) {
                     printf(
-                        "'%s'[%ld]\n",
+                        "'%s' #%ld\n",
                         packet.d.users.names[i],
                         packet.d.users.ids[i]
                     );
+                    id = packet.d.users.ids[i];
+                }
+
+                packet.hdr.type = P_TRANSFER_REQUEST;
+                packet.hdr.size = sizeof(packet.d.request);
+                strcpy(packet.d.request.file_name, "test.txt");
+                packet.d.request.file_size = 120;
+                packet.d.request.hdr.to[0] = id;
+                packet.d.request.hdr.to[1] = 0;
+                n = SSL_write(ssl, (void*)&packet, sizeof(Packet_Hdr) + sizeof(packet.d.request));
+                break;
+
+            case P_SERVER_DEL_USERS:
+                printf("Users disconnected\n");
+                for (int i = 0 ; i < packet.d.users.users_len; i++) {
+                    printf(
+                        "'%s' #%ld\n",
+                        packet.d.users.names[i],
+                        packet.d.users.ids[i]
+                    );
+                    id = packet.d.users.ids[i];
                 }
                 break;
         }

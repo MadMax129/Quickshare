@@ -5,16 +5,17 @@
 #include "client.h"
 #include "server.h"
 #include "util.h"
+#include "mem.h"
 
 void client_list_init(Client_List* clist)
 {
-    clist->list = calloc(MAX_CLIENTS, sizeof(Client));
+    clist->list = (Client*)alloc(MAX_CLIENTS * sizeof(Client));
 
     if (!clist->list)
         die("Failed alloc clients");
 
     for (unsigned int i = 0; i < MAX_CLIENTS; i++) {
-        clist->list[i].p_buf = (Packet*)malloc(sizeof(Packet));
+        clist->list[i].p_buf = (Packet*)alloc(sizeof(Packet));
         if (!clist->list[i].p_buf)
             die("Failed packet malloc");
 
@@ -23,6 +24,12 @@ void client_list_init(Client_List* clist)
                 sizeof(Packet), 
                 MSG_QUEUE_SIZE))
             die("Failed queue_init");
+
+        /* Secure buffer */
+        clist->list[i].secure.e_buf  = (char*)alloc(sizeof(Packet) * 2);
+        clist->list[i].secure.e_size = sizeof(Packet) * 2;
+        if (!clist->list[i].secure.e_buf)
+            die("secure buffer malloc");
     }
 
     clist->n_cli = 0;
@@ -32,14 +39,9 @@ void client_list_free(Client_List* clist)
 {
     for (unsigned int i = 0; i < MAX_CLIENTS; i++) {
         Client* c = &clist->list[i];
-        free(c->p_buf);
-        if (c->secure.e_buf)
-            free(c->secure.e_buf);
-        queue_free(&c->msg_queue);
-
-        // !free secure
+        (void)c;
+        // !free ssl stuff
     }
-    free(clist->list);
 }
 
 static void client_configure(Client* c)
@@ -47,7 +49,8 @@ static void client_configure(Client* c)
     c->state = C_CONNECTED;
     c->id = time(NULL);
     memset(c->p_buf, 0, sizeof(Packet));
-    c->p_len = 0;
+    c->p_len  = 0;
+    c->p_size = 0;
 
     /* Init SSL */
     secure_init(&c->secure);
@@ -73,6 +76,16 @@ Client* client_find(Client_List* clist, int fd)
 {
     for (unsigned int i = 0; i < MAX_CLIENTS; i++) {
         if (clist->list[i].fd == fd)
+            return &clist->list[i];
+    }
+
+    return NULL;
+}
+
+Client* client_find_by_id(Client_List* clist, Client_ID id)
+{
+    for (unsigned int i = 0; i < MAX_CLIENTS; i++) {
+        if (clist->list[i].id == id)
             return &clist->list[i];
     }
 

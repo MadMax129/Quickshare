@@ -13,7 +13,6 @@ typedef struct {
 } Queue;
 
 bool queue_init(Queue* q, int size, int length);
-void queue_free(Queue* q);
 void queue_reset(Queue* q);
 bool queue_empty(Queue* q);
 void* queue_peek(Queue* q);

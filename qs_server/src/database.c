@@ -7,6 +7,33 @@
 #include "util.h"
 #include "assert.h"
 
+static const char* sqlite_stmts_text[] = {
+    [SESSION_STMT_CREATE] = 
+        "insert into Sessions ('name') values(?)",
+    [SESSION_STMT_GET] =
+        "select * from Sessions where name=?",
+    [TRANSFER_STMT_CREATE] = 
+        "insert into Transfers ('creator_id') values (?)",
+    [TRANSFER_STMT_GET] = 
+        "select * from Transfers where creator_id=?",
+    [TRANSFER_CLIENT_CREATE] = 
+        "insert into TransferClients ('transfer_id', 'client_id') values (?, ?)",
+    [TRANSFER_CLIENT_GET] = 
+        "select * from TransferClients where transfer_id=? and client_id=?",
+    [TRANSFER_CLIENT_GET_ALL] =
+        "select * from TransferClients where transfer_id=? and accepted != 0",
+    [TRANSFER_CLEANUP] =
+        "begin transaction; delete from TransferClients where transfer_id=?;"
+        "delete from Transfers where transfer_id=?; commit",
+    [BEGIN_TRANSACTION] = 
+        "begin transaction;",
+    [COMMIT_TRANSACTION] =
+        "commit;",
+    [ROLLBACK_TRANSACTION] =
+        "rollback;",
+    [NUM_STMT_TYPES] = NULL
+};
+
 static void read_and_exec(Database* db, const char* filename)
 {
     FILE* file = fopen(filename, "r");
@@ -44,14 +71,31 @@ static void read_and_exec(Database* db, const char* filename)
 
 static void prepare_stmts(Database* db)
 {
-    if (
-        (sqlite3_prepare_v2(db->sql, STORE_MSG_TEXT, 
-            -1, &db->store_stmt, NULL) != SQLITE_OK) ||
-        (sqlite3_prepare_v2(db->sql, GET_MSG_TEXT, 
-        -1, &db->get_stmt, NULL) != SQLITE_OK)
-    ) {
-        die("Failed to prepare stmts");
+    for (int i = 0; i < NUM_STMT_TYPES; i++) {
+        const int e = sqlite3_prepare_v2(
+            db->sql, 
+            sqlite_stmts_text[i], 
+            -1, 
+            &db->stmts[i], 
+            NULL
+        );
+
+        if (e != SQLITE_OK)
+            die("Failed to prepare stmts");
     }
+}
+
+void db_init(Database* db)
+{
+    if (sqlite3_open(DATABASE_PATH, &db->sql) != SQLITE_OK)
+        die("sqlite_open()");
+
+    read_and_exec(db, DB_INIT_FILE);
+    prepare_stmts(db);
+
+    db->last_clean_time = time(NULL);
+
+    assert(sqlite3_threadsafe() == 1);
 }
 
 static inline void try_clean(Database* db)
@@ -75,21 +119,23 @@ static inline void try_clean(Database* db)
     }
 }
 
-long db_create_session(Database* db, char* name)
+Session_ID db_create_session(Database* db, char* name)
 {
+    const DB_Stmt_Type type = SESSION_STMT_CREATE;
+
     try_clean(db);
 
-    sqlite3_reset(db->store_stmt);
+    sqlite3_reset(db->stmts[type]);
 
     sqlite3_bind_text(
-        db->store_stmt, 
+        db->stmts[type], 
         1, 
         name, 
-        -1, 
+        -1,
         SQLITE_STATIC
     );
 
-    if (sqlite3_step(db->store_stmt) != SQLITE_DONE) {
+    if (sqlite3_step(db->stmts[type]) != SQLITE_DONE) {
         printf(
             "SQLITE ERROR: %s ('%s')\n", 
             sqlite3_errmsg(db->sql),
@@ -101,35 +147,140 @@ long db_create_session(Database* db, char* name)
     return sqlite3_last_insert_rowid(db->sql);
 }
 
-long db_get_session(Database* db, char* name)
+Session_ID db_get_session(Database* db, char* name)
 {
+    const DB_Stmt_Type type = SESSION_STMT_GET;
     try_clean(db);
 
-    sqlite3_reset(db->get_stmt);
+    sqlite3_reset(db->stmts[type]);
 
     sqlite3_bind_text(
-        db->get_stmt, 
+        db->stmts[type], 
         1,
         name,
         -1,
         SQLITE_STATIC
     );
 
-    if (sqlite3_step(db->get_stmt) == SQLITE_ROW)
-        return sqlite3_column_int64(db->get_stmt, 1);
+    if (sqlite3_step(db->stmts[type]) == SQLITE_ROW)
+        return sqlite3_column_int64(db->stmts[type], 1);
     
     return 0;
 }
 
-void db_init(Database* db)
+Transfer_ID db_create_transfer(Database* db, Client_ID c_id)
 {
-    if (sqlite3_open(DATABASE_PATH, &db->sql) != SQLITE_OK)
-        die("sqlite_open()");
+    const DB_Stmt_Type type = TRANSFER_STMT_CREATE;
 
-    read_and_exec(db, DB_INIT_FILE);
-    prepare_stmts(db);
+    try_clean(db);
 
-    db->last_clean_time = time(NULL);
+    sqlite3_reset(db->stmts[type]);
 
-    assert(sqlite3_threadsafe() == 1);
+    sqlite3_bind_int64(
+        db->stmts[type], 
+        1,
+        c_id
+    );
+
+    if (sqlite3_step(db->stmts[type]) != SQLITE_DONE) {
+        printf(
+            "SQLITE ERROR: %s\n", 
+            sqlite3_errmsg(db->sql)
+        );
+        return 0;
+    }
+
+    return sqlite3_last_insert_rowid(db->sql);
+}
+
+static sqlite_int64 db_step_int64(Database* db, const DB_Stmt_Type type, const int row)
+{
+    if (sqlite3_step(db->stmts[type]) == SQLITE_ROW)
+        return sqlite3_column_int64(db->stmts[type], row);
+    
+    return 0;
+}
+
+Transfer_ID db_get_transfer(Database* db, Client_ID c_id)
+{
+    const DB_Stmt_Type type = TRANSFER_STMT_GET;
+    
+    sqlite3_reset(db->stmts[type]);
+
+    sqlite3_bind_int64(
+        db->stmts[type],
+        1,
+        c_id
+    );
+
+    return db_step_int64(db, type, 0);
+}
+
+sqlite_int64 db_transfer_step(Database* db)
+{
+    return db_step_int64(db, TRANSFER_STMT_GET, 0);
+}
+
+Client_ID db_get_client_all(Database* db, Transfer_ID t_id)
+{
+    const DB_Stmt_Type type = TRANSFER_CLIENT_GET_ALL;
+
+    sqlite3_reset(db->stmts[type]);
+
+    sqlite3_bind_int64(
+        db->stmts[type],
+        1,
+        t_id
+    );
+
+    return db_step_int64(db, type, 1);
+}
+
+Client_ID db_client_all_step(Database* db)
+{
+    return db_step_int64(db, TRANSFER_CLIENT_GET_ALL, 1);
+}
+
+bool db_transaction(Database* db, DB_Stmt_Type type)
+{
+    sqlite3_reset(db->stmts[type]);
+
+    if (sqlite3_step(db->stmts[type]) != SQLITE_DONE) {
+        printf(
+            "SQLITE ERROR: %s\n", 
+            sqlite3_errmsg(db->sql)
+        );
+        return false;
+    }
+
+    return true;
+}
+
+bool db_create_client(Database* db, Transfer_ID t_id, Client_ID c_id)
+{
+    const DB_Stmt_Type type = TRANSFER_CLIENT_CREATE;
+
+    sqlite3_reset(db->stmts[type]);
+
+    sqlite3_bind_int64(
+        db->stmts[type], 
+        1,
+        t_id
+    );
+
+    sqlite3_bind_int64(
+        db->stmts[type], 
+        2,
+        c_id
+    );
+
+    if (sqlite3_step(db->stmts[type]) != SQLITE_DONE) {
+        printf(
+            "SQLITE ERROR: %s\n", 
+            sqlite3_errmsg(db->sql)
+        );
+        return false;
+    }
+    
+    return true;
 }
