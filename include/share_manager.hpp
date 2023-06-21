@@ -8,7 +8,7 @@
 
 class Share_Manager {
 public:
-    Share_Manager(Network& net) : net(net) {}
+    Share_Manager() {}
 
 private:
     struct Session {
@@ -19,5 +19,5 @@ private:
 
     Session sender;
     Session reciever;
-    Network& net;
+    // Network& net;
 };

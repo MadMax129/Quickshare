@@ -1,6 +1,6 @@
 #include "context.hpp"
 #include "config.hpp"
-#include "util.hpp"
+#include "util.h"
 #include <string>
 #include "nfd.h"
 #include "gui.hpp"
@@ -43,12 +43,12 @@ void Main_Menu::draw()
 
 void Main_Menu::check_net()
 {
-	if (ctx.net.state.get() == Network::FAIL_OCCURED) {
-		P_ERROR("Network fail occured... Exiting back to login\n");
-		ctx.set_appstate(Context::LOGIN);
-		thread_manager.close_all();
-		ctx.net.reset();
-	}
+	// if (ctx.net.state.get() == Network::FAIL_OCCURED) {
+	// 	P_ERROR("Network fail occured... Exiting back to login\n");
+	// 	ctx.set_appstate(Context::LOGIN);
+	// 	thread_manager.close_all();
+	// 	ctx.net.reset();
+	// }
 }
 
 void Main_Menu::draw_path()
@@ -272,20 +272,20 @@ void Main_Menu::draw_users()
 
 void Main_Menu::read_users()
 {
-	Database& db = ctx.net.get_db();
-	static bool try_get = false;
-	const u32 update = db.get_update();
+	// Database& db = ctx.net.get_db();
+	// static bool try_get = false;
+	// const u32 update = db.get_update();
 
-	/* Change has been made to Database */
-	if (update > 0)
-		try_get = true;
+	// /* Change has been made to Database */
+	// if (update > 0)
+	// 	try_get = true;
 
-	if (try_get && db.lock().try_lock()) {
-		db.copy(client_list);
-		db.got_update(update);
-		db.lock().unlock();
-		try_get = false;
-	}
+	// if (try_get && db.lock().try_lock()) {
+	// 	db.copy(client_list);
+	// 	db.got_update(update);
+	// 	db.lock().unlock();
+	// 	try_get = false;
+	// }
 }
 
 void Main_Menu::render_users()

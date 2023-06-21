@@ -12,7 +12,7 @@ create table if not exists 'Transfers'(
 create table if not exists 'TransferClients' (
     transfer_id INTEGER not null,
     client_id INTEGER not null,
-    accepted INTEGER,
+    accepted INTEGER default -1,
     FOREIGN KEY(transfer_id) REFERENCES Transfers(transfer_id)
 );
 

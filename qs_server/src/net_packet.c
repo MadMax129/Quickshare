@@ -1,6 +1,6 @@
 #include <string.h>
 #include <assert.h>
-
+#include "util.h"
 #include "server.h"
 
 static inline void server_resposne(Client* c, int type)
@@ -10,7 +10,6 @@ static inline void server_resposne(Client* c, int type)
     PACKET_HDR(type, 0, packet);
 }
 
-/* Make this work for NEW AND DEL */
 static void send_session_users(Server* s, Client* c)
 {
     Packet* packet = NULL;
@@ -67,7 +66,7 @@ static void packet_intro(Server* s, Client* c)
     p->d.intro.name[p->d.intro.name_len + 1] = '\0';
     p->d.intro.id[p->d.intro.id_len + 1]     = '\0';
    
-    printf(
+    colored_printf(CL_BLUE,
         "Packet: Intro\n"
         "  Name:    '%.*s'\n"
         "  Session: %.*s\n"
@@ -100,14 +99,41 @@ static void packet_intro(Server* s, Client* c)
     send_session_users(s, c);
 }
 
+static bool check_recipients(Server* s, Client* c, 
+                             const Transfer_ID t_id, const Packet* p)
+{
+    /* Check that all recipients are in session */
+    for (int i = 0; i < TRANSFER_CLIENTS_MAX; i++) {
+        Client_ID c_id = p->d.request.hdr.to[i];
+        if (c_id == 0)
+            return true;
+        
+        const Client* r = client_find_by_id(
+            &s->clients,
+            c_id
+        );
+
+        if (!r || 
+            (r->session_id != c->session_id) || 
+            !db_create_client(&s->db, t_id, r->id)
+        ) {
+            return false;
+        }
+
+        printf("\t#%ld\n", c_id);
+    }
+
+    return true;
+}
+
 static void packet_transfer(Server* s, Client* c)
 {
     /* Validate all recipient clients */
     const Packet* const p = c->p_buf;
 
-    printf(
+    colored_printf(CL_BLUE,
         "Transfer Request\n"
-        "\t%.*s = %lu\n",
+        "\t%.*s = %lu\n",   
         (int)sizeof(p->d.request.file_name), 
         p->d.request.file_name,
         p->d.request.file_size    
@@ -120,39 +146,23 @@ static void packet_transfer(Server* s, Client* c)
 
     const Transfer_ID t_id = db_create_transfer(&s->db, c->id);
 
-    if (!t_id)
+    if (!t_id || 
+        !check_recipients(s, c, t_id, p) || 
+        !db_transaction(&s->db, COMMIT_TRANSACTION)
+    ) {
         goto error;
-
-    /* Check that all recipients are in session */
-    for (int i = 0; i < TRANSFER_CLIENTS_MAX; i++) {
-        Client_ID c_id = p->d.request.hdr.to[i];
-        if (c_id == 0)
-            break;
-        
-        const Client* r = client_find_by_id(
-            &s->clients,
-            c_id
-        );
-
-        if (!r || 
-            (r->session_id != c->session_id) || 
-            !db_create_client(&s->db, t_id, r->id)) 
-        {
-            goto error;
-        }
-
-        printf("\t#%ld\n", c_id);
     }
-
-    if (!db_transaction(&s->db, COMMIT_TRANSACTION))
-        goto error;
-
+    
     Packet* response = enqueue(&c->msg_queue);
     assert(response);
-    PACKET_HDR(P_TRANSFER_VALID, sizeof(response->d.validate), response);
-    response->d.validate.id = t_id;
+    PACKET_HDR(
+        P_TRANSFER_VALID, 
+        sizeof(response->d.transfer_info), 
+        response
+    );
+    response->d.transfer_info.id = t_id;
 
-    // TODO!!! SEND TO TARGETS THE REQUEST 
+    // TODO!!! SEND TO TARGETS THE REQUEST
     return;
 
 error:
@@ -186,7 +196,7 @@ void analize_packet(Server* s, Client* c)
         case P_TRANSFER_CANCEL:
         case P_TRANSFER_COMPLETE:
         default:
-            printf("Unknown packet type\n");
+            P_ERROR("Unknown packet type\n");
             break;
     }
 }

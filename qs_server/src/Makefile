@@ -1,11 +1,9 @@
-# QS Server Makefile
-
+# Quickshare Server Linux Makefile
 CXX = gcc
 EXE = qs_s
 BUILD_DIR = build
 
 SRC = \
-	mem.c         \
 	queue.c       \
 	database.c    \
 	secure.c      \
@@ -16,44 +14,40 @@ SRC = \
 	net_read.c    \
 	network.c     \
 	qs_server.c
+
 SRC_OBJS = $(addprefix $(BUILD_DIR)/, $(addsuffix .o, $(basename $(SRC))))
+SRC_OBJS += $(MEM_POOL_DIR)/mem.o $(UTIL_DIR)/util.o
 
-SRC_OBJS += build/mem.o
-
+# Shared Libs
 MEM_POOL_DIR = ../../shared/mem_pool
+UTIL_DIR     = ../../shared/util
 SHARED_DIR   = ../../shared
 
 SRC_INC_DIR =         \
 	-I$(MEM_POOL_DIR) \
+	-I$(UTIL_DIR)     \
 	-I$(SHARED_DIR)   \
-	-I../include      \
-	-I../../include
+	-I../include      
 DEPS = $(addprefix build/, $(SRC:.c=.d))
 
-CXXFLAGS += -O2 -Wall -Werror -Wextra \
-			-std=c11 -pedantic-errors -Wno-error=unused-parameter
+CFLAGS += 	-O2 -Wall -Werror -Wextra                             \
+			-std=c11 -pedantic-errors -Wno-error=unused-parameter \
+			-Wshadow -Wpointer-arith -Wcast-align -Wwrite-strings \
+			-Wcast-qual -Wswitch-enum -Wunreachable-code
 LIBS = -lpthread -lsqlite3 -lssl -lcrypto -luv
 
 PRIVATE_KEY = "./cert/server.key"
 SERVER_CERT = "./cert/server.crt"
 
-# ADD OS CHECK
-
-.PHONY: all clean install_deps tls
+.PHONY: all clean tls_cert
 
 all: dir $(EXE)
-	@echo Complete
-
-install_deps: install_asio
-
-install_asio:
-	@mkdir -p ../lib
-	cd ../lib && git clone https://github.com/chriskohlhoff/asio.git
+	@echo Build Complete
 	
 dir:
 	@mkdir -p build
 
-tls:
+tls_cert:
 	openssl genrsa \
 		-des3 -passout pass:qsServer \
 		-out ./cert/s.pass.key 2048
@@ -75,15 +69,19 @@ clean:
 	rm -f $(EXE)
 
 # Build Memory Pool
-$(BUILD_DIR)/mem.o:
-	$(CXX) $(CXXFLAGS) -MMD -MP -c -o $@ $(MEM_POOL_DIR)/mem.c
+$(MEM_POOL_DIR)/mem_pool.o:
+	$(MAKE) -C $(MEM_POOL_DIR)
+
+# Build Util
+$(UTIL_DIR)/util.o:
+	$(MAKE) -C $(UTIL_DIR)
 
 # Build App Source
 $(BUILD_DIR)/%.o:%.c
-	$(CXX) $(CXXFLAGS) $(SRC_INC_DIR) -MMD -MP -c -o $@ $<
+	$(CXX) $(CFLAGS) $(SRC_INC_DIR) -MMD -MP -c -o $@ $<
 
 # Link Together
 $(EXE): $(SRC_OBJS)
-	$(CXX) -o $@ $^ $(LIBS) $(CXXFLAGS)
+	$(CXX) -o $@ $^ $(LIBS) $(CFLAGS)
 
 -include $(DEPS)

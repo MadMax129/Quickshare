@@ -19,52 +19,8 @@
 
 #pragma once
 
-#include "s_msg.hpp"
 #include "database.hpp"
-#include "c_net.hpp"
-#include "locator.hpp"
 #include "state.hpp"
 #include "connection.hpp"
 #include "thread_manager.hpp"
 #include <thread>
-
-extern Thread_Manager thread_manager;
-
-using Net_Con = Connection<Server_Msg>;
-
-class Network {
-public:
-    enum State {
-        /* Idle default state */
-        INACTIVE,
-        /* Initilization to server unsuccessful */
-        INIT_FAILED,
-        /* Success, network is online */
-        SUCCESS,
-        /* Faliure occured once online */
-        FAIL_OCCURED
-    };
-
-    Network();
-
-    static bool get_ip(char ip_buffer[IP_ADDR_LEN]);
-
-    void init_network(const char ip[IP_ADDR_LEN]);
-    void fail(const char* str);
-
-    inline void reset() { state.set(INACTIVE); }
-    inline Database& get_db() { return db; }
-
-    State_Manager<State> state;
-    Net_Con conn;
-
-private:
-    void loop(Status& status);
-    bool conn_setup();
-    void end();
-    
-    Client* client;
-    Database db;
-    Server_Msg* msg_buffer;
-    char ip[IP_ADDR_LEN];
-};

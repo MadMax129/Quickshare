@@ -3,7 +3,8 @@
 struct Context;
 
 #include "imgui.h"
-#include "locator.hpp"
+
+using Key = char[16];
 
 struct Login_Menu {
 public: 

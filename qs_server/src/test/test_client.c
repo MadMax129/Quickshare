@@ -123,7 +123,12 @@ int main(int argc, const char** argv) {
                 break;
 
             case P_TRANSFER_VALID:
-                printf("Transfer valid %ld\n", packet.d.validate.id);
+                printf("Transfer valid %ld\n", packet.d.transfer_info.id);
+                break;
+
+            case P_TRANSFER_CANCEL:
+                printf("Cancel transcation %ld %ld\n", 
+                packet.d.transfer_state.hdr.from, packet.d.transfer_state.hdr.t_id);
                 break;
 
             case P_TRANSFER_INVALID:
@@ -148,7 +153,7 @@ int main(int argc, const char** argv) {
                 packet.d.request.file_size = 120;
                 packet.d.request.hdr.to[0] = id;
                 packet.d.request.hdr.to[1] = 0;
-                n = SSL_write(ssl, (void*)&packet, sizeof(Packet_Hdr) + sizeof(packet.d.request));
+                // n = SSL_write(ssl, (void*)&packet, sizeof(Packet_Hdr) + sizeof(packet.d.request));
                 break;
 
             case P_SERVER_DEL_USERS:

@@ -169,12 +169,12 @@ void Login_Menu::draw_enter()
 					ctx.set_appstate(Context::MAIN_MENU);
 					goto end;
 				}
-				ctx.loc.start(
-					login_state ? 
-					Locator::Mode::CREATE : 
-					Locator::Mode::LOCATE,
-					key			  
-				);
+				// ctx.loc.start(
+				// 	login_state ? 
+				// 	Locator::Mode::CREATE : 
+				// 	Locator::Mode::LOCATE,
+				// 	key			  
+				// );
 				state = LOCATOR;
 			}
 		}
@@ -185,47 +185,47 @@ end:
 
 void Login_Menu::loc_check()
 {
-	switch (ctx.loc.state.get(std::memory_order_acquire))
-	{
-		case Locator::INACTIVE:
-		case Locator::WORKING:
-			error = "";
-			break;
+	// switch (ctx.loc.state.get(std::memory_order_acquire))
+	// {
+	// 	case Locator::INACTIVE:
+	// 	case Locator::WORKING:
+	// 		error = "";
+	// 		break;
 
-		case Locator::CONN_FAILED:
-		case Locator::FAILED:
-			error = "Error Invalid Key (expired)...";
-			/* Move state back to idle, do not start network */
-			state = IDLE;
-			break;
+	// 	case Locator::CONN_FAILED:
+	// 	case Locator::FAILED:
+	// 		error = "Error Invalid Key (expired)...";
+	// 		/* Move state back to idle, do not start network */
+	// 		state = IDLE;
+	// 		break;
 
-		case Locator::SUCCESS:
-			ctx.net.init_network(ctx.loc.get_ip());
-			/* Reset the locator */
-			ctx.loc.reset();
-			state = NETWORK;
-			break;
-	}
+	// 	case Locator::SUCCESS:
+	// 		ctx.net.init_network(ctx.loc.get_ip());
+	// 		/* Reset the locator */
+	// 		ctx.loc.reset();
+	// 		state = NETWORK;
+	// 		break;
+	// }
 }
 
 void Login_Menu::net_check()
 {
-	switch (ctx.net.state.get())
-	{
-		case Network::State::INACTIVE:
-			error = "";
-			break;
+	// switch (ctx.net.state.get())
+	// {
+	// 	case Network::State::INACTIVE:
+	// 		error = "";
+	// 		break;
 
-		case Network::State::INIT_FAILED:
-		case Network::State::FAIL_OCCURED:
-			error = "Cannot connect to host... Try again...";
-			state = IDLE;
-			break;
+	// 	case Network::State::INIT_FAILED:
+	// 	case Network::State::FAIL_OCCURED:
+	// 		error = "Cannot connect to host... Try again...";
+	// 		state = IDLE;
+	// 		break;
 
-		case Network::State::SUCCESS:
-			ctx.set_appstate(Context::MAIN_MENU);
-			break;
-	}
+	// 	case Network::State::SUCCESS:
+	// 		ctx.set_appstate(Context::MAIN_MENU);
+	// 		break;
+	// }
 }
 
 void Login_Menu::check_state()

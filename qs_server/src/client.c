@@ -4,7 +4,7 @@
 
 #include "client.h"
 #include "server.h"
-#include "util.h"
+#include "die.h"
 #include "mem.h"
 
 void client_list_init(Client_List* clist)
@@ -75,7 +75,10 @@ Client* client_init(Client_List* clist)
 Client* client_find(Client_List* clist, int fd)
 {
     for (unsigned int i = 0; i < MAX_CLIENTS; i++) {
-        if (clist->list[i].fd == fd)
+        if (
+            clist->list[i].state != C_EMPTY &&
+            clist->list[i].fd == fd
+        )
             return &clist->list[i];
     }
 
@@ -85,7 +88,10 @@ Client* client_find(Client_List* clist, int fd)
 Client* client_find_by_id(Client_List* clist, Client_ID id)
 {
     for (unsigned int i = 0; i < MAX_CLIENTS; i++) {
-        if (clist->list[i].id == id)
+        if (
+            clist->list[i].state != C_EMPTY &&
+            clist->list[i].id == id
+        )
             return &clist->list[i];
     }
 

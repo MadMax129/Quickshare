@@ -54,7 +54,9 @@ IMGUI_OBJS = $(addprefix $(BUILD_DIR)/, $(addsuffix .o, $(basename $(notdir $(IM
 ALL_OBJS = $(IMGUI_OBJS) $(SRC_OBJS) $(FILE_DIALOG_OBJ) $(BASE64_OBJ)
 
 DEPS = $(addprefix build\, $(SOURCES:.cpp=.d))
-SRC_INC_DIR = -I$(INCLUDES) -I$(IMGUI_DIR) -I$(IMGUI_DIR)/backends -I$(FILE_DIALOG_INCLUDE)
+SRC_INC_DIR = -I$(INCLUDES) -I$(IMGUI_DIR) \
+			  -I$(IMGUI_DIR)/backends -I$(FILE_DIALOG_INCLUDE) \
+			  -I../shared/util
 CXXFLAGS += -O2 -Wall -std=c++17 -pedantic-errors -Werror -Wextra
 IMGUI_FLAGS = -Wall -Wformat
 LIBS = -limm32 -lws2_32 -lglfw3 -lgdi32 -lopengl32 -lm -lkernel32 -lole32 -luuid -lIphlpapi -L$(FILE_DIALOG_LIB) -lnfd

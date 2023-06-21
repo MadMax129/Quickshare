@@ -28,8 +28,6 @@ public:
     void set_appstate(State state);
     inline State get_appstate() { return app_state.get(); }
 
-    Locator loc;
-    Network net;
     Share_Manager share;
 
 private:

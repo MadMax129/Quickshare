@@ -22,31 +22,34 @@ IMGUI_SOURCES += $(IMGUI_DIR)/backends/imgui_impl_glfw.cpp \
 				 $(IMGUI_DIR)/backends/imgui_impl_opengl3.cpp
 
 FILE_DIALOG_INCLUDE = "../lib/nativefiledialog/src/include"
-# FILE_DIALOG_OBJ     = ../lib/nativefiledialog/build/obj/x64/Release/nfd/nfd_common.o \
-# 					  ../lib/nativefiledialog/build/obj/x64/Release/nfd/nfd_gtk.o
 FILE_DIALOG_LIB_PATH = ../lib/nativefiledialog/build/lib/Release/x64/
 
+# Shared Libs
+SHARED_DIR   = "../shared"
+UTIL_OBJ     = "../shared/util/util.o"
+MEM_POOL_OBJ = "../shared/mem_pool/mem.o"
+
 INCLUDES = ../include
-SOURCES  =	util.cpp         \
-			mem_pool.cpp     \
-			database.cpp     \
-			locator.cpp      \
-			client.cpp       \
+SOURCES  =	database.cpp     \
 			network.cpp      \
 			context.cpp      \
 			login_menu.cpp   \
 			main_menu.cpp    \
 			quickshare.cpp
 
-
-SRC_OBJS = $(addprefix $(BUILD_DIR)/, $(addsuffix .o, $(basename $(notdir $(SOURCES)))))
+SRC_OBJS   = $(addprefix $(BUILD_DIR)/, $(addsuffix .o, $(basename $(notdir $(SOURCES)))))
 IMGUI_OBJS = $(addprefix $(BUILD_DIR)/, $(addsuffix .o, $(basename $(notdir $(IMGUI_SOURCES)))))
-ALL_OBJS = $(IMGUI_OBJS) $(SRC_OBJS) $(FILE_DIALOG_OBJ)
+ALL_OBJS   = $(IMGUI_OBJS) $(SRC_OBJS) $(FILE_DIALOG_OBJ) $(UTIL_OBJ) $(MEM_POOL_OBJ)
 
 DEPS = $(addprefix build/, $(SOURCES:.cpp=.d))
-SRC_INC_DIR = -I$(INCLUDES) -I$(IMGUI_DIR) -I$(IMGUI_DIR)/backends -I$(FILE_DIALOG_INCLUDE)
+SRC_INC_DIR = -I$(INCLUDES) -I$(IMGUI_DIR) \
+			  -I$(IMGUI_DIR)/backends -I$(FILE_DIALOG_INCLUDE) \
+			  -I../shared/util -I../shared/mem_pool
 CXXFLAGS += -O2 -Wall -std=c++17 -pedantic-errors -Werror -Wextra
-LIBS = -lGL `pkg-config --static --libs glfw3` -lpthread -L$(FILE_DIALOG_LIB_PATH) -lnfd `pkg-config --libs gtk+-3.0`
+LIBS = -lGL `pkg-config --static --libs glfw3` \
+	   -lpthread -L$(FILE_DIALOG_LIB_PATH) \
+	   -lnfd `pkg-config --libs gtk+-3.0` 
+
 
 ifeq ($(TYPE), RELEASE)
 	LINKER += -static -s -static-libgcc -static-libstdc++ -mwindows
@@ -92,9 +95,15 @@ install_imgui:
 	
 clean:
 	rm -r $(BUILD_DIR)
+	rm -f $(EXE)
 
-# build_icon:
-# 	windres .\icon\resource.rc -O coff -o .\icon\icon.res
+# Build shared util
+$(UTIL_OBJ):
+	@$(MAKE) -C $(SHARED_DIR)/util/
+
+# Build shared mem pool
+$(MEM_POOL_OBJ):
+	@$(MAKE) -C $(SHARED_DIR)/mem_pool/
 
 $(BUILD_DIR)/%.o:$(IMGUI_DIR)/%.cpp
 	$(CXX) $(CXXFLAGS) $(IMGUI_LIBS) -c -o $@ $<

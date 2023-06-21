@@ -17,11 +17,10 @@
  * limitations under the License.
  */ 
 
-#include "util.hpp"
-#include "locator.hpp"
+#include "util.h"
 #include "context.hpp"
 #include "config.hpp"
-#include "mem_pool.hpp"
+#include "mem.h"
 
 #ifdef SYSTEM_WIN_64
 #   include <windows.h>
@@ -39,7 +38,6 @@ private:
 
 static Quickshare qs;
 Thread_Manager thread_manager;
-Memory_Pool mem_pool;
 
 bool Quickshare::init_all() 
 {
@@ -49,7 +47,7 @@ bool Quickshare::init_all()
         return false;
     }
 #endif
-    return mem_pool.init();
+    return mem_pool_init(1024 * 1024);
 }
 
 void Quickshare::end()
@@ -57,7 +55,7 @@ void Quickshare::end()
 #ifdef SYSTEM_WIN_64
     WSACleanup();
 #endif
-    mem_pool.cleanup();
+    mem_pool_free();
 }
 
 void Quickshare::main()

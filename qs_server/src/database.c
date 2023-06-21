@@ -4,7 +4,7 @@
 #include <memory.h>
 
 #include "database.h"
-#include "util.h"
+#include "die.h"
 #include "assert.h"
 
 static const char* sqlite_stmts_text[] = {
@@ -16,12 +16,22 @@ static const char* sqlite_stmts_text[] = {
         "insert into Transfers ('creator_id') values (?)",
     [TRANSFER_STMT_GET] = 
         "select * from Transfers where creator_id=?",
+    [TRANSFER_STMT_DEL] =
+        "delete from Transfers where transfer_id=?",
     [TRANSFER_CLIENT_CREATE] = 
         "insert into TransferClients ('transfer_id', 'client_id') values (?, ?)",
-    [TRANSFER_CLIENT_GET] = 
-        "select * from TransferClients where transfer_id=? and client_id=?",
+    [TRANSFER_GET_CREATOR] = 
+        "select Transfers.transfer_id, Transfers.creator_id "
+        "from Transfers "
+        "join TransferClients "
+        "on Transfers.transfer_id = TransferClients.transfer_id "
+        "where TransferClients.client_id=?",
+    [TRANSFER_CLIENT_DEL] =
+        "delete from TransferClients where client_id=?",
     [TRANSFER_CLIENT_GET_ALL] =
         "select * from TransferClients where transfer_id=? and accepted != 0",
+    [TRANSFER_CLIENT_DEL_ALL] =
+        "delete from TransferClients where transfer_id=?",
     [TRANSFER_CLEANUP] =
         "begin transaction; delete from TransferClients where transfer_id=?;"
         "delete from Transfers where transfer_id=?; commit",
@@ -168,6 +178,27 @@ Session_ID db_get_session(Database* db, char* name)
     return 0;
 }
 
+void db_cleanup_transfer(Database* db, Transfer_ID t_id)
+{
+    sqlite3_reset(db->stmts[TRANSFER_STMT_DEL]);
+    sqlite3_reset(db->stmts[TRANSFER_CLIENT_DEL_ALL]);
+
+    (void)sqlite3_bind_int64(
+        db->stmts[TRANSFER_STMT_DEL], 
+        1,
+        t_id
+    );
+
+    (void)sqlite3_bind_int64(
+        db->stmts[TRANSFER_CLIENT_DEL_ALL], 
+        1,
+        t_id
+    );
+
+    (void)sqlite3_step(db->stmts[TRANSFER_STMT_DEL]);
+    (void)sqlite3_step(db->stmts[TRANSFER_CLIENT_DEL_ALL]);
+}
+
 Transfer_ID db_create_transfer(Database* db, Client_ID c_id)
 {
     const DB_Stmt_Type type = TRANSFER_STMT_CREATE;
@@ -239,6 +270,55 @@ Client_ID db_get_client_all(Database* db, Transfer_ID t_id)
 Client_ID db_client_all_step(Database* db)
 {
     return db_step_int64(db, TRANSFER_CLIENT_GET_ALL, 1);
+}
+
+Transfer_Info db_get_creator(Database* db, Client_ID c_id)
+{
+    const DB_Stmt_Type type = TRANSFER_GET_CREATOR;
+
+    sqlite3_reset(db->stmts[type]);
+
+    sqlite3_bind_int64(
+        db->stmts[type],
+        1,
+        c_id
+    );
+
+    return db_creator_step(db);
+}
+
+Transfer_Info db_creator_step(Database* db)
+{
+    Transfer_Info info = {0, 0};
+
+    if (sqlite3_step(db->stmts[TRANSFER_GET_CREATOR]) == SQLITE_ROW) {
+        info.t_id    = sqlite3_column_int64(
+            db->stmts[TRANSFER_GET_CREATOR],
+            0
+        );
+        
+        info.creator = sqlite3_column_int64(
+            db->stmts[TRANSFER_GET_CREATOR], 
+            1
+        );
+    }
+
+    return info;
+}
+
+void db_client_delete(Database* db, Client_ID c_id)
+{
+    const DB_Stmt_Type type = TRANSFER_CLIENT_DEL;
+
+    sqlite3_reset(db->stmts[type]);
+
+    sqlite3_bind_int64(
+        db->stmts[type],
+        1,
+        c_id
+    );
+
+    (void)sqlite3_step(db->stmts[type]);
 }
 
 bool db_transaction(Database* db, DB_Stmt_Type type)

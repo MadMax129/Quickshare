@@ -16,7 +16,7 @@
 #define NAME_SIZE
 
 typedef struct {
-    time_t id;
+    Client_ID id;
     int fd;
     struct sockaddr_in addr;
     Secure secure;
@@ -27,7 +27,7 @@ typedef struct {
         C_CONNECTED,
         /* Secured TLS */
         C_SECURE,
-        /* Intro send and accepted */
+        /* Intro accepted */
         C_COMPLETE
     } state;
     Session_ID session_id;

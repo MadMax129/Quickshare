@@ -4,8 +4,9 @@
 #include <string.h>
 #include <assert.h>
 
-#include "server.h"
 #include "util.h"
+#include "server.h"
+#include "die.h"
 #include "mem.h"
 
 void create_socket(Server* s, const char* ip, const short port)
@@ -97,18 +98,28 @@ static void accept_client(Server* s)
     socklen_t socklen = sizeof(addr);
     Client* client = client_init(&s->clients);
 
-    int conn = accept(
+    const int conn = accept(
         s->sock_fd,
         (struct sockaddr*)&addr,
         &socklen
     );
 
-    if (conn == -1 || !client) {
-        printf("Client rejected %s:%d\n",
+    client->fd = conn;
+    (void)memcpy(
+        (void*)&client->addr, 
+        (void*)&addr, 
+        sizeof(addr)
+    );
+
+    if (conn == -1 || 
+        !client || 
+        !new_client_event(s, EPOLL_CTL_ADD, conn)
+    ) {
+        P_ERRORF("Client rejected %s:%d\n",
             inet_ntoa(addr.sin_addr), 
             addr.sin_port
         );
-        close(conn);
+        close_client(s, conn);
         return;
     }
 
@@ -120,12 +131,8 @@ static void accept_client(Server* s)
         after timeout
         close connection
     */
-    assert(new_client_event(s, EPOLL_CTL_ADD, conn));
 
-    client->fd = conn;
-    memcpy((void*)&client->addr, (void*)&addr, sizeof(addr));
-
-    printf("Client CONN [#%d, %d] %s:%d\n",
+    LOGF("Client CONN [#%d, %d] %s:%d\n",
         (int)(client - s->clients.list), conn,
         inet_ntoa(addr.sin_addr), 
         addr.sin_port
@@ -167,6 +174,9 @@ void server_loop(Server* s)
             MAX_EPOLL_EVENTS, 
             -1
         );
+
+        /* Check for client connected time vs. 
+        send packet_intro kick client out if too long*/
 
         /* Failed */
         if (n_events == -1)

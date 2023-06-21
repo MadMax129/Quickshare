@@ -1,12 +1,11 @@
 #include <stdio.h>
 #include <stdarg.h>
 
+#include "util.h"
 #include "server.h"
 #include "client.h"
 #include "database.h"
 #include "mem.h"
-
-SSL_CTX* ssl_ctx;
 
 _Noreturn void die(const char* format, ...)
 {

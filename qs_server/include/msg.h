@@ -87,8 +87,12 @@ typedef struct {
         } request;
 
         struct {
+            Transfer_Hdr hdr;
+        } transfer_state;
+
+        struct {
             Transfer_ID id;
-        } validate;
+        } transfer_info;
     } d;
 } __attribute__((packed)) Packet;
 

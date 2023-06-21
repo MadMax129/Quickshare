@@ -4,7 +4,7 @@
 #include <string>
 #include <thread>
 #include "state.hpp"
-#include "util.hpp"
+#include "util.h"
 #include "config.hpp"
 
 using Status = State_Manager<bool>;

@@ -3,7 +3,7 @@
 #include "imgui_impl_opengl3.h"
 #include "config.hpp"
 #include "gui.hpp"
-#include "util.hpp"
+#include "util.h"
 #define STB_IMAGE_IMPLEMENTATION
 #include "../lib/stb_image.h"
 #include "roboto-medium_font.h"
@@ -13,7 +13,7 @@ static void glfw_error_callback(int error, const char* description)
     fprintf(stderr, "Glfw Error %d: %s\n", error, description);
 }
 
-Context::Context() : share(net), f_menu(*this), l_menu(*this)
+Context::Context() : f_menu(*this), l_menu(*this)
 {
     window = NULL;
     glsl_version = NULL;

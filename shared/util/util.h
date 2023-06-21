@@ -1,4 +1,5 @@
-#pragma once
+#ifndef QS_UTIL_HEADER
+#define QS_UTIL_HEADER
 
 #if defined(_WIN64)
 #   define SYSTEM_WIN_64
@@ -67,9 +68,9 @@ typedef time_t UserId;
 #endif
 
 #define colored_printf(color, str, ...) \
-    _colored_print((void*)color, str, __VA_ARGS__)
+    _colored_print((const void*)color, str, __VA_ARGS__)
 #define colored_print(color, str) \
-    _colored_print((void*)color, str)
+    _colored_print((const void*)color, str)
 
 #define LOG(str) \
     colored_print(CL_YELLOW, "[ LOG ] " str);
@@ -94,6 +95,13 @@ typedef time_t UserId;
 #   define P_ERRORF(str, ...)
 #endif
 
-void _colored_print(void* color, const char* str, ...);
+#ifdef __cplusplus
+extern "C" {
+#endif 
+void _colored_print(const void* color, const char* str, ...);
 void safe_strcpy(char* dest, const char* src, size_t size);
-void get_computer_name(char* buffer);
+#ifdef __cplusplus
+}
+#endif
+
+#endif /* QS_UTIL_HEADER */
