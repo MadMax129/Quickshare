@@ -26,6 +26,10 @@ static const char* sqlite_stmts_text[] = {
         "join TransferClients "
         "on Transfers.transfer_id = TransferClients.transfer_id "
         "where TransferClients.client_id=?",
+    [TRANSFER_GET_CREATOR_BY_ID] =
+        "select creator_id from Transfers where transfer_id=?",
+    [TRANSFER_CLIENT_ACCEPT] =
+        "update TransferClients set accepted=? where client_id=? and transfer_id=?",
     [TRANSFER_CLIENT_DEL] =
         "delete from TransferClients where client_id=?",
     [TRANSFER_CLIENT_GET_ALL] =
@@ -306,6 +310,24 @@ Transfer_Info db_creator_step(Database* db)
     return info;
 }
 
+Client_ID db_get_creator_by_tid(Database* db, Transfer_ID t_id)
+{
+    const DB_Stmt_Type type = TRANSFER_GET_CREATOR_BY_ID;
+
+    sqlite3_reset(db->stmts[type]);
+
+    sqlite3_bind_int64(
+        db->stmts[type],
+        1,
+        t_id
+    );
+
+    if (sqlite3_step(db->stmts[type]) != SQLITE_ROW)
+        return 0;
+
+    return sqlite3_column_int64(db->stmts[type], 0);
+}
+
 void db_client_delete(Database* db, Client_ID c_id)
 {
     const DB_Stmt_Type type = TRANSFER_CLIENT_DEL;
@@ -319,6 +341,34 @@ void db_client_delete(Database* db, Client_ID c_id)
     );
 
     (void)sqlite3_step(db->stmts[type]);
+}
+
+bool db_client_accept(Database* db, Client_ID c_id, 
+                      Transfer_ID t_id, bool accept)
+{
+    const DB_Stmt_Type type = TRANSFER_CLIENT_ACCEPT;
+
+    sqlite3_reset(db->stmts[type]);
+
+    sqlite3_bind_int(
+        db->stmts[type],
+        1,
+        (int)accept
+    );
+
+    sqlite3_bind_int64(
+        db->stmts[type],
+        2,
+        c_id
+    );
+
+    sqlite3_bind_int64(
+        db->stmts[type],
+        3,
+        t_id
+    );
+
+    return sqlite3_step(db->stmts[type]) == SQLITE_DONE;
 }
 
 bool db_transaction(Database* db, DB_Stmt_Type type)

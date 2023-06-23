@@ -17,6 +17,8 @@ typedef enum {
     TRANSFER_STMT_DEL,
     TRANSFER_CLIENT_CREATE,
     TRANSFER_GET_CREATOR,
+    TRANSFER_GET_CREATOR_BY_ID,
+    TRANSFER_CLIENT_ACCEPT,
     TRANSFER_CLIENT_DEL,
     TRANSFER_CLIENT_GET_ALL,
     TRANSFER_CLIENT_DEL_ALL,
@@ -60,5 +62,8 @@ Client_ID db_client_all_step(Database* db);
 Transfer_Info db_get_creator(Database* db, Client_ID c_id);
 Transfer_Info db_creator_step(Database* db);
 void db_client_delete(Database* db, Client_ID c_id);
+bool db_client_accept(Database* db, Client_ID c_id, 
+                      Transfer_ID t_id, bool accept);
+Client_ID db_get_creator_by_tid(Database* db, Transfer_ID t_id);
 
 #endif /* QS_DB */

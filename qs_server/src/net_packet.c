@@ -22,7 +22,6 @@ static void send_session_users(Server* s, Client* c)
             user->state == C_COMPLETE && 
             user->session_id == c->session_id) 
         {
-            printf("Sending\n");
             if (!packet) {
                 packet = enqueue(&c->msg_queue);
                 assert(packet);
@@ -106,7 +105,7 @@ static bool check_recipients(Server* s, Client* c,
     for (int i = 0; i < TRANSFER_CLIENTS_MAX; i++) {
         Client_ID c_id = p->d.request.hdr.to[i];
         if (c_id == 0)
-            return true;
+            return i != 0;
         
         const Client* r = client_find_by_id(
             &s->clients,
@@ -124,6 +123,28 @@ static bool check_recipients(Server* s, Client* c,
     }
 
     return true;
+}
+
+static void echo_transfer_request(Server* s, Client* c, 
+                                  const Packet* req, const Transfer_ID t_id)
+{
+    for (int i = 0; i < TRANSFER_CLIENTS_MAX; i++) {
+        Client_ID c_id = req->d.request.hdr.to[i];
+
+        if (c_id == 0)
+            break;
+
+        Client* r = client_find_by_id(
+            &s->clients,
+            c_id
+        );
+
+        Packet* packet = enqueue(&r->msg_queue);
+        assert(packet);
+        (void)memcpy(packet, req, sizeof(Packet));
+        packet->d.request.hdr.from = c->id;
+        packet->d.request.hdr.t_id = t_id;
+    }
 }
 
 static void packet_transfer(Server* s, Client* c)
@@ -162,7 +183,7 @@ static void packet_transfer(Server* s, Client* c)
     );
     response->d.transfer_info.id = t_id;
 
-    // TODO!!! SEND TO TARGETS THE REQUEST
+    echo_transfer_request(s, c, p, t_id);
     return;
 
 error:
@@ -172,8 +193,29 @@ error:
 
 static void packet_reply(Server* s, Client* c)
 {
-    (void)s;
-    (void)c;
+    const Packet* const p = c->p_buf;
+
+    const bool accept = db_client_accept(
+        &s->db, c->id, 
+        p->d.transfer_reply.hdr.t_id,
+        p->d.transfer_reply.accept
+    );
+
+    const Client_ID c_id = db_get_creator_by_tid(
+        &s->db, 
+        p->d.transfer_reply.hdr.t_id
+    );
+
+    Client* recp = client_find_by_id(&s->clients, c_id);
+    Packet* response = enqueue(&recp->msg_queue);
+    assert(response);
+    (void)memcpy(response, p, sizeof(Packet));
+    response->d.transfer_reply.hdr.from = c->id;    
+
+    if (accept && recp)
+        server_resposne(c, P_TRANSFER_VALID);
+    else
+        server_resposne(c, P_TRANSFER_INVALID);
 }
 
 void analize_packet(Server* s, Client* c)

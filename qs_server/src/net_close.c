@@ -8,7 +8,7 @@
 
 static void send_user_disconnect(Server* s, Client* c)
 {
-    /* Inform other clients */
+    /* Inform other session clients */
     for (int i = 0; i < MAX_CLIENTS; i++) {
         Client* other = &s->clients.list[i];
         if (other->id != c->id && 
@@ -88,7 +88,6 @@ static void cancel_transaction_user(Server* s, Client* c)
         }
         info = db_creator_step(&s->db);
     }
-    
     db_client_delete(&s->db, c->id);
 }
 
@@ -101,11 +100,10 @@ static void cancel_transaction(Server* s, Client* c)
     
     if (t_id != 0)
         cancel_transaction_creator(s, c, t_id);
-    else 
-        cancel_transaction_user(s, c);
+    
+    cancel_transaction_user(s, c);
 
-    if (!db_transaction(&s->db, COMMIT_TRANSACTION))
-        return;
+    (void)db_transaction(&s->db, COMMIT_TRANSACTION);
 }
 
 void close_client(Server* s, int fd)
@@ -123,8 +121,8 @@ void close_client(Server* s, int fd)
     }
 
     if (client->state == C_COMPLETE) {
-        send_user_disconnect(s, client);
         cancel_transaction(s, client);
+        send_user_disconnect(s, client);
     }
     
     LOGF("Client DISC [#%d:%d, %ld] %s:%d\n",

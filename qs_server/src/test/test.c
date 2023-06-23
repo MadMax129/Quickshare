@@ -1,112 +1,72 @@
-#include <stdio.h>
-#include <unistd.h>
-#include <string.h>
-#include <signal.h>
-#include <sys/socket.h>
-#include <arpa/inet.h>
-#include <openssl/ssl.h>
-#include <openssl/err.h>
+#include <ncurses.h>
+#include <stdlib.h>
 
-int create_socket(int port)
-{
-    int s;
-    struct sockaddr_in addr;
+#define LINES_PER_PAGE 30
+#define TOTAL_LINES 100
 
-    addr.sin_family = AF_INET;
-    addr.sin_port = htons(port);
-    addr.sin_addr.s_addr = htonl(INADDR_ANY);
+void print_scrollable_text(WINDOW *win, const char **text, int num_lines) {
+    WINDOW *pad;
+    int pad_line = 0;
 
-    s = socket(AF_INET, SOCK_STREAM, 0);
-    if (s < 0) {
-        perror("Unable to create socket");
-        exit(EXIT_FAILURE);
+    // Create pad
+    pad = newpad(num_lines, COLS - 2);
+
+    // Add lines to the pad
+    for (int i = 0; i < num_lines; i++) {
+        mvwprintw(pad, pad_line++, 0, "%s", text[i]);
     }
 
-    if (bind(s, (struct sockaddr*)&addr, sizeof(addr)) < 0) {
-        perror("Unable to bind");
-        exit(EXIT_FAILURE);
-    }
+    int pad_top = 0;
+    int ch;
 
-    if (listen(s, 1) < 0) {
-        perror("Unable to listen");
-        exit(EXIT_FAILURE);
-    }
+    // Initial display of the pad
+    prefresh(pad, pad_top, 0, 1, 1, LINES_PER_PAGE, COLS - 2);
+    
+    keypad(pad, TRUE);  // Enable function keys on our pad window
 
-    return s;
-}
-
-SSL_CTX *create_context()
-{
-    const SSL_METHOD *method;
-    SSL_CTX *ctx;
-
-    method = TLS_server_method();
-
-    ctx = SSL_CTX_new(method);
-    if (!ctx) {
-        perror("Unable to create SSL context");
-        ERR_print_errors_fp(stderr);
-        exit(EXIT_FAILURE);
-    }
-
-    return ctx;
-}
-
-void configure_context(SSL_CTX *ctx)
-{
-    /* Set the key and cert */
-    if (SSL_CTX_use_certificate_file(ctx, "server.crt", SSL_FILETYPE_PEM) <= 0) {
-        ERR_print_errors_fp(stderr);
-        exit(EXIT_FAILURE);
-    }
-
-    if (SSL_CTX_use_PrivateKey_file(ctx, "server.key", SSL_FILETYPE_PEM) <= 0 ) {
-        ERR_print_errors_fp(stderr);
-        exit(EXIT_FAILURE);
-    }
-}
-
-int main(int argc, char **argv)
-{
-    int sock;
-    SSL_CTX *ctx;
-
-    /* Ignore broken pipe signals */
-    signal(SIGPIPE, SIG_IGN);
-
-    ctx = create_context();
-
-    configure_context(ctx);
-
-    sock = create_socket(4433);
-
-    /* Handle connections */
-    while(1) {
-        struct sockaddr_in addr;
-        unsigned int len = sizeof(addr);
-        SSL *ssl;
-        const char reply[] = "test\n";
-
-        int client = accept(sock, (struct sockaddr*)&addr, &len);
-        if (client < 0) {
-            perror("Unable to accept");
-            exit(EXIT_FAILURE);
+    while (1) {
+        ch = wgetch(pad);  // Read from pad
+        switch (ch) {
+            case KEY_UP:
+                if (pad_top > 0) {
+                    pad_top--;
+                }
+                break;
+            case KEY_DOWN:
+                if (pad_top < num_lines - LINES_PER_PAGE) {
+                    pad_top++;
+                }
+                break;
+            case 'q':
+                // Exit the loop on 'q'
+                delwin(pad);
+                return;
         }
 
-        ssl = SSL_new(ctx);
-        SSL_set_fd(ssl, client);
+        prefresh(pad, pad_top, 0, 1, 1, LINES_PER_PAGE, COLS - 2);
+    }
+}
 
-        if (SSL_accept(ssl) <= 0) {
-            ERR_print_errors_fp(stderr);
-        } else {
-            SSL_write(ssl, reply, strlen(reply));
-        }
+int main() {
+    initscr();
+    noecho();
+    keypad(stdscr, TRUE);
 
-        SSL_shutdown(ssl);
-        SSL_free(ssl);
-        close(client);
+    const char **text = malloc(sizeof(char *) * TOTAL_LINES);
+
+    for (int i = 0; i < TOTAL_LINES; i++) {
+        text[i] = malloc(80 * sizeof(char));
+        sprintf(text[i], "This is line %d of the scrollable text", i + 1);
     }
 
-    close(sock);
-    SSL_CTX_free(ctx);
+    print_scrollable_text(stdscr, text, TOTAL_LINES);
+
+    for (int i = 0; i < TOTAL_LINES; i++) {
+        free(text[i]);
+    }
+    free(text);
+
+    endwin();
+
+    return 0;
 }

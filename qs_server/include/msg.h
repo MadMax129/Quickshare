@@ -5,15 +5,13 @@
 #include "config.h"
 
 enum {
-    /* Server reply 
-       to client request 
+    /* Client intro message
+       setup session
+       + SERVER_OK
+       - SERVER_DENY
     */
     P_SERVER_OK,
     P_SERVER_DENY,
-
-    /* Client intro message
-       setup session
-    */
     P_CLIENT_INTRO,
     
     /* Server reply to client
@@ -23,13 +21,19 @@ enum {
     P_SERVER_DEL_USERS,
 
     /* Transfer file msgs
-        Valid (S)
-        Invalid (S)
         Request (C)
+            * request
+            + Valid (transfer_info)
+            - Invalid
         Reply (S/C)
+            * transfer_reply
+            + Valid
+            - Invalid
         Data (S/C)
         Cancel (S/C)
         Complete (S/C) 
+        Valid (S)
+        Invalid (S)
     */
    P_TRANSFER_VALID,
    P_TRANSFER_INVALID,
@@ -88,11 +92,26 @@ typedef struct {
 
         struct {
             Transfer_Hdr hdr;
+            uint8_t accept;
+        } transfer_reply;
+
+        struct {
+            Transfer_Hdr hdr;
         } transfer_state;
 
         struct {
             Transfer_ID id;
         } transfer_info;
+
+        struct {
+            Transfer_Hdr hdr;
+            char bytes[
+                PACKET_MAX_SIZE - 
+                sizeof(Packet_Hdr) - 
+                sizeof(uint32_t) -
+                sizeof(Transfer_Hdr)
+            ];
+        } transfer_data;
     } d;
 } __attribute__((packed)) Packet;
 
