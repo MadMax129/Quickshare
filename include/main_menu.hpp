@@ -1,10 +1,8 @@
 #pragma once
 
-#include "database.hpp"
+class Context;
 
-struct Context;
-
-struct Main_Menu {
+class Main_Menu {
 public:
     enum Transfer_Type {
         T_ERROR,
@@ -33,7 +31,7 @@ private:
     void read_users();
     void render_users();
 
-    Client_GUI_List client_list;
+    // Client_GUI_List client_list;
     bool open;
     Context& ctx;
 };

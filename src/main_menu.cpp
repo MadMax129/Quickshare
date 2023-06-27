@@ -5,6 +5,13 @@
 #include "nfd.h"
 #include "gui.hpp"
 
+#define MENU_BAR_MARGIN 20.0f
+#define PATH_BUTTON_MARGIN 10.0f
+#define REQUEST_MARGIN 20.0f
+#define TWO_MENUS_Y_MARGIN 20.0f
+#define MENUS_SIDE_MARGIN 16.0f
+#define MENU_BOTTOM_MARGIN 35.0f
+
 Main_Menu::Main_Menu(Context& context) : ctx(context) {}
 
 void Main_Menu::draw()
@@ -290,11 +297,11 @@ void Main_Menu::read_users()
 
 void Main_Menu::render_users()
 {
-	for (auto& c : client_list) {
-		char label[CLIENT_NAME_LEN];
-		safe_strcpy(label, c.name, CLIENT_NAME_LEN);
-		ImGui::Selectable(label, &c.selected);
-	}
+	// for (auto& c : client_list) {
+	// 	char label[PC_NAME_MAX_LEN];
+	// 	safe_strcpy(label, c.name, PC_NAME_MAX_LEN);
+	// 	ImGui::Selectable(label, &c.selected);
+	// }
 }
 
 void Main_Menu::add_event(Transfer_Type type, const char *desc, const char *fname)

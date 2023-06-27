@@ -49,27 +49,26 @@ enum {
     packet->hdr.size = psize; \
 }
 
-typedef struct {
+typedef struct __attribute__((packed)) {
     uint32_t type;
     uint32_t size;
 } Packet_Hdr;
 
-typedef struct {
+typedef struct __attribute__((packed)) {
     Transfer_ID t_id;
     Client_ID from;
     Client_ID to[TRANSFER_CLIENTS_MAX];
 } Transfer_Hdr;
 
-typedef struct {
+typedef struct __attribute__((packed)) {
     Packet_Hdr hdr;
     union {
         char data[
             PACKET_MAX_SIZE - 
-            sizeof(Packet_Hdr) - 
-            sizeof(uint32_t)
+            sizeof(Packet_Hdr)
         ];
 
-        struct Intro {
+        struct {
             char name[PC_NAME_MAX_LEN];
             char id[SESSION_ID_MAX_LEN];
             /* 0 - Join | 1 - Create */
@@ -105,19 +104,26 @@ typedef struct {
 
         struct {
             Transfer_Hdr hdr;
+            uint64_t b_size;
             char bytes[
                 PACKET_MAX_SIZE - 
                 sizeof(Packet_Hdr) - 
-                sizeof(uint32_t) -
-                sizeof(Transfer_Hdr)
+                sizeof(Transfer_Hdr) - 
+                sizeof(uint64_t)
             ];
         } transfer_data;
     } d;
-} __attribute__((packed)) Packet;
+} Packet;
 
+#ifdef __cplusplus
+static_assert(
+    sizeof(Packet) == PACKET_MAX_SIZE
+);
+#else
 _Static_assert(
     sizeof(Packet) == PACKET_MAX_SIZE,
     "Packet not MTU size..."
 );
+#endif
 
 #endif /* QS_MSG */

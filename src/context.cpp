@@ -13,12 +13,23 @@ static void glfw_error_callback(int error, const char* description)
     fprintf(stderr, "Glfw Error %d: %s\n", error, description);
 }
 
-Context::Context() : f_menu(*this), l_menu(*this)
+static void get_pc_name(char buffer[PC_NAME_MAX_LEN])
+{   
+#ifdef SYSTEM_WIN_64
+    DWORD size = PC_NAME_MAX_LEN;
+    (void)GetUserName(buffer, &size);
+#elif defined(SYSTEM_UNX)
+    (void)getlogin_r(buffer, PC_NAME_MAX_LEN);
+#endif
+}
+
+Context::Context() : f_menu(*this), l_menu(*this), 
+                     window(NULL), glsl_version(NULL),
+                     error("") 
 {
-    window = NULL;
-    glsl_version = NULL;
     app_state.set(LOGIN);
-    error = "";
+    get_pc_name(pc_name);
+    LOGF("%s\n", pc_name);
 }
 
 void Context::init_style()
@@ -180,7 +191,16 @@ void Context::menu_bar()
             }
             ImGui::EndMenu();
         }
-        ImGui::Text("Session Key: sGFSDNMesgnjfdl34nESNJf");
+        // if (ImGui::BeginMenu("Name")) {
+        //     ImGui::InputTextWithHint(
+        //         "name",
+        //         pc_name,
+        //         pc_name,
+        //         sizeof(pc_name)
+        //     );
+        //     ImGui::EndMenu();
+        // }
+        // ImGui::Text("Session Key: sGFSDNMesgnjfdl34nESNJf");
         ImGui::EndMainMenuBar();
     }
 }
@@ -219,9 +239,8 @@ void Context::set_appstate(State state)
             break;
         
         case MAIN_MENU:
-            break;
-
-        default:
+        case ERROR_WINDOW:
+        case CLOSE:
             break;
     }
 

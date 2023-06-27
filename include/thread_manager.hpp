@@ -5,7 +5,9 @@
 #include <thread>
 #include "state.hpp"
 #include "util.h"
-#include "config.hpp"
+#include "config.h"
+
+#define MAX_THREAD_NUMBER 8
 
 using Status = State_Manager<bool>;
 
@@ -19,14 +21,16 @@ public:
     };
 
     template<class Func, class ...Args>
-    void new_thread(Func&& f, Args&&... args)
+    bool new_thread(Func&& f, Args&&... args)
     {
-        assert(th_num != MAX_THREAD_NUMBER);
-        // add bool is possible
+        if (th_num == MAX_THREAD_NUMBER)
+            return false;
+
         auto &slot = thread_map.at(th_num);
         slot.active.set(true);
         slot.th = std::thread(f, args..., std::ref(slot.active));
         ++th_num;
+        return true;
     }
 
     void close_all()
@@ -44,3 +48,5 @@ private:
     std::array<Slot, MAX_THREAD_NUMBER> thread_map;
     u32 th_num;
 };
+
+extern Thread_Manager thread_manager;

@@ -19,14 +19,15 @@
 
 #include "util.h"
 #include "context.hpp"
-#include "config.hpp"
+#include "config.h"
 #include "mem.h"
 
 #ifdef SYSTEM_WIN_64
 #   include <windows.h>
 #endif
 
-struct Quickshare {
+class Quickshare {
+public:
     bool init_all();
     void main();
     void end();
@@ -36,7 +37,6 @@ private:
 #endif
 };
 
-static Quickshare qs;
 Thread_Manager thread_manager;
 
 bool Quickshare::init_all() 
@@ -47,7 +47,7 @@ bool Quickshare::init_all()
         return false;
     }
 #endif
-    return mem_pool_init(1024 * 1024);
+    return mem_pool_init(MEM_POOL_SIZE);
 }
 
 void Quickshare::end()
@@ -60,7 +60,7 @@ void Quickshare::end()
 
 void Quickshare::main()
 {
-    Context ctx;
+    Context& ctx = Context::get_instance();
 
     if (!ctx.create_window(WINDOW_WIDTH, WINDOW_HEIGHT, "Quickshare")) {
         P_ERROR("Failed to create window...");
@@ -92,6 +92,8 @@ int main(const int argc, const char* argv[])
     (void)argc;
     (void)argv;
 #endif
+    Quickshare qs;
+
     if (qs.init_all()) {
         LOG("Starting Quickshare...\n");
         qs.main();

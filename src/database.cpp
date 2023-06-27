@@ -83,7 +83,7 @@ void Database::get_client(Slot& slot, const socket_t sock)
 }
 
 void Database::complete_client(const socket_t sock, 
-                               const char name[CLIENT_NAME_LEN], 
+                               const char name[PC_NAME_MAX_LEN], 
                                const UserId id)
 {
     std::lock_guard<std::mutex> guard(mtx);
@@ -99,7 +99,7 @@ void Database::complete_client(const socket_t sock,
     assert(slot != std::end(client_list));
 
     slot->state = Slot::COMPLETE;
-    safe_strcpy(slot->name, name, CLIENT_NAME_LEN);
+    safe_strcpy(slot->name, name, PC_NAME_MAX_LEN);
     slot->id = id;
     
     LOGF("Client Complete %s:%d\n\tName: %s\n\tUserId: %lld\n", 

@@ -1,12 +1,12 @@
 #pragma once
 
-struct Context;
+class Context;
 
 #include "imgui.h"
 
 using Key = char[16];
 
-struct Login_Menu {
+class Login_Menu {
 public: 
     Login_Menu(Context& context);
     
@@ -18,6 +18,7 @@ private:
     void draw_key();
     void draw_enter();
     void draw_text();
+    void button();
     void check_state();
     void loc_check();
     void net_check();

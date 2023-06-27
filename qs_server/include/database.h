@@ -21,6 +21,7 @@ typedef enum {
     TRANSFER_CLIENT_ACCEPT,
     TRANSFER_CLIENT_DEL,
     TRANSFER_CLIENT_GET_ALL,
+    TRANSFER_CLIENT_GET_ALL_ACCEPTED,
     TRANSFER_CLIENT_DEL_ALL,
     TRANSFER_CLEANUP,
     BEGIN_TRANSACTION,
@@ -59,10 +60,12 @@ void db_cleanup_transfer(Database* db, Transfer_ID t_id);
 bool db_create_client(Database* db, Transfer_ID t_id, Client_ID c_id);
 Client_ID db_get_client_all(Database* db, Transfer_ID t_id);
 Client_ID db_client_all_step(Database* db);
+Client_ID db_get_client_all_accepted(Database* db, Transfer_ID t_id);
+Client_ID db_client_all_step_accepted(Database* db);
 Transfer_Info db_get_creator(Database* db, Client_ID c_id);
 Transfer_Info db_creator_step(Database* db);
 void db_client_delete(Database* db, Client_ID c_id);
-bool db_client_accept(Database* db, Client_ID c_id, 
+void db_client_accept(Database* db, Client_ID c_id, 
                       Transfer_ID t_id, bool accept);
 Client_ID db_get_creator_by_tid(Database* db, Transfer_ID t_id);
 

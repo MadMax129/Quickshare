@@ -7,10 +7,6 @@ EXE = qs
 BUILD_DIR = build
 TYPE = DEBUG
 
-# Install Directories
-# INSTALL_DIR = "C:\Program Files\Quickshare"
-# ICON_PATH   = "C:\Program Files\Quickshare\icon\logo.png"
-
 IMGUI_DIR ?= ../lib/imgui-1.85
 IMGUI_SOURCES =	$(IMGUI_DIR)/imgui.cpp        \
 				$(IMGUI_DIR)/imgui_demo.cpp   \
@@ -29,9 +25,10 @@ SHARED_DIR   = "../shared"
 UTIL_OBJ     = "../shared/util/util.o"
 MEM_POOL_OBJ = "../shared/mem_pool/mem.o"
 
+LOCK_FREE_QUEUE_HDR = "../lib/LockFreeQueueCpp11.h"
+
 INCLUDES = ../include
-SOURCES  =	database.cpp     \
-			network.cpp      \
+SOURCES  =	network.cpp      \
 			context.cpp      \
 			login_menu.cpp   \
 			main_menu.cpp    \
@@ -44,17 +41,17 @@ ALL_OBJS   = $(IMGUI_OBJS) $(SRC_OBJS) $(FILE_DIALOG_OBJ) $(UTIL_OBJ) $(MEM_POOL
 DEPS = $(addprefix build/, $(SOURCES:.cpp=.d))
 SRC_INC_DIR = -I$(INCLUDES) -I$(IMGUI_DIR) \
 			  -I$(IMGUI_DIR)/backends -I$(FILE_DIALOG_INCLUDE) \
-			  -I../shared/util -I../shared/mem_pool
+			  -I../shared/util -I../shared/mem_pool -I../shared
 CXXFLAGS += -O2 -Wall -std=c++17 -pedantic-errors -Werror -Wextra
-LIBS = -lGL `pkg-config --static --libs glfw3` \
-	   -lpthread -L$(FILE_DIALOG_LIB_PATH) \
-	   -lnfd `pkg-config --libs gtk+-3.0` 
 
+LIBS = -lGL `pkg-config --static --libs glfw3` \
+	   -lpthread -L$(FILE_DIALOG_LIB_PATH)     \
+	   -lnfd `pkg-config --libs gtk+-3.0`      \
+	   -lssl -lcrypto
 
 ifeq ($(TYPE), RELEASE)
-	LINKER += -static -s -static-libgcc -static-libstdc++ -mwindows
+	LINKER += -static -s -lc -lstdc++
 endif
-
 ifeq ($(TYPE), DEBUG)
 	CXXFLAGS += -DDEBUG_MODE
 endif

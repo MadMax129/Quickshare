@@ -195,7 +195,7 @@ static void packet_reply(Server* s, Client* c)
 {
     const Packet* const p = c->p_buf;
 
-    const bool accept = db_client_accept(
+    db_client_accept(
         &s->db, c->id, 
         p->d.transfer_reply.hdr.t_id,
         p->d.transfer_reply.accept
@@ -206,16 +206,34 @@ static void packet_reply(Server* s, Client* c)
         p->d.transfer_reply.hdr.t_id
     );
 
-    Client* recp = client_find_by_id(&s->clients, c_id);
-    Packet* response = enqueue(&recp->msg_queue);
-    assert(response);
-    (void)memcpy(response, p, sizeof(Packet));
-    response->d.transfer_reply.hdr.from = c->id;    
+    if (c_id != 0) {
+        Client* recp = client_find_by_id(&s->clients, c_id);
+        assert(recp);
+        Packet* response = enqueue(&recp->msg_queue);
+        assert(response);
+        (void)memcpy(response, p, sizeof(Packet));
+        response->d.transfer_reply.hdr.from = c->id;    
+    }
+}
 
-    if (accept && recp)
-        server_resposne(c, P_TRANSFER_VALID);
-    else
-        server_resposne(c, P_TRANSFER_INVALID);
+static void packet_data(Server* s, Client* c)
+{
+    const Packet* const p = c->p_buf;
+
+    Client_ID recp_id = db_get_client_all_accepted(
+        &s->db,
+        p->d.transfer_data.hdr.t_id
+    );
+
+    while (recp_id) {
+        Client* other = client_find_by_id(&s->clients, recp_id);
+        if (other) {
+            Packet* packet = enqueue(&other->msg_queue);
+            assert(packet);
+            memcpy(packet, p, sizeof(Packet));
+        }
+        recp_id = db_client_all_step_accepted(&s->db);
+    }
 }
 
 void analize_packet(Server* s, Client* c)
@@ -235,6 +253,9 @@ void analize_packet(Server* s, Client* c)
             break;
 
         case P_TRANSFER_DATA:
+            packet_data(s, c);
+            break;
+
         case P_TRANSFER_CANCEL:
         case P_TRANSFER_COMPLETE:
         default:

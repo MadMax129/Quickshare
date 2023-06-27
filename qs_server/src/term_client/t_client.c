@@ -26,6 +26,16 @@ typedef struct LinkedList {
     Node* head;
 } LinkedList;
 
+typedef struct {
+    int head, tail;
+    struct {
+        Transfer_ID t_id;
+        Client_ID id;
+        bool state;
+    } transfer[8];
+} Transfers;
+
+static Transfers transfers;
 static int sock;
 static SSL_CTX* ctx;
 static SSL* ssl;
@@ -214,6 +224,13 @@ void print_packet(Packet* packet)
                 "Transfer valid t_id:%ld", 
                 packet->d.transfer_info.id
             );
+
+            transfers.transfer[transfers.head].t_id = packet->d.transfer_info.id;
+            ++transfers.head;
+            break;
+
+        case P_TRANSFER_DATA:
+            print_output("Data\n");
             break;
 
         case P_TRANSFER_REQUEST:
@@ -228,6 +245,12 @@ void print_packet(Packet* packet)
                 packet->d.transfer_reply.hdr.from,
                 packet->d.transfer_reply.hdr.t_id
             );
+            for (int i = 0; i < 8; i++) {
+                if (transfers.transfer[i].t_id == packet->d.transfer_reply.hdr.t_id) {
+                    transfers.transfer[i].state = packet->d.transfer_reply.accept;
+                    transfers.transfer[i].id = packet->d.transfer_reply.hdr.from;
+                }
+            }
             break;
 
         case P_TRANSFER_CANCEL:
@@ -347,7 +370,7 @@ void* read_thread(void* d)
     }
 }
 
-void transfer_req(Packet* packet, long t_id)
+void transfer_req(Packet* packet, long c_id)
 {
     PACKET_HDR(
         P_TRANSFER_REQUEST,
@@ -357,7 +380,7 @@ void transfer_req(Packet* packet, long t_id)
 
     strcpy(packet->d.request.file_name, "test.txt");
     packet->d.request.file_size = 120;
-    packet->d.request.hdr.to[0] = t_id;
+    packet->d.request.hdr.to[0] = c_id;
     packet->d.request.hdr.to[1] = 0;
     packet->d.request.hdr.to[2] = 0;
     assert(
@@ -388,6 +411,33 @@ void reply(Packet* packet, long t_id, bool response)
     );
 }
 
+void send_data(Packet* packet, long t_id)
+{
+    for (int i = 0; i < 8; i++) {
+        if (transfers.transfer[i].t_id == t_id && 
+            !transfers.transfer[i].state) {
+            print_output("cannot send. No client response");
+            return;
+        }
+    }
+
+    PACKET_HDR(
+        P_TRANSFER_DATA,
+        sizeof(packet->d.transfer_data),
+        packet
+    );
+
+    packet->d.transfer_data.hdr.t_id = t_id;
+    packet->d.transfer_data.b_size = 10;
+    assert(
+        SSL_write(
+            ssl, 
+            (void*)packet, 
+            sizeof(Packet_Hdr) + sizeof(packet->d.transfer_data)
+        ) == sizeof(Packet_Hdr) + sizeof(packet->d.transfer_data)
+    );
+}
+
 void* input_thread(void* d)
 {
     static Packet packet;
@@ -415,15 +465,16 @@ void* input_thread(void* d)
                 value,
                 command == 'y'
             );
-        } 
+        }
+        else if (command == 'd') {
+            send_data(&packet, value);
+        }
         else {
             print_output("Invalid command received.");
         }
         pthread_mutex_unlock(&lock);
     }
 }
-
-//gcc test_client.c -o t1 -lcrypto -lssl -I"../../../shared" -lpthread -lncurses
 
 int main(int argc, const char** argv) 
 {

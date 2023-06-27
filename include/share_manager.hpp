@@ -2,7 +2,6 @@
 
 #include "network.hpp"
 #include "connection.hpp"
-#include "data_packet.hpp"
 #include "file_manager.hpp"
 #include <atomic>
 
@@ -12,7 +11,7 @@ public:
 
 private:
     struct Session {
-        Connection<Data_Packet> conn;
+        // Connection<Data_Packet> conn;
         File_Manager file;
         std::atomic<u64> progress;
     };

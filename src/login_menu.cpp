@@ -4,6 +4,16 @@
 #include "gui.hpp"
 #include <cstring>
 
+#define MAX_INNER_LENGTH 500.0f
+#define MAX_INNER_HEIGHT 350.0f
+#define INNER_LOGIN_MARGIN 50.0f
+#define WELCOME_TEXT_MARGIN 20.0f
+#define SESSION_TEXT_MARGIN 3.0f
+#define KEY_TEXT_LEFT_MARGIN 50.0f
+#define KEY_TEXT_TOP_MARGIN 20.0f
+#define ENTER_BUTTON_MARGIN 20.0f
+#define ENTER_BUTTON_HEIGHT 30.0f
+
 Login_Menu::Login_Menu(Context& context) : ctx(context)
 {
 	clean();
@@ -27,10 +37,11 @@ void Login_Menu::draw()
 		)
 	);
 
+
 	constexpr ImGuiWindowFlags flags = ImGuiWindowFlags_NoCollapse  | 
 									   ImGuiWindowFlags_NoScrollbar | 
 									   ImGuiWindowFlags_NoResize    | 
-									   ImGuiWindowFlags_NoMove      |  
+									   ImGuiWindowFlags_NoMove      |
 									   ImGuiWindowFlags_NoTitleBar;
 
 	// Push all colors and style settings...
@@ -91,10 +102,7 @@ void Login_Menu::draw_inner()
 		);
 		ImGui::Text("Welcome to Quickshare");
 		
-		ImGui::SetCursorPosX(
-			(inner_size.x / 2.0f) - 
-			(ImGui::CalcTextSize("Enter a session key").x / 2.0f)
-		);
+		X_CENTER_ALIGN(inner_size.x, "Enter a session key");
 		ImGui::TextDisabled("Enter a session key");
 
 		// Draw key input box
@@ -107,7 +115,7 @@ void Login_Menu::draw_inner()
 		draw_text();
 
 		// State machine
-		check_state();
+		net_check();
 
 		ImGui::EndChild();
 	}
@@ -138,6 +146,15 @@ void Login_Menu::draw_key()
 	ImGui::PopItemWidth();
 }
 
+void Login_Menu::button()
+{
+	if (strnlen(key, IM_ARRAYSIZE(key) - 1) > 0) {
+		if (state == IDLE) {
+			Network::getInstance().start("test", "t");
+		}
+	}
+}
+
 void Login_Menu::draw_enter()
 {
 	const char* button_text;
@@ -161,80 +178,25 @@ void Login_Menu::draw_enter()
 
 	ImGui::PushStyleVar(ImGuiStyleVar_FrameRounding, 3.f);
 	if (ImGui::Button(button_text, enter_size))
-	{
-		if (strnlen(key, IM_ARRAYSIZE(key) - 1) > 0) {
-			if (state == IDLE) {
-				if (!std::strcmp(key, "test")) {
-					// ! TEST KEY
-					ctx.set_appstate(Context::MAIN_MENU);
-					goto end;
-				}
-				// ctx.loc.start(
-				// 	login_state ? 
-				// 	Locator::Mode::CREATE : 
-				// 	Locator::Mode::LOCATE,
-				// 	key			  
-				// );
-				state = LOCATOR;
-			}
-		}
-	}
-end:
+		button();
 	ImGui::PopStyleVar();
-}
-
-void Login_Menu::loc_check()
-{
-	// switch (ctx.loc.state.get(std::memory_order_acquire))
-	// {
-	// 	case Locator::INACTIVE:
-	// 	case Locator::WORKING:
-	// 		error = "";
-	// 		break;
-
-	// 	case Locator::CONN_FAILED:
-	// 	case Locator::FAILED:
-	// 		error = "Error Invalid Key (expired)...";
-	// 		/* Move state back to idle, do not start network */
-	// 		state = IDLE;
-	// 		break;
-
-	// 	case Locator::SUCCESS:
-	// 		ctx.net.init_network(ctx.loc.get_ip());
-	// 		/* Reset the locator */
-	// 		ctx.loc.reset();
-	// 		state = NETWORK;
-	// 		break;
-	// }
 }
 
 void Login_Menu::net_check()
 {
-	// switch (ctx.net.state.get())
-	// {
-	// 	case Network::State::INACTIVE:
-	// 		error = "";
-	// 		break;
-
-	// 	case Network::State::INIT_FAILED:
-	// 	case Network::State::FAIL_OCCURED:
-	// 		error = "Cannot connect to host... Try again...";
-	// 		state = IDLE;
-	// 		break;
-
-	// 	case Network::State::SUCCESS:
-	// 		ctx.set_appstate(Context::MAIN_MENU);
-	// 		break;
-	// }
-}
-
-void Login_Menu::check_state()
-{
-	switch (state)
+	switch (Network::getInstance().get_state())
 	{
-		case IDLE: break;
-		case LOCATOR: loc_check(); break;
-		case NETWORK: net_check(); break;
+		case Network::State::INIT_ERROR:
+		case Network::State::NET_ERROR:
+			LOG("Network ERROR\n");
+			break;
+
+		case Network::State::CONNECTED:
+			LOG("CONNCETED\n");
+			break;
+
+		default:
+			break;
 	}
 }
 		
