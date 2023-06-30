@@ -43,6 +43,17 @@ struct Connection {
         return true;
     }
 
+    void set_non_blocking()
+    {
+#ifdef SYSTEM_WIN_64
+        u_long mode = 1;
+        (void)ioctlsocket(my_sock, FIONBIO, &mode);
+#elif defined(SYSTEM_UNIX)
+        const int flags = fcntl(sockfd, F_GETFL, 0);
+        (void)fcntl(my_sock, F_SETFL, flags | O_NONBLOCK);
+#endif
+    }
+
     bool bind_and_listen() const
     {
         if (bind(my_sock, (struct sockaddr*)&my_addr, sizeof(my_addr)) < 0)

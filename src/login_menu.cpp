@@ -37,7 +37,6 @@ void Login_Menu::draw()
 		)
 	);
 
-
 	constexpr ImGuiWindowFlags flags = ImGuiWindowFlags_NoCollapse  | 
 									   ImGuiWindowFlags_NoScrollbar | 
 									   ImGuiWindowFlags_NoResize    | 
@@ -149,9 +148,7 @@ void Login_Menu::draw_key()
 void Login_Menu::button()
 {
 	if (strnlen(key, IM_ARRAYSIZE(key) - 1) > 0) {
-		if (state == IDLE) {
-			Network::getInstance().start("test", "t");
-		}
+		Network::getInstance().session(ctx.get_name(), key, !login_state);
 	}
 }
 
@@ -188,13 +185,25 @@ void Login_Menu::net_check()
 	{
 		case Network::State::INIT_ERROR:
 		case Network::State::NET_ERROR:
-			LOG("Network ERROR\n");
+			state = NETWORK_ERROR;
+			error = "Network failed to initiate...";
+			break;
+
+		case Network::State::SESSION_ERROR:
+			state = NETWORK_ERROR;
+			error = "Session ID is NOT valid...";
 			break;
 
 		case Network::State::CONNECTED:
-			LOG("CONNCETED\n");
+		case Network::State::OPENED:
+			state = CONNECTING;
+			error = "Conecting...";
 			break;
 
+		case Network::State::SESSION_SUCCESS:
+			ctx.set_appstate(Context::State::MAIN_MENU);
+			break;
+			
 		default:
 			break;
 	}
@@ -217,9 +226,13 @@ void Login_Menu::draw_text()
 
 	ImGui::PopStyleColor(3);
 
-	// Error message
 	X_CENTER_ALIGN(inner_size.x, error);
 	SHIFT_VERTICAL(10.0f);
-	ImGui::TextColored(ImVec4(1.0f, 0.0f, 0.0f, 1.0f), "%s", error);
+	if (state == NETWORK_ERROR) 
+		ImGui::TextColored(ImVec4(1.0f, 0.0f, 0.0f, 1.0f), "%s", error);
+	else if (state == CONNECTING)
+		ImGui::Text("Connecting %c", "|/-\\"[(int)(ImGui::GetTime() / 0.3f) & 3]);
+	else
+		ImGui::Text(" ");
 
 }

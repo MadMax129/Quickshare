@@ -4,6 +4,7 @@
 #include <assert.h>
 
 #include "server.h"
+#include "util.h"
 
 static Secure_State ssl_want_more(Client* c)
 {
@@ -38,7 +39,8 @@ static Secure_State complete_handshake(Client* c)
         SSL_state_string_long(c->secure.ssl)
     );
 
-    if (n) c->state = C_SECURE;
+    if (n == 1) 
+        c->state = C_SECURE;
 
     status = get_sslstate(&c->secure, n);
 
@@ -50,45 +52,43 @@ static Secure_State complete_handshake(Client* c)
 
 static int decrypt_data(Server* s, Client* c)
 {
-    int n;
+    Buffer* buf = &c->decrypt_buf;
+    int n = 0;
+
     do {
         n = SSL_read(
             c->secure.ssl, 
-            ((char*)c->p_buf) + c->p_len, 
-            (sizeof(Packet_Hdr) + c->p_size) - c->p_len
+            (char*)buf->data    + buf->len, 
+            (sizeof(Packet_Hdr) + buf->size) - buf->len
         );
 
         if (n > 0) {
-            c->p_len += n;
-            if (c->p_len == sizeof(Packet_Hdr)) {
-                /* Read size of packet */
-                Packet_Hdr* hdr = (Packet_Hdr*)c->p_buf;
-                c->p_size = hdr->size;
-            }
+            LOGF("HERE >>>>>>>>>>>>>>>>>>>%d\n", n);
+            buf->len += n;
+            
+            /* Read size of packet */
+            if (buf->len == sizeof(Packet_Hdr))
+                buf->size = ((Packet_Hdr*)buf->data)->size;
 
-            if (c->p_len == (c->p_size + sizeof(Packet_Hdr))) {
+            if (buf->len == (buf->size + sizeof(Packet_Hdr))) {
                 analize_packet(s, c);
-                c->p_len  = 0;
-                c->p_size = 0;
+                buf->len  = 0;
+                buf->size = 0;
             }
-        }
-        else {
-            ERR_print_errors_fp(stderr);
         }
     } while (n > 0);
 
     return n;
 }
 
-static bool decode_packet(Server* s, Packet* packet, ssize_t len, Client* c)
+static bool decode_packet(Server* s, Packet* packet, size_t len, Client* c)
 {
-    char* packet_bytes = (char*)packet;
+    const char* packet_bytes = (char*)packet;
     int n = 0;
 
-    assert(c);
-
-    while (len > 0) {
-        n = BIO_write(c->secure.r_bio, (void*)packet_bytes, len);
+    while (len > 0) 
+    {
+        n = BIO_write(c->secure.r_bio, packet_bytes, len);
 
         printf("BIO full write %d == %ld\n", n, len);
 
@@ -117,27 +117,38 @@ static bool decode_packet(Server* s, Packet* packet, ssize_t len, Client* c)
         else if (status == STATUS_FAIL)
             return false;
     }
-
+    
     return true;
 }
 
 void read_data(Server* s, int fd)
 {
-    static Packet packet;
-    ssize_t n = read(fd, (void*)&packet, sizeof(Packet));
+    Client* const client = client_find(
+        &s->clients,
+        fd
+    );
+    assert(client);
+    Buffer* const buf = &client->read_buf;
+
+    const ssize_t n = read(
+        client->fd, 
+        (char*)buf->data,
+        sizeof(Packet) / 4
+    );
 
     if (n > 0) {
-        if (decode_packet(
-                s,
-                &packet, 
-                n, 
-                client_find(&s->clients, fd)
-            ))
+        if (!decode_packet(s, (Packet*)buf->data, n, client)) {
+            printf("decode_packet failed:\n");
+            ERR_print_errors_fp(stdout);
+            close_client(s, client->fd);
+        }
+    }
+    else if (n == -1) {
+        if (errno == EAGAIN ||
+            errno == EWOULDBLOCK)
             return;
     }
-
-    /* Error reading data */
-    
-    printf("read()=%ld failed: %s\n", n, strerror(errno));
-    close_client(s, fd);
+    else {
+        close_client(s, fd);
+    }
 }

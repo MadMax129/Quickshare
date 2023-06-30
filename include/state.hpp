@@ -7,7 +7,7 @@ struct State_Manager {
     State_Manager() = default;
     State_Manager(const State_Manager<T>& rhs) : state(rhs.state.load(std::memory_order_relaxed)) {}
 
-    inline T get(std::memory_order order = std::memory_order_relaxed)
+    inline T get(std::memory_order order = std::memory_order_relaxed) const
     {
         return state.load(order);
     }

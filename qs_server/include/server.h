@@ -11,7 +11,7 @@
 #include "secure.h"
 #include "database.h"
 
-#define MAX_EPOLL_EVENTS 64
+#define MAX_EPOLL_EVENTS (MAX_CLIENTS * 2)
 
 typedef struct {
     int sock_fd, epoll_fd;

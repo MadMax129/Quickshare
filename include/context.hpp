@@ -34,8 +34,12 @@ public:
     void main_loop();
 
     void set_appstate(State state);
-    inline State get_state() { 
+    inline State get_state() const { 
         return app_state.get(); 
+    }
+    
+    const inline char* get_name() const {
+        return pc_name;
     }
 
 private:

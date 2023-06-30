@@ -6,6 +6,7 @@
 static inline void server_resposne(Client* c, int type)
 {
     Packet* packet = enqueue(&c->msg_queue);
+    LOGF("size %d\n", c->msg_queue.count);
     assert(packet);
     PACKET_HDR(type, 0, packet);
 }
@@ -49,15 +50,16 @@ static void send_session_users(Server* s, Client* c)
 
 static void packet_intro(Server* s, Client* c)
 {
-    Packet* const p = c->p_buf;
+    Packet* const p = B_DATA(c->decrypt_buf);
 
     /* Make sure all data makes sense */
     if (c->state == C_COMPLETE                      ||
         p->d.intro.id_len >= (SESSION_ID_MAX_LEN-1) ||
         p->d.intro.name_len >= (PC_NAME_MAX_LEN-1)  ||
-        p->d.intro.session > 1) 
-    {
+        p->d.intro.session > 1
+    ) {
         /* Abnormal client behavior */
+        P_ERROR("Abnormal client packet intro\n");
         server_resposne(c, P_SERVER_DENY);
         return;
     }
@@ -150,7 +152,7 @@ static void echo_transfer_request(Server* s, Client* c,
 static void packet_transfer(Server* s, Client* c)
 {
     /* Validate all recipient clients */
-    const Packet* const p = c->p_buf;
+    const Packet* const p = B_DATA(c->decrypt_buf);
 
     colored_printf(CL_BLUE,
         "Transfer Request\n"
@@ -193,7 +195,7 @@ error:
 
 static void packet_reply(Server* s, Client* c)
 {
-    const Packet* const p = c->p_buf;
+    const Packet* const p = B_DATA(c->decrypt_buf);
 
     db_client_accept(
         &s->db, c->id, 
@@ -218,7 +220,7 @@ static void packet_reply(Server* s, Client* c)
 
 static void packet_data(Server* s, Client* c)
 {
-    const Packet* const p = c->p_buf;
+    const Packet* const p = B_DATA(c->decrypt_buf);
 
     Client_ID recp_id = db_get_client_all_accepted(
         &s->db,
@@ -238,7 +240,8 @@ static void packet_data(Server* s, Client* c)
 
 void analize_packet(Server* s, Client* c)
 {
-    switch(c->p_buf->hdr.type)
+    const Packet* const p = (Packet*)B_DATA(c->decrypt_buf);
+    switch (p->hdr.type)
     {
         case P_CLIENT_INTRO:
             packet_intro(s, c);

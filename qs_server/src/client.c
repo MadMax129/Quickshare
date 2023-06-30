@@ -10,29 +10,34 @@
 void client_list_init(Client_List* clist)
 {
     clist->list = (Client*)alloc(MAX_CLIENTS * sizeof(Client));
+    clist->n_cli = 0;
 
     if (!clist->list)
         die("Failed alloc clients");
 
     for (unsigned int i = 0; i < MAX_CLIENTS; i++) {
-        clist->list[i].p_buf = (Packet*)alloc(sizeof(Packet));
-        if (!clist->list[i].p_buf)
+        /* TCP read buffer and decrypt buffer */
+        BUFFER_ALLOC(clist->list[i].read_buf, sizeof(Packet));
+        BUFFER_ALLOC(clist->list[i].decrypt_buf, sizeof(Packet));
+        
+        /* Secure buffer */
+        BUFFER_ALLOC(
+            clist->list[i].secure.encrypted_buf,
+            sizeof(Packet) * 2
+        );
+
+        if (!B_DATA(clist->list[i].read_buf)    ||
+            !B_DATA(clist->list[i].decrypt_buf) ||
+            !B_DATA(clist->list[i].secure.encrypted_buf))
             die("Failed packet malloc");
 
+        /* Client Message Queue */
         if (!queue_init(
                 &clist->list[i].msg_queue, 
                 sizeof(Packet), 
-                MSG_QUEUE_SIZE))
+                MAX_CLIENTS))
             die("Failed queue_init");
-
-        /* Secure buffer */
-        clist->list[i].secure.e_buf  = (char*)alloc(sizeof(Packet) * 2);
-        clist->list[i].secure.e_size = sizeof(Packet) * 2;
-        if (!clist->list[i].secure.e_buf)
-            die("secure buffer malloc");
     }
-
-    clist->n_cli = 0;
 }
 
 void client_list_free(Client_List* clist)
@@ -46,14 +51,21 @@ void client_list_free(Client_List* clist)
 
 static void client_configure(Client* c)
 {
-    c->state = C_CONNECTED;
-    c->id = time(NULL);
-    memset(c->p_buf, 0, sizeof(Packet));
-    c->p_len  = 0;
-    c->p_size = 0;
+    c->state      = C_CONNECTED;
+    c->id         = time(NULL);
+    c->session_id = 0;
+    c->fd         = 0;
+    memset(c->name, 0, sizeof(c->name));
+
+    /* Zero buffers */
+    B_RESET(c->read_buf);
+    B_RESET(c->decrypt_buf);
 
     /* Init SSL */
     secure_init(&c->secure);
+
+    /* Reset Msg Queue */
+    queue_reset(&c->msg_queue);
 }
 
 Client* client_init(Client_List* clist)
@@ -109,7 +121,6 @@ Client* client_close(Client_List* clist, int fd)
 
     /* Shutdown SSL */
     secure_free(&client->secure);
-    queue_reset(&client->msg_queue);
     --clist->n_cli;
 
     return client;

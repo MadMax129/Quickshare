@@ -10,6 +10,7 @@
 #include "msg.h"
 #include "queue.h"
 #include "database.h"
+#include "buffer.h"
 
 #define MAX_CLIENTS 32
 #define MSG_QUEUE_SIZE 8
@@ -33,8 +34,7 @@ typedef struct {
     Session_ID session_id;
     Queue msg_queue;
     char name[PC_NAME_MAX_LEN];
-    Packet* p_buf;
-    unsigned int p_len, p_size;
+    Buffer read_buf, decrypt_buf;
 } Client;
 
 typedef struct {

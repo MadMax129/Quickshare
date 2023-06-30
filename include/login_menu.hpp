@@ -27,10 +27,8 @@ private:
     enum {
         /* No ongoing tasks */
         IDLE,
-        /* Locator enabled */
-        LOCATOR,
-        /* Networking enabled */
-        NETWORK
+        CONNECTING,
+        NETWORK_ERROR
     } state;
     Key key;
     ImVec2 inner_size;

@@ -75,6 +75,8 @@ typedef struct __attribute__((packed)) {
             uint8_t session;
             uint8_t name_len;
             uint8_t id_len;
+            uint8_t  : 8;
+            uint32_t : 32;
         } intro;
 
         struct {

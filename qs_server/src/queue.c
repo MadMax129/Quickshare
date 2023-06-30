@@ -12,13 +12,10 @@ bool queue_init(Queue* q, int size, int length)
         
     q->items = alloc((size_t)size * (size_t)length);
 
-    if (!q)
+    if (!q->items)
         return false;
 
-    memset(q->items, 0, (size_t)(size * length));
-    q->head   = 0;
-    q->tail   = 0;
-    q->count  = 0;
+    queue_reset(q);
     q->len    = length;
     q->size   = size;
 
@@ -32,9 +29,9 @@ void queue_reset(Queue* q)
         0, 
         (size_t)(q->size * q->len)
     );
-    q->head = 0;
-    q->tail = 0;
-    q->count  = 0;
+    q->head  = 0;
+    q->tail  = 0;
+    q->count = 0;
 }
 
 bool queue_empty(Queue* q)

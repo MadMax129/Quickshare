@@ -4,33 +4,55 @@
 #include <assert.h>
 
 #include "server.h"
+#include "util.h"
 
-static bool write_raw_data(int fd, char* data, size_t size)
+typedef enum {
+    WRITE_ERROR,
+    WRITE_OK,
+    WRITE_BLOCK
+} Write_Result;
+
+static Write_Result write_bytes(Client* c)
 {
-    while (size > 0) {
+    Buffer* const buf = &c->secure.encrypted_buf;
+
+    while (buf->len > 0)
+    {
         ssize_t n = write(
-            fd, 
-            data, 
-            size
+            c->fd,
+            buf->data,
+            buf->len
         );
 
-        if (n > 0) {
-            size -= n;
-            data += n;
+        if (n == -1          && 
+            (errno == EAGAIN || 
+             errno == EWOULDBLOCK)
+        ) {
+            return WRITE_BLOCK;
+        }
+        else if (n > 0) {
+            if ((buf->len - n) != 0) {
+                (void*)memmove(
+                    buf->data,
+                    (char*)buf->data + n,
+                    buf->len         - n
+                );
+            }
+            buf->len -= n;
         }
         else {
-            return false;
+            return WRITE_ERROR;
         }
     }
 
-    return true;
+    return WRITE_OK;
 }
 
-static bool write_and_encrypt(Packet* p, Client* c)
+static bool encrypt(Packet* p, Client* c)
 {
-    static Packet buf;
+    char buf[64];
     size_t size = sizeof(Packet_Hdr) + p->hdr.size; 
-    char* data  = (char*)p;
+    const char* data  = (const char*)p;
     Secure_State state;
 
     while (size > 0) {
@@ -40,14 +62,16 @@ static bool write_and_encrypt(Packet* p, Client* c)
 
         state = get_sslstate(&c->secure, n);
 
+        assert(state != STATUS_MORE_IO);
+
         if (n > 0) {
             data += n;
             size -= n;
 
             do {
-                n = BIO_read(c->secure.w_bio, (void*)&buf, sizeof(Packet));
+                n = BIO_read(c->secure.w_bio, &buf, sizeof(buf));
                 if (n > 0) 
-                    secure_queue_write(&c->secure, (void*)&buf, n);
+                    secure_queue_write(&c->secure, (const void*)&buf, n);
                 else if (!BIO_should_retry(c->secure.w_bio))
                     return false;
             } while (n > 0);
@@ -62,24 +86,31 @@ static bool write_and_encrypt(Packet* p, Client* c)
 
 void write_data(Server* s, int fd)
 {
-    Client* c = client_find(&s->clients, fd);
-    Queue*  q = &c->msg_queue;
+    Client* const client = client_find(&s->clients, fd);
+    assert(client);
 
-    if (c->secure.e_len > 0) {
-        if (!write_raw_data(fd, c->secure.e_buf, c->secure.e_len)) {
-            printf("Failed to send openssl data\n");
-            close_client(s, fd);
+    Queue* const q = &client->msg_queue;
+
+    Write_Result w_state = WRITE_OK;
+
+    do {
+        /* Write encrypted bytes */
+        if (B_LEN(client->secure.encrypted_buf) > 0) {
+            w_state = write_bytes(client);
+            if (w_state == WRITE_ERROR) {
+                P_ERROR("Failed to write data\n");
+                close_client(s, fd);
+            }
         }
-        c->secure.e_len = 0;
-    }
 
-    if (!queue_empty(q)) {
-        Packet* packet = dequeue(q);
-        assert(packet);
+        if (!queue_empty(q)) {
+            Packet* packet = dequeue(q);
+            assert(packet);
 
-        if (write_and_encrypt(packet, c))
-            return;
-        printf("Failed to write and encrypt\n");
-        close_client(s, fd);
-    }
+            if (!encrypt(packet, client)) {
+                printf("Failed to write and encrypt\n");
+                close_client(s, fd);
+            }
+        }
+    } while (!queue_empty(q) && w_state != WRITE_BLOCK);
 }

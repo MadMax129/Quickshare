@@ -3,11 +3,24 @@
 #include <errno.h>
 #include <string.h>
 #include <assert.h>
+#include <fcntl.h>
+#include <unistd.h>
 
 #include "util.h"
 #include "server.h"
 #include "die.h"
 #include "mem.h"
+
+static void set_nonblocking(const int fd) {
+    int flags = fcntl(fd, F_GETFL, 0);
+    if (flags == -1) {
+        P_ERROR("fcntl get flags\n");
+        return;
+    }
+    if (fcntl(fd, F_SETFL, flags | O_NONBLOCK) == -1) {
+        P_ERROR("fcntl()");
+    }
+}
 
 void create_socket(Server* s, const char* ip, const short port)
 {
@@ -21,18 +34,20 @@ void create_socket(Server* s, const char* ip, const short port)
                     &enable, sizeof(enable)) < 0)
 	    die("setsockopt(SO_REUSEADDR)");
 
-	memset(&s->s_addr, 0, sizeof(s->s_addr));
-	s->s_addr.sin_family = AF_INET;
-	s->s_addr.sin_addr.s_addr = ip ? inet_addr(ip) : htonl(INADDR_ANY);
-	s->s_addr.sin_port = htons(port);
+    set_nonblocking(s->sock_fd);
 
-	if (bind(s->sock_fd, 
+    memset(&s->s_addr, 0, sizeof(s->s_addr));
+    s->s_addr.sin_family = AF_INET;
+    s->s_addr.sin_addr.s_addr = ip ? inet_addr(ip) : htonl(INADDR_ANY);
+    s->s_addr.sin_port = htons(port);
+
+    if (bind(s->sock_fd, 
             (struct sockaddr*)&s->s_addr, 
             sizeof(s->s_addr)) < 0)
-	    die("bind()");
+        die("bind()");
 
-	if (listen(s->sock_fd, SOMAXCONN) < 0)
-	    die("listen()");
+    if (listen(s->sock_fd, SOMAXCONN) < 0)
+        die("listen()");
 }
 
 void setup_poll(Server* s)
@@ -94,49 +109,52 @@ void send_single_user(Client* recp, Client* c1, int type)
 
 static void accept_client(Server* s)
 {
-    struct sockaddr_in addr;
-    socklen_t socklen = sizeof(addr);
-    Client* client = client_init(&s->clients);
+    for (;;) 
+    {
+        struct sockaddr_in addr;
+        socklen_t socklen = sizeof(addr);
 
-    const int conn = accept(
-        s->sock_fd,
-        (struct sockaddr*)&addr,
-        &socklen
-    );
+        const int conn = accept(
+            s->sock_fd,
+            (struct sockaddr*)&addr,
+            &socklen
+        );
 
-    client->fd = conn;
-    (void)memcpy(
-        (void*)&client->addr, 
-        (void*)&addr, 
-        sizeof(addr)
-    );
+        if (conn == -1) {
+            if (errno == EAGAIN ||
+                errno == EWOULDBLOCK)
+                break;
+        }
 
-    if (conn == -1 || 
-        !client || 
-        !new_client_event(s, EPOLL_CTL_ADD, conn)
-    ) {
-        P_ERRORF("Client rejected %s:%d\n",
+        Client* client = client_init(&s->clients);
+
+        set_nonblocking(conn);
+
+        if (conn == -1 || 
+            !client    || 
+            !new_client_event(s, EPOLL_CTL_ADD, conn)
+        ) {
+            P_ERRORF("Client rejected %s:%d\n",
+                inet_ntoa(addr.sin_addr), 
+                addr.sin_port
+            );
+            close_client(s, conn);
+            return;
+        }
+
+        client->fd = conn;
+        (void)memcpy(
+            (void*)&client->addr, 
+            (void*)&addr, 
+            sizeof(addr)
+        );
+
+        LOGF("Client CONN [#%d, %d] %s:%d\n",
+            (int)(client - s->clients.list), conn,
             inet_ntoa(addr.sin_addr), 
             addr.sin_port
         );
-        close_client(s, conn);
-        return;
     }
-
-    // TODO ADD wait list/queue 
-    /* 
-        Once handshake has completed or
-        no handshake has been initiated
-
-        after timeout
-        close connection
-    */
-
-    LOGF("Client CONN [#%d, %d] %s:%d\n",
-        (int)(client - s->clients.list), conn,
-        inet_ntoa(addr.sin_addr), 
-        addr.sin_port
-    );
 }
 
 static void check_for_write(Server* s)
@@ -151,10 +169,12 @@ static void check_for_write(Server* s)
             .data.fd = s->clients.list[i].fd
         };
 
-        if (!queue_empty(&s->clients.list[i].msg_queue) ||
-            s->clients.list[i].secure.e_len > 0)
+        if (
+            !queue_empty(&s->clients.list[i].msg_queue) ||
+            B_LEN(s->clients.list[i].secure.encrypted_buf) > 0
+        )
             ev.events |= EPOLLOUT;
-
+        
         epoll_ctl(
             s->epoll_fd, 
             EPOLL_CTL_MOD, 
@@ -175,30 +195,35 @@ void server_loop(Server* s)
             -1
         );
 
-        /* Check for client connected time vs. 
+        /* TODO: Check for client connected time vs. 
         send packet_intro kick client out if too long*/
 
-        /* Failed */
+        /* epoll_wait() Failed */
         if (n_events == -1)
             break;
 
         for (int i = 0; i < n_events; i++) {
             const struct epoll_event* e = &s->events[i];
-            /* Error */
-            if (e->events & (EPOLLERR | EPOLLHUP | EPOLLRDHUP))
-                close_client(s, e->data.fd);
 
             /* Incoming connection */
-            else if (e->data.fd == s->sock_fd)
+            if (e->data.fd == s->sock_fd) {
                 accept_client(s);
+            }
+            else {
+                /* Error */
+                if (e->events & (EPOLLERR | EPOLLHUP | EPOLLRDHUP)) {
+                    close_client(s, e->data.fd);
+                    continue;
+                }
 
-            /* Recv data */
-            else if (e->events & EPOLLIN)
-                read_data(s, e->data.fd);
+                /* Recv data */
+                if (e->events & EPOLLIN)
+                    read_data(s, e->data.fd);
 
-            /* Write data */
-            else if (e->events & EPOLLOUT)
-                write_data(s, e->data.fd);
+                /* Write data */
+                if (e->events & EPOLLOUT)
+                    write_data(s, e->data.fd);
+            }
         }
     }
 }

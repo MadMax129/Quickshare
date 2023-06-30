@@ -6,13 +6,13 @@
 #include <openssl/pem.h>
 #include <openssl/ssl.h>
 
+#include "buffer.h"
+
 typedef struct {
     SSL* ssl;
     BIO* r_bio; 
     BIO* w_bio;
-    char* e_buf;
-    unsigned int e_len, 
-                 e_size;
+    Buffer encrypted_buf;
 } Secure;
 
 typedef enum {

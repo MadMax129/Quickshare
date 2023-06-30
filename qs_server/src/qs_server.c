@@ -28,7 +28,7 @@ int main(const int argc, const char* argv[])
 
 	db_init(&server.db);
 	ssl_init("./cert/server.crt", "./cert/server.key");
-	if (!mem_pool_init(1024 * 1024))
+	if (!mem_pool_init((1024 * 1024) * 2))
 		die("Memory pool fail");
 
 	client_list_init(&server.clients);

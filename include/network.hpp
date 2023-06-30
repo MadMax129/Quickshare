@@ -22,13 +22,16 @@
 #include <openssl/ssl.h>
 #include <openssl/err.h>
 #include <variant>
+#ifdef SYSTEM_UNX
+#   include <sys/select.h>
+#endif
 
 #include "state.hpp"
 #include "connection.hpp"
 #include "msg.h"
-#include "../lib/LockFreeQueueCpp11.h"
-#include <sys/select.h>
+#include "LockFreeQueueCpp11.h"
 #include "thread_manager.hpp"
+#include "client_poll.hpp"
 
 #define SERVER_MSG_QUEUE_SIZE 6
 
@@ -40,11 +43,30 @@ struct Server_Msg {
 
     struct Session_Key {
         char name[PC_NAME_MAX_LEN];
-        char s_id[SESSION_ID_MAX_LEN]; 
+        char s_id[SESSION_ID_MAX_LEN];
+        /* 0 - Join | 1 - Create */
+        bool opt;
     };
 
-    Server_Msg(Type type) : type(type) {}
-    
+    Server_Msg() = default;
+
+    template <typename T>
+    Server_Msg(Type type, const T& value) : 
+        type(type), 
+        data(value) {}
+
+    inline Type get_type() const {
+        return type;
+    }
+
+    template <typename T>
+    const T& get_data() const {
+        return std::get<T>(data);
+    }
+
+    void to_packet(Packet* packet);
+
+private:
     Type type;
     std::variant<Session_Key> data;
 };
@@ -72,22 +94,45 @@ public:
         return state.get();
     }
 
-    void start(const char name[PC_NAME_MAX_LEN], 
-               const char s_id[SESSION_ID_MAX_LEN]);
+    void session(const char name[PC_NAME_MAX_LEN], 
+                 const char s_id[SESSION_ID_MAX_LEN],
+                 bool opt);
 private:
+    struct Packet_Buf {
+        Packet* packet;
+        unsigned int len, 
+                     size;
+    };
+
     Network();
     Network(const Network&) = delete;
     Network& operator=(const Network&) = delete;
 
+    void start();
     bool init();
     void clean();
+    
+    bool tcp_connect();
+    bool tls_connect();
     bool init_conn(Status& active);
+    void check_write();
+    void handle(Status& active);
     void server_loop(Status& active);
+    
+    /* Packets */
+    void analize();
+    void server_response();
+
+    void write_data();
+    void convert_msg();
+    void read_data();
 
     Connection<Packet> conn;
+    Client_Poll<Packet> c_poll;
     State_Manager<State> state;
     Server_Queue msg_queue;
-    fd_set read_set, write_set;
+   
+    Packet_Buf rbuf, wbuf;
     SSL_CTX* ssl_ctx;
     SSL* ssl;
 };
