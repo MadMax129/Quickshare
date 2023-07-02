@@ -1,13 +1,14 @@
 #pragma once
 
 #include <GLFW/glfw3.h>
+#include <memory>
+
 #include "imgui.h"
 #include "main_menu.hpp"
 #include "login_menu.hpp"
 #include "network.hpp"
 #include "state.hpp"
 #include "thread_manager.hpp"
-#include <memory>
 #include "share_manager.hpp"
 
 #define WINDOW_HEIGHT 600

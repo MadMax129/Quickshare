@@ -89,22 +89,41 @@ bool new_client_event(Server* s, int op, int fd)
 
 void send_single_user(Client* recp, Client* c1, int type)
 {
+    assert(
+        type == P_SERVER_NEW_USERS ||
+        type == P_SERVER_DEL_USERS
+    );
+
     Packet* packet = enqueue(&recp->msg_queue);
     assert(packet);
+
     memset((void*)packet, 0, sizeof(Packet));
     
     PACKET_HDR(
         type, 
-        sizeof(packet->d.users), 
+        type == P_SERVER_NEW_USERS ? 
+            sizeof(packet->d.new_users) : 
+            sizeof(packet->d.del_user), 
         packet
     );
-    packet->d.users.users_len = 1;
-    packet->d.users.ids[0] = c1->id;
-    memcpy(
-        &packet->d.users.names[0],
-        c1->name,
-        PC_NAME_MAX_LEN
-    );
+
+    if (type == P_SERVER_NEW_USERS) {
+        packet->d.new_users.users_len = 1;
+        packet->d.new_users.ids[0]    = c1->id;
+        memcpy(
+            &packet->d.new_users.names[0],
+            c1->name,
+            PC_NAME_MAX_LEN
+        );
+    }
+    else {
+        packet->d.del_user.id = c1->id;
+        memcpy(
+            &packet->d.del_user.name,
+            c1->name,
+            PC_NAME_MAX_LEN
+        );
+    }
 }
 
 static void accept_client(Server* s)

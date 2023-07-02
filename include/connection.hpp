@@ -15,6 +15,7 @@ using socket_t = SOCKET;
 #   include <sys/socket.h>
 #   include <unistd.h>
 #   include <arpa/inet.h>
+#   include <fcntl.h>
 #   define CLOSE_SOCKET(sock) ::close(sock)
 using socket_t = int;
 #endif
@@ -48,8 +49,8 @@ struct Connection {
 #ifdef SYSTEM_WIN_64
         u_long mode = 1;
         (void)ioctlsocket(my_sock, FIONBIO, &mode);
-#elif defined(SYSTEM_UNIX)
-        const int flags = fcntl(sockfd, F_GETFL, 0);
+#elif defined(SYSTEM_UNX)
+        const int flags = fcntl(my_sock, F_GETFL, 0);
         (void)fcntl(my_sock, F_SETFL, flags | O_NONBLOCK);
 #endif
     }

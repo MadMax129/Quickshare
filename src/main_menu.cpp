@@ -1,8 +1,7 @@
-#include "context.hpp"
-#include "config.hpp"
-#include "util.h"
 #include <string>
-#include "nfd.h"
+
+#include "context.hpp"
+#include "util.h"
 #include "gui.hpp"
 
 #define MENU_BAR_MARGIN 20.0f
@@ -77,10 +76,12 @@ void Main_Menu::draw_path()
 
     ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.44706f, 0.53725f, 0.85490f, 1.0f)); 
     if (ImGui::Button(buffer, button_size)) {
-        const char* path = open_file();
+        const nfdchar_t* path = open_file();
 		if (path) {
 			std::sprintf(buffer, "%s###Path", path);
-			std::free((void*)path);
+			if (file_path)
+				std::free((void*)file_path);
+			file_path = path;
 		}
     }
     ImGui::PopStyleColor();
@@ -271,37 +272,39 @@ void Main_Menu::draw_users()
 
 	ImGui::SetCursorPos(save_center);
 
-	ImGui::Button("Send", {user_size.x, 20.0f});
+	if (ImGui::Button("Send", {user_size.x, 20.0f}))
+		transfer();
 
 	ImGui::PopStyleColor();
 	ImGui::PopStyleVar();
 }
 
+void Main_Menu::transfer()
+{
+
+}
+
 void Main_Menu::read_users()
 {
-	// Database& db = ctx.net.get_db();
-	// static bool try_get = false;
-	// const u32 update = db.get_update();
+	static bool trying_to_copy = false;
 
-	// /* Change has been made to Database */
-	// if (update > 0)
-	// 	try_get = true;
+	if (User_List::get_instance().get_dirty())
+		trying_to_copy = true;
 
-	// if (try_get && db.lock().try_lock()) {
-	// 	db.copy(client_list);
-	// 	db.got_update(update);
-	// 	db.lock().unlock();
-	// 	try_get = false;
-	// }
+	if (trying_to_copy && 
+		User_List::get_instance().get_copy(user_list)) {
+		trying_to_copy = false;
+	}
 }
 
 void Main_Menu::render_users()
 {
-	// for (auto& c : client_list) {
-	// 	char label[PC_NAME_MAX_LEN];
-	// 	safe_strcpy(label, c.name, PC_NAME_MAX_LEN);
-	// 	ImGui::Selectable(label, &c.selected);
-	// }
+	for (auto& c : user_list) 
+	{
+		char name[PC_NAME_MAX_LEN];
+		safe_strcpy(name, c.name, PC_NAME_MAX_LEN);
+		ImGui::Selectable(name, &c.selected);
+	}
 }
 
 void Main_Menu::add_event(Transfer_Type type, const char *desc, const char *fname)
@@ -349,10 +352,14 @@ void Main_Menu::add_event(Transfer_Type type, const char *desc, const char *fnam
 	ImGui::TextWrapped("'%s'", fname);
 }
 
-const char* Main_Menu::open_file()
+const nfdchar_t* Main_Menu::open_file()
 {
     nfdchar_t *outPath = NULL;
-    nfdresult_t result = NFD_OpenDialog(NULL, NULL, &outPath);
+    nfdresult_t result = NFD_OpenDialog(
+		NULL, 
+		NULL, 
+		&outPath
+	);
 
     if (result == NFD_OKAY)
     {

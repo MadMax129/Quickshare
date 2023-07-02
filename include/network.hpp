@@ -122,6 +122,7 @@ private:
     /* Packets */
     void analize();
     void server_response();
+    void update_users();
 
     void write_data();
     void convert_msg();

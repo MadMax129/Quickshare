@@ -80,10 +80,15 @@ typedef struct __attribute__((packed)) {
         } intro;
 
         struct {
-            char names[PC_NAME_MAX_LEN][CLIENT_LIST_LEN];
+            char names[CLIENT_LIST_LEN][PC_NAME_MAX_LEN];
             time_t ids[CLIENT_LIST_LEN];
             uint8_t users_len;
-        } users;
+        } new_users;
+
+        struct {
+            char name[PC_NAME_MAX_LEN];
+            time_t id;
+        } del_user;
 
         struct {
             Transfer_Hdr hdr;

@@ -1,5 +1,9 @@
 #pragma once
 
+#include "users.hpp"
+#include "nfd.h"
+
+
 class Context;
 
 class Main_Menu {
@@ -24,14 +28,15 @@ private:
     void draw_backlog();
     
     void draw_path();
-    const char* open_file();
+    const nfdchar_t* open_file();
     
     void draw_users();
     void check_net();
     void read_users();
     void render_users();
+    void transfer();
 
-    // Client_GUI_List client_list;
-    bool open;
+    const nfdchar_t* file_path;
+    User_Vec user_list;
     Context& ctx;
 };

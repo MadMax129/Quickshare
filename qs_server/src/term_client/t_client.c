@@ -9,7 +9,7 @@
 #include <poll.h>
 #include <assert.h>
 #include <pthread.h>
-#include "../../include/msg.h"
+#include "../../../shared/msg.h"
 
 #define SERVER_IP "127.0.0.1"
 #define SERVER_PORT 8080
@@ -266,17 +266,17 @@ void print_packet(Packet* packet)
             break;
         
         case P_SERVER_NEW_USERS: {
-            for (int i = 0 ; i < packet->d.users.users_len; i++) {
-                add_node(&c_list, packet->d.users.names[i], packet->d.users.ids[i]);
+            for (int i = 0 ; i < packet->d.new_users.users_len; i++) {
+                add_node(&c_list, packet->d.new_users.names[i], packet->d.new_users.ids[i]);
             }
             print_users();
             break;
         }
 
         case P_SERVER_DEL_USERS: {
-            for (int i = 0 ; i < packet->d.users.users_len; i++) {
-                remove_node(&c_list, packet->d.users.names[i]);
-            }
+            // for (int i = 0 ; i < packet->d.de.users_len; i++) {
+                remove_node(&c_list, packet->d.del_user.name);
+            // }
             print_users();
             break;
         }

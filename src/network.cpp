@@ -1,5 +1,6 @@
 #include "network.hpp"
 #include "client_poll.hpp"
+#include "users.hpp"
 
 Network::Network() : 
     c_poll(conn),
@@ -12,13 +13,14 @@ Network::Network() :
     SSL_load_error_strings();
 
     state.set(UNINITIALIZED);
-    memset(&rbuf, 0, sizeof(Packet_Buf));
-    memset(&wbuf, 0, sizeof(Packet_Buf));
 }
 
 bool Network::init()
 {
     const SSL_METHOD* method = TLS_client_method();
+
+    memset(&rbuf, 0, sizeof(Packet_Buf));
+    memset(&wbuf, 0, sizeof(Packet_Buf));
 
     ssl_ctx = SSL_CTX_new(method);
     rbuf.packet = (Packet*)alloc(sizeof(Packet));
@@ -206,7 +208,7 @@ void Network::clean()
         CLOSE_SOCKET(conn.me());
 
     state.set(UNINITIALIZED);
-    ssl = NULL;
+    ssl     = NULL;
     ssl_ctx = NULL;
 }
 
@@ -307,6 +309,11 @@ void Network::write_data()
 
         if (nbytes > 0) {
             wbuf.len += nbytes;
+
+            if (wbuf.len == wbuf.size) {
+                wbuf.len  = 0;
+                wbuf.size = 0;
+            }
         }
         else {
             P_ERRORF(
@@ -315,50 +322,51 @@ void Network::write_data()
             ); 
             assert(false);
         }
-
-        printf("===>%d %u %u\n", nbytes, wbuf.len, wbuf.size);
     }
 }
 
 void Network::read_data()
 {
-    const int nbytes = SSL_read(
-        ssl,
-        rbuf.packet + rbuf.len,
-        (sizeof(Packet_Hdr) + rbuf.size) - rbuf.len
-    );
+    do {
+        const int nbytes = SSL_read(
+            ssl,
+            (char*)rbuf.packet + rbuf.len,
+            (sizeof(Packet_Hdr) + rbuf.size) - rbuf.len
+        );
 
-    if (nbytes > 0) {
-        rbuf.len += nbytes;
-    
-        if (rbuf.len == sizeof(Packet_Hdr)) {
-            const Packet_Hdr* hdr = (Packet_Hdr*)rbuf.packet;
-            rbuf.size = hdr->size;
-        }
+        if (nbytes > 0) {
+            rbuf.len += nbytes;
 
-        if (rbuf.len == (rbuf.size + sizeof(Packet_Hdr))) {
-            analize();
-            rbuf.size = 0;
-            rbuf.len  = 0;
+            if (rbuf.len == sizeof(Packet_Hdr)) {
+                const Packet_Hdr* hdr = (Packet_Hdr*)rbuf.packet;
+                rbuf.size = hdr->size;
+            }
+
+            if (rbuf.len == (rbuf.size + sizeof(Packet_Hdr))) {
+                analize();
+                rbuf.size = 0;
+                rbuf.len  = 0;
+            }
         }
-    }
-    else {
-        switch (SSL_get_error(ssl, nbytes))
-        {
-            case SSL_ERROR_ZERO_RETURN:
-            case SSL_ERROR_SSL:
-            case SSL_ERROR_SYSCALL:
-                // HOW DO I GO BACK TO INIT LOOP
+        else {
+            const i32 err = SSL_get_error(ssl, nbytes);
+            if (err == SSL_ERROR_ZERO_RETURN ||
+                err == SSL_ERROR_SSL         ||
+                err == SSL_ERROR_SYSCALL
+            ) {
                 P_ERROR("Server disconnect\n");
                 break;
+            }
 
-            case SSL_ERROR_WANT_WRITE:
-            case SSL_ERROR_WANT_READ:
-                P_ERROR("HERE\n");
+            if (err == SSL_ERROR_WANT_WRITE ||
+                err == SSL_ERROR_WANT_READ
+            ) {
+                LOG("read WANT MORE\n");
                 break;
+            }
         }
-        assert(false);
-    }
+    } while (SSL_pending(ssl));
+    LOG("OUTTT\n");
 }
 
 void Network::analize()
@@ -372,6 +380,7 @@ void Network::analize()
     
         case P_SERVER_NEW_USERS:
         case P_SERVER_DEL_USERS:
+            update_users();
             break;
 
         case P_TRANSFER_VALID:
@@ -401,6 +410,16 @@ void Network::server_response()
         state.set(State::SESSION_ERROR);
 }
 
+void Network::update_users()
+{
+    const Packet* const p = rbuf.packet;
+
+    if (p->hdr.type == P_SERVER_NEW_USERS)
+        User_List::get_instance().add_users(p);
+    else 
+        User_List::get_instance().remove_user(p);
+}
+
 void Network::check_write()
 {
     /* Unset WRITE */
@@ -408,8 +427,10 @@ void Network::check_write()
 
     convert_msg();
 
-    if (wbuf.size > 0)
+    if (wbuf.size > 0) {
+        LOG("REAR\n");
         c_poll.get_events() |= EVENT_WRITE;
+    }
 }
 
 void Network::handle(Status& active)

@@ -28,7 +28,8 @@ MEM_POOL_OBJ = "../shared/mem_pool/mem.o"
 LOCK_FREE_QUEUE_HDR = "../lib/LockFreeQueueCpp11.h"
 
 INCLUDES = ../include
-SOURCES  =	network.cpp      \
+SOURCES  =	users.cpp        \
+			network.cpp      \
 			context.cpp      \
 			login_menu.cpp   \
 			main_menu.cpp    \

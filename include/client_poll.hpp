@@ -41,7 +41,7 @@ struct Client_Poll {
         poll_fds.events = event;
     }
 
-    i32 poll(u32 timeout_usec)
+    i32 poll(i32 timeout_usec)
     {
 #ifdef SYSTEM_UNX
         return ::poll(&poll_fds, 1, timeout_usec);

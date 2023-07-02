@@ -19,28 +19,33 @@ static void send_session_users(Server* s, Client* c)
     for (unsigned int i = 0; i < MAX_CLIENTS; i++) {
         Client* user = &s->clients.list[i];
 
-        if (user->id != c->id &&
+        if (user->state != C_EMPTY) {
+            LOGF("USER %s %ld %d %d\n", user->name, user->id, user->state, user->session_id);
+
+        }
+
+        if (user->id != c->id         &&
             user->state == C_COMPLETE && 
-            user->session_id == c->session_id) 
-        {
+            user->session_id == c->session_id
+        ) {
             if (!packet) {
                 packet = enqueue(&c->msg_queue);
                 assert(packet);
                 memset((void*)packet, 0, sizeof(Packet));
                 PACKET_HDR(
                     P_SERVER_NEW_USERS,
-                    sizeof(packet->d.users),
+                    sizeof(packet->d.new_users),
                     packet
                 );
             }
 
             memcpy(
-                &packet->d.users.names[count],
+                &packet->d.new_users.names[count],
                 user->name,
                 PC_NAME_MAX_LEN
             );
-            packet->d.users.ids[count] = user->id;
-            ++packet->d.users.users_len;
+            packet->d.new_users.ids[count] = user->id;
+            ++packet->d.new_users.users_len;
             ++count;
 
             send_single_user(user, c, P_SERVER_NEW_USERS);
