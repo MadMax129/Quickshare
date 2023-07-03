@@ -9,7 +9,6 @@
 #include "network.hpp"
 #include "state.hpp"
 #include "thread_manager.hpp"
-#include "share_manager.hpp"
 
 #define WINDOW_HEIGHT 600
 #define WINDOW_WIDTH 600

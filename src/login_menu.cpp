@@ -19,6 +19,16 @@ Login_Menu::Login_Menu(Context& context) : ctx(context)
 	clean();
 }
 
+// void RenderProgressBar(float value, float maxValue)
+// {
+//     ImGui::PushStyleColor(ImGuiCol_FrameBg, ImVec4(0.2f, 0.2f, 0.2f, 1.0f));
+//     ImGui::PushStyleColor(ImGuiCol_PlotHistogram, ImVec4(1.0f, 1.0f, 1.0f, 1.0f));
+
+//     ImGui::ProgressBar(value / maxValue, ImVec2(200, 10), "Hi");
+
+//     ImGui::PopStyleColor(2);
+// }
+
 void Login_Menu::clean()
 {
 	std::memset(key, 0, sizeof(Key));
@@ -231,7 +241,9 @@ void Login_Menu::draw_text()
 	if (state == NETWORK_ERROR) 
 		ImGui::TextColored(ImVec4(1.0f, 0.0f, 0.0f, 1.0f), "%s", error);
 	else if (state == CONNECTING)
-		ImGui::Text("Connecting %c", "|/-\\"[(int)(ImGui::GetTime() / 0.3f) & 3]);
+		// ImGui::Text("Connecting %*s", 7, anim[(int)(ImGui::GetTime() / 0.3f) % 7]);
+		ImGui::TextColored(ImVec4(146/255.f, 230/255.f, 147/255.f, 1.0f), "Connecting %c", ".oOOo."[(int)(ImGui::GetTime() / 0.3f) % 6]);
+		// ImGui::Text("Connecting %c", "|/-\\"[(int)(ImGui::GetTime() / 0.3f) & 3]);
 	else
 		ImGui::Text(" ");
 

@@ -27,13 +27,14 @@ enum {
             - Invalid
         Reply (S/C)
             * transfer_reply
-            + Valid
-            - Invalid
-        Data (S/C)
-        Cancel (S/C)
-        Complete (S/C) 
-        Valid (S)
+        Data (S/C) 
+            * transfer_data
+        Cancel   (S/C) 
+        Complete (S/C)
+            * transfer_state
+        Valid   (S)
         Invalid (S)
+            * transfer_reply
     */
    P_TRANSFER_VALID,
    P_TRANSFER_INVALID,
@@ -59,6 +60,12 @@ typedef struct __attribute__((packed)) {
     Client_ID from;
     Client_ID to[TRANSFER_CLIENTS_MAX];
 } Transfer_Hdr;
+
+typedef struct __attribute((packed)) {
+    Transfer_Hdr hdr;
+    char file_name[FILE_NAME_LEN];
+    uint64_t file_size;
+} Transfer_Request;
 
 typedef struct __attribute__((packed)) {
     Packet_Hdr hdr;
@@ -90,11 +97,7 @@ typedef struct __attribute__((packed)) {
             time_t id;
         } del_user;
 
-        struct {
-            Transfer_Hdr hdr;
-            char file_name[FILE_NAME_LEN];
-            uint64_t file_size;
-        } request;
+        Transfer_Request request;
 
         struct {
             Transfer_Hdr hdr;
@@ -104,10 +107,6 @@ typedef struct __attribute__((packed)) {
         struct {
             Transfer_Hdr hdr;
         } transfer_state;
-
-        struct {
-            Transfer_ID id;
-        } transfer_info;
 
         struct {
             Transfer_Hdr hdr;

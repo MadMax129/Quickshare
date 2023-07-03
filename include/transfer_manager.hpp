@@ -1,12 +1,37 @@
 #pragma once
 
+#include <atomic>
+
+#include "msg.h"
 #include "network.hpp"
 #include "connection.hpp"
 #include "file_manager.hpp"
-#include <atomic>
 
 class Transfer_Manager {
 public:
+    enum Transfer_Type {
+        /* Transfer created by client */
+        TRANSFER_HOST,
+        /* Transfer recv from other */
+        TRANSFER_RECV
+    };
+
+    enum Transfer_State {
+        PENDING,
+        CANCELLED,
+        ACTIVE,
+        ERROR,
+        COMPLETE
+    };
+
+    struct Transfer {
+        Transfer_Type type;
+        Transfer_State state;
+        Transfer_Request info;
+        uint64_t progress;
+        // file manager thing
+    };
+
     Transfer_Manager() {}
 
     /* API
@@ -33,8 +58,7 @@ public:
 
     cancel transfer()
         call at any point to cancel 
-        * Either server or client    
-    
+        * Either server or client  
     
     */
 

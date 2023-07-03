@@ -1,6 +1,7 @@
 #include "network.hpp"
 #include "client_poll.hpp"
 #include "users.hpp"
+#include "transfer_manager.hpp"
 
 Network::Network() : 
     c_poll(conn),

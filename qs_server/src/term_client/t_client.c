@@ -222,10 +222,10 @@ void print_packet(Packet* packet)
         case P_TRANSFER_VALID:
             print_output(
                 "Transfer valid t_id:%ld", 
-                packet->d.transfer_info.id
+                packet->d.request.hdr.t_id
             );
 
-            transfers.transfer[transfers.head].t_id = packet->d.transfer_info.id;
+            transfers.transfer[transfers.head].t_id = packet->d.request.hdr.t_id;
             ++transfers.head;
             break;
 

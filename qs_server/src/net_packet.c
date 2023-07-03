@@ -183,12 +183,14 @@ static void packet_transfer(Server* s, Client* c)
     
     Packet* response = enqueue(&c->msg_queue);
     assert(response);
+    (void)memcpy(response, p, sizeof(Packet));
+
     PACKET_HDR(
         P_TRANSFER_VALID, 
-        sizeof(response->d.transfer_info), 
+        sizeof(response->d.request), 
         response
     );
-    response->d.transfer_info.id = t_id;
+    response->d.request.hdr.t_id = t_id;
 
     echo_transfer_request(s, c, p, t_id);
     return;
@@ -232,12 +234,16 @@ static void packet_data(Server* s, Client* c)
         p->d.transfer_data.hdr.t_id
     );
 
+    // check that the data coming in is your transfer creator_id
+
+    assert(recp_id != 0);
+
     while (recp_id) {
         Client* other = client_find_by_id(&s->clients, recp_id);
         if (other) {
             Packet* packet = enqueue(&other->msg_queue);
             assert(packet);
-            memcpy(packet, p, sizeof(Packet));
+            (void)memcpy(packet, p, sizeof(Packet));
         }
         recp_id = db_client_all_step_accepted(&s->db);
     }
