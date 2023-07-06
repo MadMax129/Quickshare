@@ -1,5 +1,4 @@
 #include "login_menu.hpp"
-#include "config.hpp"
 #include "context.hpp"
 #include "gui.hpp"
 #include <cstring>
@@ -158,7 +157,7 @@ void Login_Menu::draw_key()
 void Login_Menu::button()
 {
 	if (strnlen(key, IM_ARRAYSIZE(key) - 1) > 0) {
-		Network::getInstance().session(ctx.get_name(), key, !login_state);
+		Network::get_instance().session(ctx.get_name(), key, login_state);
 	}
 }
 
@@ -191,7 +190,7 @@ void Login_Menu::draw_enter()
 
 void Login_Menu::net_check()
 {
-	switch (Network::getInstance().get_state())
+	switch (Network::get_instance().get_state())
 	{
 		case Network::State::INIT_ERROR:
 		case Network::State::NET_ERROR:

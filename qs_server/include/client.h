@@ -14,7 +14,6 @@
 
 #define MAX_CLIENTS 32
 #define MSG_QUEUE_SIZE 8
-#define NAME_SIZE
 
 typedef struct {
     Client_ID id;

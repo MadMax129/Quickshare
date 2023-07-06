@@ -3,7 +3,6 @@
 #include "users.hpp"
 #include "nfd.h"
 
-
 class Context;
 
 class Main_Menu {

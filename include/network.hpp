@@ -33,8 +33,6 @@
 #include "thread_manager.hpp"
 #include "client_poll.hpp"
 
-#define SERVER_MSG_QUEUE_SIZE 6
-
 struct Server_Msg {
     enum Type {
         SESSION_KEY,
@@ -85,7 +83,7 @@ public:
         SESSION_SUCCESS
     };
 
-    static Network& getInstance() {
+    static Network& get_instance() {
         static Network instance;
         return instance;
     }
@@ -125,7 +123,7 @@ private:
     void update_users();
 
     void write_data();
-    void convert_msg();
+    bool convert_msg();
     void read_data();
 
     Connection<Packet> conn;

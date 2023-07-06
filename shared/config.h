@@ -4,13 +4,26 @@
 #include <time.h>
 
 /* Collection of all Quickshare configurations */
+
+/* Packet */
 #define PACKET_MAX_SIZE 1440
 #define PC_NAME_MAX_LEN 16
 #define SESSION_ID_MAX_LEN 16
 #define CLIENT_LIST_LEN 32
 #define FILE_NAME_LEN 64
 #define TRANSFER_CLIENTS_MAX 6
+
+/* Mem Pool */
 #define MEM_POOL_SIZE (1024 * 1024)
+
+/* Network */
+#define SERVER_MSG_QUEUE_SIZE 6
+
+/* Transfers */
+#define SIM_TRANSFERS_MAX 6
+
+/* Threads */
+#define THREAD_NUMBER_MAX 8
 
 typedef time_t Client_ID;
 typedef long Transfer_ID;

@@ -23,8 +23,6 @@ enum {
     /* Transfer file msgs
         Request (C)
             * request
-            + Valid (transfer_info)
-            - Invalid
         Reply (S/C)
             * transfer_reply
         Data (S/C) 
@@ -61,8 +59,9 @@ typedef struct __attribute__((packed)) {
     Client_ID to[TRANSFER_CLIENTS_MAX];
 } Transfer_Hdr;
 
-typedef struct __attribute((packed)) {
+typedef struct __attribute__((packed)) {
     Transfer_Hdr hdr;
+    Transfer_ID client_transfer_id;
     char file_name[FILE_NAME_LEN];
     uint64_t file_size;
 } Transfer_Request;

@@ -146,12 +146,36 @@ static void echo_transfer_request(Server* s, Client* c,
             c_id
         );
 
+        /* Already checked validity */
+        assert(r);
+
         Packet* packet = enqueue(&r->msg_queue);
         assert(packet);
         (void)memcpy(packet, req, sizeof(Packet));
         packet->d.request.hdr.from = c->id;
         packet->d.request.hdr.t_id = t_id;
     }
+}
+
+static void send_transfer_response(Client* c, const Packet* req, 
+                                   const int type, const Transfer_ID t_id)
+{
+    assert(type == P_TRANSFER_INVALID || type == P_TRANSFER_VALID);
+
+    Packet* const response = enqueue(&c->msg_queue);
+    assert(response);
+
+    /* Copy request */
+    (void)memcpy(response, req, sizeof(Packet));
+
+    PACKET_HDR(
+        type,
+        sizeof(response->d.request),
+        response
+    );
+
+    if (type == P_TRANSFER_VALID)
+        response->d.request.hdr.t_id = t_id;
 }
 
 static void packet_transfer(Server* s, Client* c)
@@ -161,14 +185,16 @@ static void packet_transfer(Server* s, Client* c)
 
     colored_printf(CL_BLUE,
         "Transfer Request\n"
-        "\t%.*s = %lu\n",   
+        "\t%.*s = %lu\n"
+        "\tClient TID: %lu\n",   
         (int)sizeof(p->d.request.file_name), 
         p->d.request.file_name,
-        p->d.request.file_size    
+        p->d.request.file_size,
+        p->d.request.client_transfer_id    
     );
 
     if (!db_transaction(&s->db, BEGIN_TRANSACTION)) {
-        server_resposne(c, P_TRANSFER_INVALID);
+        send_transfer_response(c, p, P_TRANSFER_INVALID, 0);
         return;
     }
 
@@ -181,22 +207,13 @@ static void packet_transfer(Server* s, Client* c)
         goto error;
     }
     
-    Packet* response = enqueue(&c->msg_queue);
-    assert(response);
-    (void)memcpy(response, p, sizeof(Packet));
-
-    PACKET_HDR(
-        P_TRANSFER_VALID, 
-        sizeof(response->d.request), 
-        response
-    );
-    response->d.request.hdr.t_id = t_id;
+    send_transfer_response(c, p, P_TRANSFER_INVALID, t_id);
 
     echo_transfer_request(s, c, p, t_id);
     return;
 
 error:
-    server_resposne(c, P_TRANSFER_INVALID);
+    send_transfer_response(c, p, P_TRANSFER_INVALID, 0);
     db_transaction(&s->db, ROLLBACK_TRANSACTION);
 }
 
@@ -205,7 +222,8 @@ static void packet_reply(Server* s, Client* c)
     const Packet* const p = B_DATA(c->decrypt_buf);
 
     db_client_accept(
-        &s->db, c->id, 
+        &s->db, 
+        c->id, 
         p->d.transfer_reply.hdr.t_id,
         p->d.transfer_reply.accept
     );
@@ -235,6 +253,9 @@ static void packet_data(Server* s, Client* c)
     );
 
     // check that the data coming in is your transfer creator_id
+    // what if all clients canceled or denied
+    //  -> cancel transfer
+    //  -> dont send data
 
     assert(recp_id != 0);
 

@@ -1,6 +1,7 @@
 #pragma once
 
 #include <atomic>
+#include <vector>
 
 #include "msg.h"
 #include "network.hpp"
@@ -25,14 +26,26 @@ public:
     };
 
     struct Transfer {
-        Transfer_Type type;
+        Transfer(Transfer_Type type) : 
+            type(type), 
+            state(PENDING),
+            t_hdr({}),
+            client_t_id(0) {}
+    
+        const Transfer_Type  type;
         Transfer_State state;
-        Transfer_Request info;
-        uint64_t progress;
-        // file manager thing
+        Transfer_Hdr   t_hdr;
+        Transfer_ID    client_t_id;
+        File_Manager   file_session;
     };
 
-    Transfer_Manager() {}
+    static Transfer_Manager& get_instance() {
+        static Transfer_Manager instance;
+        return instance;
+    }
+
+    void create_request();
+    void create_request(const Transfer_ID t_id);
 
     /* API
     
@@ -64,9 +77,10 @@ public:
 
 
 private:
-    /* File_Manager */
+    Transfer_Manager();
+    Transfer_Manager(const Transfer_Manager&) = delete;
+    Transfer_Manager& operator=(const Transfer_Manager&) = delete;
 
-
-
-
+    std::vector<Transfer> transfers;
+    Transfer_ID client_transfer_ids;
 };

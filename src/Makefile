@@ -28,11 +28,13 @@ MEM_POOL_OBJ = "../shared/mem_pool/mem.o"
 LOCK_FREE_QUEUE_HDR = "../lib/LockFreeQueueCpp11.h"
 
 INCLUDES = ../include
-SOURCES  =	users.cpp        \
-			network.cpp      \
-			context.cpp      \
-			login_menu.cpp   \
-			main_menu.cpp    \
+SOURCES  =	users.cpp            \
+			file_manager.cpp     \
+			transfer_manager.cpp \
+			network.cpp          \
+			context.cpp          \
+			login_menu.cpp       \
+			main_menu.cpp        \
 			quickshare.cpp
 
 SRC_OBJS   = $(addprefix $(BUILD_DIR)/, $(addsuffix .o, $(basename $(notdir $(SOURCES)))))

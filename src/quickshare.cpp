@@ -19,6 +19,7 @@
 
 #include "util.h"
 #include "context.hpp"
+#include "transfer_manager.hpp"
 #include "config.h"
 #include "mem.h"
 
@@ -61,6 +62,9 @@ void Quickshare::end()
 void Quickshare::main()
 {
     Context& ctx = Context::get_instance();
+    (void)Network::get_instance();
+    (void)User_List::get_instance();
+    (void)Transfer_Manager::get_instance();
 
     if (!ctx.create_window(WINDOW_WIDTH, WINDOW_HEIGHT, "Quickshare")) {
         P_ERROR("Failed to create window...");

@@ -1,7 +1,6 @@
 #include "context.hpp"
 #include "imgui_impl_glfw.h"
 #include "imgui_impl_opengl3.h"
-#include "config.hpp"
 #include "gui.hpp"
 #include "util.h"
 #define STB_IMAGE_IMPLEMENTATION
@@ -29,7 +28,6 @@ Context::Context() : f_menu(*this), l_menu(*this),
 {
     app_state.set(LOGIN);
     get_pc_name(pc_name);
-    LOGF("%s\n", pc_name);
 }
 
 void Context::init_style()

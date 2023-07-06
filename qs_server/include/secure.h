@@ -21,8 +21,6 @@ typedef enum {
     STATUS_FAIL
 } Secure_State;
 
-extern SSL_CTX* ssl_ctx;
-
 void ssl_init(const char* certfile, const char* keyfile);
 void secure_init(Secure* s);
 void secure_free(Secure* s);

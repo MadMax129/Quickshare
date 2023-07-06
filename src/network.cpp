@@ -259,23 +259,25 @@ void Server_Msg::to_packet(Packet* packet)
 
             safe_strcpy(
                 packet->d.intro.id, 
-                get_data<Server_Msg::Session_Key>().s_id, 
+                get_data<Session_Key>().s_id, 
                 SESSION_ID_MAX_LEN
             );
 
             safe_strcpy(
                 packet->d.intro.name, 
-                get_data<Server_Msg::Session_Key>().name, 
+                get_data<Session_Key>().name, 
                 PC_NAME_MAX_LEN
             );
 
             packet->d.intro.id_len = strlen(
-                get_data<Server_Msg::Session_Key>().s_id
+                get_data<Session_Key>().s_id
             );
 
             packet->d.intro.name_len = strlen(
-                get_data<Server_Msg::Session_Key>().name
+                get_data<Session_Key>().name
             );
+
+            packet->d.intro.session = get_data<Session_Key>().opt;
             break;
         }
 
@@ -284,19 +286,21 @@ void Server_Msg::to_packet(Packet* packet)
     }
 }
 
-void Network::convert_msg()
+bool Network::convert_msg()
 {
     Packet* packet = wbuf.packet;
     Server_Msg msg;
 
     if (!msg_queue.peek(msg))
-        return;
+        return false;
 
     msg.to_packet(packet);
     wbuf.len  = 0;
     wbuf.size = packet->hdr.size + 
         sizeof(Packet_Hdr);
     msg_queue.pop();
+
+    return true;
 }
 
 void Network::write_data()
@@ -356,6 +360,7 @@ void Network::read_data()
                 err == SSL_ERROR_SYSCALL
             ) {
                 P_ERROR("Server disconnect\n");
+                assert(false);
                 break;
             }
 
@@ -426,9 +431,7 @@ void Network::check_write()
     /* Unset WRITE */
     c_poll.get_events() &= ~EVENT_WRITE;
 
-    convert_msg();
-
-    if (wbuf.size > 0) {
+    if (convert_msg()) {
         LOG("REAR\n");
         c_poll.get_events() |= EVENT_WRITE;
     }

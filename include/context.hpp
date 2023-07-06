@@ -11,9 +11,9 @@
 #include "thread_manager.hpp"
 
 #define WINDOW_HEIGHT 600
-#define WINDOW_WIDTH 600
-#define ICON_PATH "../images/logo.png"
-#define FONT_SIZE 15.0f
+#define WINDOW_WIDTH  600
+#define ICON_PATH     "../images/logo.png"
+#define FONT_SIZE     15.0f
 
 class Context {
 public:

@@ -5,7 +5,7 @@
 #include "server.h"
 #include "die.h"
 
-SSL_CTX* ssl_ctx;
+static SSL_CTX* ssl_ctx;
 
 void ssl_init(const char * certfile, const char* keyfile)
 {
