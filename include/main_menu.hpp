@@ -1,6 +1,7 @@
 #pragma once
 
 #include "users.hpp"
+#include "transfer_manager.hpp"
 #include "nfd.h"
 
 class Context;
@@ -23,19 +24,22 @@ private:
     
     void draw_menus();
     void draw_request();
+    void render_request();
     void draw_session();
+    void render_session();
     void draw_backlog();
-    
+    void draw_users();
+    void render_users();
     void draw_path();
+    
     const nfdchar_t* open_file();
     
-    void draw_users();
+    void copy_data();
     void check_net();
-    void read_users();
-    void render_users();
     void transfer();
 
     const nfdchar_t* file_path;
     User_Vec user_list;
+    Transfer_Vec transfer_list;
     Context& ctx;
 };

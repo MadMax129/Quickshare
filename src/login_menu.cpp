@@ -18,16 +18,6 @@ Login_Menu::Login_Menu(Context& context) : ctx(context)
 	clean();
 }
 
-// void RenderProgressBar(float value, float maxValue)
-// {
-//     ImGui::PushStyleColor(ImGuiCol_FrameBg, ImVec4(0.2f, 0.2f, 0.2f, 1.0f));
-//     ImGui::PushStyleColor(ImGuiCol_PlotHistogram, ImVec4(1.0f, 1.0f, 1.0f, 1.0f));
-
-//     ImGui::ProgressBar(value / maxValue, ImVec2(200, 10), "Hi");
-
-//     ImGui::PopStyleColor(2);
-// }
-
 void Login_Menu::clean()
 {
 	std::memset(key, 0, sizeof(Key));

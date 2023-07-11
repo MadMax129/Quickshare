@@ -28,23 +28,17 @@ struct User_List {
     void add_users(const Packet* packet);
     void remove_user(const Packet* packet);
     
-    inline bool get_copy(User_Vec& vec)
+    inline void copy(User_Vec& vec)
     {
-        if (lock.try_lock()) {
-            vec = user_list;
-            dirty.store(false, std::memory_order_release);
-            lock.unlock();
-            return true;
+        if (dirty.load(std::memory_order_acquire)) {
+            if (lock.try_lock()) {
+                vec = user_list;
+                dirty.store(false, std::memory_order_release);
+                lock.unlock();
+            }
         }
-
-        return false;
     }
-
-    inline bool get_dirty()
-    {
-        return dirty.load(std::memory_order_relaxed);
-    }
-
+    
 private:
     User_List();
     User_List(const User_List&) = delete;

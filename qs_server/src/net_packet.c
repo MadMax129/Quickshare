@@ -19,11 +19,6 @@ static void send_session_users(Server* s, Client* c)
     for (unsigned int i = 0; i < MAX_CLIENTS; i++) {
         Client* user = &s->clients.list[i];
 
-        if (user->state != C_EMPTY) {
-            LOGF("USER %s %ld %d %d\n", user->name, user->id, user->state, user->session_id);
-
-        }
-
         if (user->id != c->id         &&
             user->state == C_COMPLETE && 
             user->session_id == c->session_id

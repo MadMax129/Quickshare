@@ -2,18 +2,20 @@
 #include <assert.h>
 #include <string>
 #include <cstring>
+#include <new>
 
 #include "file_manager.hpp"
 #include "mem.h"
 
-File_Manager::File_Manager() : 
-    session({}) 
+File_Manager::File_Manager()
 {
-    session.buf = alloc(1024 * 12);
+    for (Session& s : write_transfers)
+        new (&s) Session();
 
-    if (!session.buf) {
-        P_ERROR("File Mangaer buffer alloc failed\n");
-        exit(EXIT_FAILURE);
+    for (Session& s : read_transfers) {
+        new (&s) Session();
+        s.buf = alloc(1024 * 12);
+        assert(s.buf);
     }
 }
 
@@ -27,25 +29,44 @@ i64 File_Manager::get_file_size(FILE* file_fd) const
     return ftell(file_fd);
 }
 
-bool File_Manager::read_file(const char* path)
+File_Manager::Session* File_Manager::get_session(Transfer_Array& t_array)
 {
-    session.file_fd = std::fopen(path, "rb");
-    i64 file_size;
-
-    if (!session.file_fd ||
-        (file_size = get_file_size(session.file_fd)) == -1
-    ) {
-        return false;
+    for (auto& s : t_array) {
+        if (s.state.load(std::memory_order_acquire) == EMPTY)
+            return &s;
     }
 
-    session.file_size = session.left_to_read = file_size;
-    session.buf_len = 0;
-    session.state = State::READING;
-    
-    return true;
+    return NULL;
 }
 
-bool File_Manager::write_file(const char* filename)
+File_Manager::Session* File_Manager::read_file(const char* path)
+{
+    Session* const session = get_session(read_transfers);
+
+    if (!session)
+        return NULL;
+
+    session->file_fd = std::fopen(path, "rb");
+    i64 file_size;
+
+    if (!session->file_fd ||
+        (file_size = get_file_size(session->file_fd)) == -1
+    ) {
+        return NULL;
+    }
+
+    session->file_size = file_size;
+    session->buf_len = 0;
+    
+    session->progress.store(0, std::memory_order_relaxed);
+    session->state.store(WORKING, std::memory_order_release);
+
+    LOGF("OPENED FILE %s\n", path);
+    
+    return session;
+}
+
+File_Manager::Session* File_Manager::write_file(const char* filename)
 {
     const char* env_name;
 
@@ -54,9 +75,9 @@ bool File_Manager::write_file(const char* filename)
 #elif defined(SYSTEM_UNX)
     env_name = std::getenv("USER");
 #endif
-
-    if (!env_name)
-        return false;
+    Session* session = get_session(write_transfers);
+    if (!env_name || !session)
+        return NULL;
 
     std::string download_path;
 #ifdef SYSTEM_WIN_64
@@ -72,56 +93,86 @@ bool File_Manager::write_file(const char* filename)
 #endif
 
     LOGF("PATH %s\n", download_path.c_str());
-    assert(false);
 
-    session.file_fd = std::fopen(download_path.c_str(), "wb");
+    session->progress.store(0, std::memory_order_relaxed);
+    session->state.store(WORKING, std::memory_order_release);
 
-    if (!session.file_fd)
-        return false;
+    // session.file_fd = std::fopen(download_path.c_str(), "wb");
 
-    /* Pass in file size !! */
-    // session.file_size = session.left_to_read = file_size;
-    // session.buf_len = 0;
-    session.state = State::WRITING;
+    // if (!session.file_fd)
+    //     return false;
 
-    return true;
+    // /* Pass in file size !! */
+    // // session.file_size = session.left_to_read = file_size;
+    // // session.buf_len = 0;
+    // session.state = State::WRITING;
+
+    return session;
 }
 
-bool File_Manager::make_data_packet(Packet* packet)
+File_Manager::Session* File_Manager::get_work()
 {
-    if (session.state == READING) {
+    for (u32 i = 0; i < SIM_TRANSFERS_MAX; i++) {
+        const State s1 = write_transfers[i].state.load(
+            std::memory_order_acquire
+        );
 
-        if (session.buf_len == 0) {
-            // Read buf from file
-            ssize_t n = std::fread(
-                session.buf, 
-                1, 
-                1024 * 12, 
-                session.file_fd
+        if (s1 == WORKING || s1 == COMPLETE)
+            return &write_transfers[i];
+    }
+
+    return NULL;
+}
+
+bool File_Manager::send_packet(Packet* packet)
+{   
+    Session* session = get_work();
+
+    if (!session)
+        return false; 
+
+    const State session_state = session->state.load(std::memory_order_acquire);
+
+    switch (session_state)
+    {
+        case WORKING: {
+            if (session->buf_len == 0) {
+                session->buf_len = std::fread(
+                    session->buf, 
+                    1, 
+                    1024 * 12, 
+                    session->file_fd
+                );
+
+                assert(session->buf_len);
+            }
+
+            assert(session->buf_len <= sizeof(packet->d.transfer_data.bytes));
+
+            PACKET_HDR(
+                P_TRANSFER_DATA,
+                sizeof(packet->d.transfer_data),
+                packet
             );
 
-            session.buf_len = n;
+            packet->d.transfer_data.b_size = session->buf_len;
+            (void)std::memcpy(
+                packet->d.transfer_data.bytes,
+                session->buf,
+                session->buf_len
+            );
+
+            session->state = COMPLETE;
+
+            break;
         }
+        
+        case COMPLETE:
+            LOG("COMPLETE\n");
+            break;
 
-        assert(session.buf_len <= sizeof(packet->d.transfer_data.bytes));
-
-        PACKET_HDR(
-            P_TRANSFER_DATA,
-            sizeof(packet->d.transfer_data),
-            packet
-        );
-
-        packet->d.transfer_data.b_size = session.buf_len;
-        (void)std::memcpy(
-            packet->d.transfer_data.bytes,
-            session.buf,
-            session.buf_len
-        );
-
-        session.state = COMPLETE;
-    } else {
-        LOG("COMPLETE\n");
-        return false;
+        case EMPTY:
+            return false;
     }
 
     return true;

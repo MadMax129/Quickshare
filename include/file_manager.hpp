@@ -3,6 +3,7 @@
 #include <stdio.h>
 #include <array>
 #include <optional>
+#include <atomic>
 
 #include "util.h"
 #include "config.h"
@@ -12,30 +13,44 @@ class File_Manager {
 public:
     enum State {
         EMPTY,
-        READING,
-        WRITING,
+        WORKING,
         COMPLETE
     };  
 
     struct Session {
-        State state;
+        Session() :
+            state(EMPTY),
+            progress(0),
+            file_fd(NULL),
+            buf(NULL),
+            buf_len(0),
+            file_size(0) 
+        {}
+
+        std::atomic<State> state;
+        std::atomic<u32> progress;
         FILE* file_fd;
         char* buf;
         u64 buf_len,
-            file_size,
-            left_to_read;
+            file_size;    
     };
     
+    using Transfer_Array = std::array<Session, SIM_TRANSFERS_MAX>;
+
     File_Manager();
 
-    bool read_file(const char* path);
-    bool write_file(const char* filename);
+    Session* read_file(const char* path);
+    Session* write_file(const char* filename);
     
-    bool make_data_packet(Packet* packet);
+    bool send_packet(Packet* packet);
     bool read_data_packet(Packet* packet);
 
 private:
     i64 get_file_size(FILE* file_fd) const;
+    Session* get_session(Transfer_Array& t_array);
+    Session* get_work();
 
-    Session session;
+    Transfer_Array write_transfers;
+    char cache_line_pad[64];
+    Transfer_Array read_transfers;
 };

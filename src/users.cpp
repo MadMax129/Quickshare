@@ -13,6 +13,7 @@ User::User(const char name[PC_NAME_MAX_LEN],
            Client_ID id) : id(id)
 {
     (void)std::memcpy(this->name, name, PC_NAME_MAX_LEN);
+    selected = false;
 }
 
 void User_List::add_users(const Packet* packet)

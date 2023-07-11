@@ -289,6 +289,15 @@ void Server_Msg::to_packet(Packet* packet)
 bool Network::convert_msg()
 {
     Packet* packet = wbuf.packet;
+
+    if (Transfer_Manager::get_instance().write_packet(packet)) {
+        LOG("GOT T WORK\n");
+        wbuf.len  = 0;
+        wbuf.size = packet->hdr.size + 
+            sizeof(Packet_Hdr);
+        return true;
+    }
+
     Server_Msg msg;
 
     if (!msg_queue.peek(msg))
@@ -389,9 +398,18 @@ void Network::analize()
             update_users();
             break;
 
+        case P_TRANSFER_REQUEST:
+            Transfer_Manager::get_instance()
+                .create_request(
+                    &rbuf.packet->d.request
+                );
+            break;
+        
         case P_TRANSFER_VALID:
         case P_TRANSFER_INVALID:
-        case P_TRANSFER_REQUEST:
+            
+            break;
+
         case P_TRANSFER_REPLY:
         case P_TRANSFER_DATA:
         case P_TRANSFER_CANCEL:
@@ -431,10 +449,8 @@ void Network::check_write()
     /* Unset WRITE */
     c_poll.get_events() &= ~EVENT_WRITE;
 
-    if (convert_msg()) {
-        LOG("REAR\n");
+    if (convert_msg())
         c_poll.get_events() |= EVENT_WRITE;
-    }
 }
 
 void Network::handle(Status& active)
