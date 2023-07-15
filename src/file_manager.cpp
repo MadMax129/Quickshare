@@ -60,8 +60,6 @@ File_Manager::Session* File_Manager::read_file(const char* path)
     
     session->progress.store(0, std::memory_order_relaxed);
     session->state.store(WORKING, std::memory_order_release);
-
-    LOGF("OPENED FILE %s\n", path);
     
     return session;
 }
@@ -113,18 +111,18 @@ File_Manager::Session* File_Manager::write_file(const char* filename)
 File_Manager::Session* File_Manager::get_work()
 {
     for (u32 i = 0; i < SIM_TRANSFERS_MAX; i++) {
-        const State s1 = write_transfers[i].state.load(
+        const State s1 = read_transfers[i].state.load(
             std::memory_order_acquire
         );
 
         if (s1 == WORKING || s1 == COMPLETE)
-            return &write_transfers[i];
+            return &read_transfers[i];
     }
 
     return NULL;
 }
 
-bool File_Manager::send_packet(Packet* packet)
+bool File_Manager::read_from_file(Packet* packet)
 {   
     Session* session = get_work();
 
@@ -147,7 +145,10 @@ bool File_Manager::send_packet(Packet* packet)
                 assert(session->buf_len);
             }
 
+            printf("==>%s\n", session->buf);
+
             assert(session->buf_len <= sizeof(packet->d.transfer_data.bytes));
+            assert(session->buf_len == session->file_size);
 
             PACKET_HDR(
                 P_TRANSFER_DATA,
@@ -162,7 +163,7 @@ bool File_Manager::send_packet(Packet* packet)
                 session->buf_len
             );
 
-            session->state = COMPLETE;
+            session->state.store(COMPLETE, std::memory_order_release);
 
             break;
         }
@@ -178,7 +179,7 @@ bool File_Manager::send_packet(Packet* packet)
     return true;
 }
 
-bool File_Manager::read_data_packet(Packet* packet)
+bool File_Manager::write_to_file(Packet* packet)
 {
     (void)packet;
     return true;

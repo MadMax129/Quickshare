@@ -93,6 +93,7 @@ void write_data(Server* s, int fd)
 
     Write_Result w_state = WRITE_OK;
 
+    // TODO: RETHINK LOOP
     do {
         /* Write encrypted bytes */
         if (B_LEN(client->secure.encrypted_buf) > 0) {

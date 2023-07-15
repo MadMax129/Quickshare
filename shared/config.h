@@ -12,6 +12,7 @@
 #define CLIENT_LIST_LEN 32
 #define FILE_NAME_LEN 64
 #define TRANSFER_CLIENTS_MAX 6
+#define TRANSFER_QUEUE_MAX 6 
 
 /* Mem Pool */
 #define MEM_POOL_SIZE (1024 * 1024)

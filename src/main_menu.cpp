@@ -54,7 +54,7 @@ void Main_Menu::draw()
 void Main_Menu::copy_data()
 {
 	User_List::get_instance().copy(user_list);
-	Transfer_Manager::get_instance().copy(transfer_list);
+	// Transfer_Manager::get_instance().copy(transfer_list);
 }
 
 void Main_Menu::check_net()
@@ -164,33 +164,33 @@ void Main_Menu::draw_request()
 
 void Main_Menu::render_request()
 {
-	for (const auto& t : transfer_list) 
-	{
-		if (t.type  != TRANSFER_RECV || 
-			t.state != PENDING)
-			continue;
+	// for (const auto& t : transfer_list) 
+	// {
+	// 	if (t.type  != TRANSFER_RECV || 
+	// 		t.state != PENDING)
+	// 		continue;
 
-		const auto user = std::find_if(
-			user_list.begin(),
-			user_list.end(),
-			[&](const User& u) {
-				return u.id == t.t_hdr.from;
-			}
-		);
+	// 	const auto user = std::find_if(
+	// 		user_list.begin(),
+	// 		user_list.end(),
+	// 		[&](const User& u) {
+	// 			return u.id == t.t_hdr.from;
+	// 		}
+	// 	);
 
-		if (user == user_list.end())
-			continue;
+	// 	if (user == user_list.end())
+	// 		continue;
 
-		ImGui::Text("%s", user->name); ImGui::SameLine(150);
-		ImGui::Text("%s", t.file_path.filename().c_str()); ImGui::SameLine();
-		ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.0884, 0.680, 0.128, 1.0f));
-		ImGui::SmallButton("Accept");
-		ImGui::PopStyleColor();
-		ImGui::SameLine();
-		ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.910, 0.246, 0.246, 1.0f));
-		ImGui::SmallButton("Deny");
-		ImGui::PopStyleColor();
-	}
+	// 	ImGui::Text("%s", user->name); ImGui::SameLine(150);
+	// 	ImGui::Text("%s", t.file_path.filename().c_str()); ImGui::SameLine();
+	// 	ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.0884, 0.680, 0.128, 1.0f));
+	// 	ImGui::SmallButton("Accept");
+	// 	ImGui::PopStyleColor();
+	// 	ImGui::SameLine();
+	// 	ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.910, 0.246, 0.246, 1.0f));
+	// 	ImGui::SmallButton("Deny");
+	// 	ImGui::PopStyleColor();
+	// }
 }
 
 void Main_Menu::draw_menus()
@@ -274,60 +274,60 @@ void Main_Menu::draw_session()
 
 void Main_Menu::render_session()
 {
-	for (const auto& t : transfer_list)
-	{
-		/* Displayed in window above */
-		if (t.type == TRANSFER_RECV && t.state == PENDING)
-			continue;
+	// for (const auto& t : transfer_list)
+	// {
+	// 	/* Displayed in window above */
+	// 	if (t.type == TRANSFER_RECV && t.state == PENDING)
+	// 		continue;
 
-		ImGui::Text("%s", t.file_path.filename().c_str());
-		ImGui::SameLine();
-		ImGui::PushStyleColor(ImGuiCol_FrameBg, ImVec4(0.2f, 0.2f, 0.2f, 1.0f));
-		ImGui::PushStyleColor(ImGuiCol_PlotHistogram, ImVec4(1.0f, 1.0f, 1.0f, 1.0f));
+	// 	ImGui::Text("%s", t.file_path.filename().c_str());
+	// 	ImGui::SameLine();
 
-		if (t.session) {
-    		ImGui::ProgressBar(
-				1.0f / 100.0f, 
-				ImVec2(70, 20)
-			);
-		}
-    	ImGui::PopStyleColor(2);
-		ImGui::SameLine();
-		switch (t.state) 
-		{
-			case Transfer_State::SEND_REQ:
-			case Transfer_State::PENDING:
-				ImGui::TextColored(
-					ImVec4(1.0f, 1.0f, 0.0f, 1.0f), 
-					"PENDING"
-				);
-				break;
+	// 	if (t.session) {
+	// 		ImGui::PushStyleColor(ImGuiCol_FrameBg, ImVec4(0.2f, 0.2f, 0.2f, 1.0f));
+	// 		ImGui::PushStyleColor(ImGuiCol_PlotHistogram, ImVec4(1.0f, 1.0f, 1.0f, 1.0f));
+    // 		ImGui::ProgressBar(
+	// 			1.0f / 100.0f, 
+	// 			ImVec2(70, 20)
+	// 		);
+    // 		ImGui::PopStyleColor(2);
+	// 	}
+	// 	ImGui::SameLine();
+	// 	switch (t.state) 
+	// 	{
+	// 		case Transfer_State::SEND_REQ:
+	// 		case Transfer_State::PENDING:
+	// 			ImGui::TextColored(
+	// 				ImVec4(1.0f, 1.0f, 0.0f, 1.0f), 
+	// 				"PENDING"
+	// 			);
+	// 			break;
 
-			case Transfer_State::CANCELLED:
-			case Transfer_State::ERROR:
-				ImGui::TextColored(
-					ImVec4(1.0f, 0.0f, 0.0f, 1.0f), 
-					t.state==Transfer_State::ERROR ?
-						"ERROR" :
-						"CANCELLED"
-				);
-				break;
+	// 		case Transfer_State::CANCELLED:
+	// 		case Transfer_State::ERROR:
+	// 			ImGui::TextColored(
+	// 				ImVec4(1.0f, 0.0f, 0.0f, 1.0f), 
+	// 				t.state==Transfer_State::ERROR ?
+	// 					"ERROR" :
+	// 					"CANCELLED"
+	// 			);
+	// 			break;
 
-			case Transfer_State::ACTIVE:
-				ImGui::TextColored(
-					ImVec4(0.0f, 0.0f, 1.0f, 1.0f), 
-					"ACTIVE"
-				);
-				break;
+	// 		case Transfer_State::ACTIVE:
+	// 			ImGui::TextColored(
+	// 				ImVec4(0.0f, 0.0f, 1.0f, 1.0f), 
+	// 				"ACTIVE"
+	// 			);
+	// 			break;
 			
-			case Transfer_State::COMPLETE:
-				ImGui::TextColored(
-					ImVec4(0.0f, 1.0f, 0.0f, 1.0f), 
-					"COMPLETE"
-				);
-				break;
-		}
-	}
+	// 		case Transfer_State::COMPLETE:
+	// 			ImGui::TextColored(
+	// 				ImVec4(0.0f, 1.0f, 0.0f, 1.0f), 
+	// 				"COMPLETE"
+	// 			);
+	// 			break;
+	// 	}
+	// }
 }
 
 void Main_Menu::draw_users()
@@ -402,11 +402,12 @@ void Main_Menu::transfer()
 	if (!file_path || count == 0)
 		return;
 
-	(void)Transfer_Manager::get_instance()
-		.create_host_request(
-			file_path,
-			t_id
-		);
+	(void)t_id;
+	// (void)Transfer_Manager::get_instance()
+	// 	.create_host_request(
+	// 		file_path,
+	// 		t_id
+	// 	);
 
 	for (auto& c : user_list)
 		c.selected = false;

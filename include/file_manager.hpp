@@ -42,8 +42,8 @@ public:
     Session* read_file(const char* path);
     Session* write_file(const char* filename);
     
-    bool send_packet(Packet* packet);
-    bool read_data_packet(Packet* packet);
+    bool read_from_file(Packet* packet);
+    bool write_to_file(Packet* packet);
 
 private:
     i64 get_file_size(FILE* file_fd) const;

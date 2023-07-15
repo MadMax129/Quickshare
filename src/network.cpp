@@ -289,25 +289,26 @@ void Server_Msg::to_packet(Packet* packet)
 bool Network::convert_msg()
 {
     Packet* packet = wbuf.packet;
+    Server_Msg msg;
+    bool peeked = false;
 
-    if (Transfer_Manager::get_instance().write_packet(packet)) {
-        LOG("GOT T WORK\n");
-        wbuf.len  = 0;
-        wbuf.size = packet->hdr.size + 
-            sizeof(Packet_Hdr);
-        return true;
+    if (
+        // !Transfer_Manager::get_instance().write_packet(packet) &&
+        !(peeked = msg_queue.peek(msg))
+    ) {
+        return false;
     }
 
-    Server_Msg msg;
+    if (peeked) {
+        LOG("PEEEK\n");
+        msg.to_packet(packet);
+        msg_queue.pop();
+    }
 
-    if (!msg_queue.peek(msg))
-        return false;
-
-    msg.to_packet(packet);
     wbuf.len  = 0;
-    wbuf.size = packet->hdr.size + 
+    wbuf.size = 
+        packet->hdr.size + 
         sizeof(Packet_Hdr);
-    msg_queue.pop();
 
     return true;
 }
@@ -381,7 +382,6 @@ void Network::read_data()
             }
         }
     } while (SSL_pending(ssl));
-    LOG("OUTTT\n");
 }
 
 void Network::analize()
@@ -399,10 +399,10 @@ void Network::analize()
             break;
 
         case P_TRANSFER_REQUEST:
-            Transfer_Manager::get_instance()
-                .create_request(
-                    &rbuf.packet->d.request
-                );
+            // Transfer_Manager::get_instance()
+            //     .create_recv_request(
+            //         &rbuf.packet->d.request
+            //     );
             break;
         
         case P_TRANSFER_VALID:
@@ -449,8 +449,10 @@ void Network::check_write()
     /* Unset WRITE */
     c_poll.get_events() &= ~EVENT_WRITE;
 
-    if (convert_msg())
+    if (convert_msg()) {
         c_poll.get_events() |= EVENT_WRITE;
+        LOG("WRITEEEE\n");
+    }
 }
 
 void Network::handle(Status& active)
