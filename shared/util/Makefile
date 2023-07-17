@@ -7,7 +7,7 @@ CFLAGS += -O2 -Wall -Werror -Wextra \
 		  -std=c11 -pedantic-errors -Wno-error=unused-parameter \
 		  -Wshadow -Wpointer-arith -Wcast-align -Wwrite-strings \
 		  -Wcast-qual -Wswitch-enum -Wunreachable-code
-LDFLAGS = -lpthread
+LDFLAGS = 
 
 all: $(TARGET)
 

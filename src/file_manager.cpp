@@ -9,6 +9,7 @@
 
 File_Manager::File_Manager()
 {
+    (void)cache_line_pad;
     for (Session& s : write_transfers)
         new (&s) Session();
 

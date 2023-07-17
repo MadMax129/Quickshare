@@ -37,6 +37,7 @@ SOURCES  =	users.cpp            \
 			main_menu.cpp        \
 			quickshare.cpp
 
+UNAME_S    := $(shell uname -s)
 SRC_OBJS   = $(addprefix $(BUILD_DIR)/, $(addsuffix .o, $(basename $(notdir $(SOURCES)))))
 IMGUI_OBJS = $(addprefix $(BUILD_DIR)/, $(addsuffix .o, $(basename $(notdir $(IMGUI_SOURCES)))))
 ALL_OBJS   = $(IMGUI_OBJS) $(SRC_OBJS) $(FILE_DIALOG_OBJ) $(UTIL_OBJ) $(MEM_POOL_OBJ)
@@ -47,10 +48,20 @@ SRC_INC_DIR = -I$(INCLUDES) -I$(IMGUI_DIR) \
 			  -I../shared/util -I../shared/mem_pool -I../shared
 CXXFLAGS += -O2 -Wall -std=c++17 -pedantic-errors -Werror -Wextra
 
-LIBS = -lGL `pkg-config --static --libs glfw3` \
-	   -lpthread -L$(FILE_DIALOG_LIB_PATH)     \
-	   -lnfd `pkg-config --libs gtk+-3.0`      \
-	   -lssl -lcrypto
+ifeq ($(UNAME_S), Linux)
+	LIBS += `pkg-config --libs gtk+-3.0` -lGL \
+			-lpthread -L/usr/local/Cellar/openssl@3/lib
+endif
+ifeq ($(UNAME_S), Darwin)
+	CXXFLAGS += -Wextra -Wno-overlength-strings \
+				-Wno-deprecated-declarations \
+				-Wno-unused-private-field
+	LIBS += -framework OpenGL
+endif
+
+LIBS += `pkg-config --static --libs glfw3` \
+		-L$(FILE_DIALOG_LIB_PATH) -lnfd \
+		-lssl -lcrypto
 
 ifeq ($(TYPE), RELEASE)
 	LINKER += -static -s -lc -lstdc++
@@ -85,9 +96,12 @@ install_stbimage:
 install_nfd:
 	mkdir -p ../lib
 	cd ../lib && git clone https://github.com/mlabbe/nativefiledialog
-	cd ../lib/nativefiledialog/build/gmake_linux && \
-	make
-
+ifeq ($(UNAME_S), Linux)
+	cd ../lib/nativefiledialog/build/gmake_linux && make
+endif
+ifeq ($(UNAME_S), Darwin)
+	cd ../lib/nativefiledialog/build/gmake_macosx && make
+endif
 install_imgui:
 	mkdir -p ../lib
 	cd ../lib && git clone -b v1.85 https://github.com/ocornut/imgui/

@@ -53,12 +53,18 @@ typedef time_t UserId;
 #   define PATH_TO_DATA "/home/%s/Downloads"
 #endif
 
-#if defined(SYSTEM_UNX)
+#if defined(SYSTEM_LINUX_64)
 #   define CL_RESET  "\x1b[0m"
 #   define CL_RED    "\x1b[31m"
 #   define CL_BLUE   "\x1b[34m"
 #   define CL_GREEN  "\x1b[32m"
 #   define CL_YELLOW "\x1b[33m"
+#elif defined(SYSTEM_MAC_64)
+#   define CL_RESET  "\033[0m"
+#   define CL_RED    "\033[31m"
+#   define CL_BLUE   "\033[34m"
+#   define CL_GREEN  "\033[32m"
+#   define CL_YELLOW "\033[33m"
 #elif defined(SYSTEM_WIN_64)
 #   define CL_RESET  7
 #   define CL_RED    4

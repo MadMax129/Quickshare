@@ -9,6 +9,7 @@ Transfer_Manager::Transfer_Manager() :
     cmd_queue(TRANSFER_QUEUE_MAX),
     t_count(0)
 {
+    (void)client_transfer_ids;
     for (u32 i = 0; i < transfers.size(); i++) {
         transfers.at(i).type = 
             i < (SIM_TRANSFERS_MAX / 2) ? 
