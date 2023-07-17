@@ -6,7 +6,8 @@
 Transfer_Manager::Transfer_Manager() : 
     dirty(false),
     client_transfer_ids(1),
-    cmd_queue(TRANSFER_QUEUE_MAX)
+    cmd_queue(TRANSFER_QUEUE_MAX),
+    t_count(0)
 {
     for (u32 i = 0; i < transfers.size(); i++) {
         transfers.at(i).type = 
@@ -44,33 +45,7 @@ void Transfer_Manager::process_cmds()
     }
 }
 
-
-// bool Transfer_Manager::create_host_request(
-//     const char* path,
-//     const Transfer_ID t_id[TRANSFER_CLIENTS_MAX]
-// )
-// {
-//     Transfer transfer(TRANSFER_HOST);
-
-//     transfer.session = f_manager.read_file(path);
-//     if (!transfer.session)
-//         return false;
-
-//     transfer.client_t_id = client_transfer_ids++;
-//     (void)std::memcpy(
-//         transfer.t_hdr.to, 
-//         t_id, 
-//         sizeof(transfer.t_hdr.to)
-//     );
-//     transfer.file_path = path;
-//     transfer.state = SEND_REQ;
-
-//     push_transfer(transfer);
-
-//     return true;
-// }
-
-bool Transfer_Manager::create_recv_request(const Transfer_Request* request)
+bool Transfer_Manager::server_request(const Transfer_Request* request)
 {
     Active_Transfer* const transfer = get_transfer(
         Active_Transfer::Type::TRANSFER_RECV
@@ -85,6 +60,7 @@ bool Transfer_Manager::create_recv_request(const Transfer_Request* request)
         sizeof(Transfer_Hdr)
     );
     transfer->file = request->file_name;
+    t_count.fetch_add(1, std::memory_order_relaxed);
     transfer->state.store(
         Active_Transfer::State::PENDING,
         std::memory_order_release

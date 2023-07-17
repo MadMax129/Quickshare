@@ -56,6 +56,12 @@ struct Transfer_Cmd {
     };
 
     Type type;
+    Transfer_ID t_id;
+    
+    union {
+        bool reply;
+        Transfer_Request req;
+    } cmd;
 };
 
 using Transfer_Vec = std::vector<Transfer_Info>;
@@ -68,12 +74,13 @@ public:
     }
 
     void process_cmds();
-    bool create_recv_request(const Transfer_Request* request);
+    bool server_request(const Transfer_Request* request);
+    // void server_accept();
 
-    // bool create_host_request(
-    //     const char* path,
-    //     const Transfer_ID t_id[TRANSFER_CLIENTS_MAX]
-    // );
+    inline bool client_cmd(const Transfer_Cmd& t_cmd)
+    {
+        return cmd_queue.push(t_cmd);
+    }
 
     // void create_recv_request(const Transfer_Request* request);
 
@@ -115,5 +122,6 @@ private:
     std::atomic<bool> dirty;
     Transfer_ID client_transfer_ids;
     LockFreeQueueCpp11<Transfer_Cmd> cmd_queue;
+    std::atomic<u32> t_count;
     std::array<Active_Transfer, SIM_TRANSFERS_MAX> transfers;
 };
