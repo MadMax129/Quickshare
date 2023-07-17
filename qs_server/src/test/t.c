@@ -33,19 +33,12 @@ typedef struct host_s {
 
 host_t hosts[] = {
 	/* This should connect OK. */
-	{ "www.devnull.cz", "80", {-1, -1, -1}, 0 },
-	/* This will timeout. */
-	{ "www.devnull.cz", "33", {-1, -1, -1}, 0 },
-	/* This should refuse the connection on both IPv4 and IPv6. */
-	{ "mail.kolej.mff.cuni.cz", "999", {-1, -1, -1}, 0 },
-	/* To see if localhost gets EINPROGRESS as well. */
-	{ "localhost", "22", {-1, -1, -1}, 0 },
+	{ "127.0.0.1", "8080", {-1, -1, -1}, 0 },
 	/*
 	 * To see if localhost gets EINPROGRESS as well. Connection refusal
 	 * might be different from an open port. Port 7 is echo service,
 	 * nobody should run it these days.
 	 */
-	{ "localhost", "7", {-1, -1, -1}, 0 },
 	{ NULL, 0, {-1, -1, -1}, 0 }
 };
 

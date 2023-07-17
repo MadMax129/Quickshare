@@ -80,6 +80,8 @@ bool Network::tcp_connect()
                 &optlen
             );
 
+            LOGF("===> %d HERE\n", optval);
+
             if (optval == 0)
                 return true;
         }
@@ -199,7 +201,7 @@ bool Network::init_conn(Status& active)
 
 void Network::clean()
 {
-    if (ssl) 
+    if (ssl)
         SSL_free(ssl);
 
     if (ssl_ctx) 
@@ -469,6 +471,9 @@ void Network::handle(Status& active)
 
         const i32 n_ready = c_poll.poll(1000);
 
+        // True when server discon
+        LOGF("==>%d %d\n", c_poll.is_set(EVENT_ERROR), n_ready < 0);
+
         if (n_ready < 0 || 
             c_poll.is_set(EVENT_ERROR)
         ) {
@@ -493,6 +498,9 @@ void Network::server_loop(Status& active)
 
         if (init_conn(active))
             handle(active);
+
+        if (state.get() == NET_ERROR)
+            return;
 
         /* Exited on error */
         clean();

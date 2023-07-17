@@ -33,8 +33,8 @@ DEPS = $(addprefix build/, $(SRC:.c=.d))
 CFLAGS += 	-O2 -Wall -Werror -Wextra                             \
 			-std=c11 -pedantic-errors -Wno-error=unused-parameter \
 			-Wshadow -Wpointer-arith -Wcast-align -Wwrite-strings \
-			-Wcast-qual -Wswitch-enum -Wunreachable-code
-LIBS = -lpthread -lsqlite3 -lssl -lcrypto -luv
+			-Wcast-qual -Wswitch-enum -Wunreachable-code -Wno-newline-eof
+LIBS = -lpthread -lsqlite3 -lssl -lcrypto
 
 PRIVATE_KEY = "./cert/server.key"
 SERVER_CERT = "./cert/server.crt"
