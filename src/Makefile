@@ -50,7 +50,7 @@ CXXFLAGS += -O2 -Wall -std=c++17 -pedantic-errors -Werror -Wextra
 
 ifeq ($(UNAME_S), Linux)
 	LIBS += `pkg-config --libs gtk+-3.0` -lGL \
-			-lpthread -L/usr/local/Cellar/openssl@3/lib
+			-lpthread
 endif
 ifeq ($(UNAME_S), Darwin)
 	CXXFLAGS += -Wextra -Wno-overlength-strings \

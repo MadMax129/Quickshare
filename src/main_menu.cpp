@@ -164,33 +164,36 @@ void Main_Menu::draw_request()
 
 void Main_Menu::render_request()
 {
-	// for (const auto& t : transfer_list) 
-	// {
-	// 	if (t.type  != TRANSFER_RECV || 
-	// 		t.state != PENDING)
-	// 		continue;
+	for (const auto& t : Transfer_Manager::get_instance().
+							get_recv_transfers()
+	) {
+		if (t.state.load(std::memory_order_acquire) != 
+			Active_Transfer::GET_RESPONSE)
+			continue;
 
-	// 	const auto user = std::find_if(
-	// 		user_list.begin(),
-	// 		user_list.end(),
-	// 		[&](const User& u) {
-	// 			return u.id == t.t_hdr.from;
-	// 		}
-	// 	);
+		const auto user = std::find_if(
+			user_list.begin(),
+			user_list.end(),
+			[&](const User& u) {
+				return u.id == t.hdr.from;
+			}
+		);
 
-	// 	if (user == user_list.end())
-	// 		continue;
+		if (user == user_list.end())
+			continue;
 
-	// 	ImGui::Text("%s", user->name); ImGui::SameLine(150);
-	// 	ImGui::Text("%s", t.file_path.filename().c_str()); ImGui::SameLine();
-	// 	ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.0884, 0.680, 0.128, 1.0f));
-	// 	ImGui::SmallButton("Accept");
-	// 	ImGui::PopStyleColor();
-	// 	ImGui::SameLine();
-	// 	ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.910, 0.246, 0.246, 1.0f));
-	// 	ImGui::SmallButton("Deny");
-	// 	ImGui::PopStyleColor();
-	// }
+		ImGui::Text("%s", user->name); 
+		ImGui::SameLine(150);
+		ImGui::Text("%s", t.file.filename().c_str()); 
+		ImGui::SameLine();
+		ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.0884, 0.680, 0.128, 1.0f));
+		ImGui::SmallButton("Accept");
+		ImGui::PopStyleColor();
+		ImGui::SameLine();
+		ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.910, 0.246, 0.246, 1.0f));
+		ImGui::SmallButton("Deny");
+		ImGui::PopStyleColor();
+	}
 }
 
 void Main_Menu::draw_menus()
@@ -272,8 +275,60 @@ void Main_Menu::draw_session()
 	ImGui::PopStyleVar();
 }
 
+static void state_to_text(const Active_Transfer::State state)
+{
+	const ImVec4 yellow = ImVec4(1.0f, 1.0f, 0.0f, 1.0f);
+	switch (state)
+	{
+		case Active_Transfer::SEND_REQ:
+		case Active_Transfer::GET_RESPONSE:
+			ImGui::TextColored(
+				yellow, 
+				"Awaiting Approval"
+			);
+			break;
+
+		case Active_Transfer::ACCEPT:
+		case Active_Transfer::DENY:
+		case Active_Transfer::PENDING:
+			ImGui::TextColored(
+				yellow, 
+				"Pending"
+			);
+			break;
+
+		case Active_Transfer::ACTIVE:
+			ImGui::TextColored(
+				ImVec4(0.0f, 1.0f, 0.0f, 1.0f), 
+				"Active"
+			);
+
+		case Active_Transfer::EMPTY:
+		default:
+			break;
+	}
+}
+
 void Main_Menu::render_session()
 {
+	auto draw_func = [](const Transfer_Manager::Transfer_Array& t_array) 
+	{
+		for (const auto& t : t_array)
+		{
+			const Active_Transfer::State state = t.state.load(std::memory_order_acquire);
+			if (state == Active_Transfer::State::EMPTY)
+				continue;
+			
+			ImGui::Text("%s", t.file.filename().c_str());
+			ImGui::SameLine();
+
+			state_to_text(state);
+		}
+	};
+
+	Transfer_Manager& t_manager = Transfer_Manager::get_instance();
+	draw_func(t_manager.get_host_transfers());
+	draw_func(t_manager.get_recv_transfers());
 	// for (const auto& t : transfer_list)
 	// {
 	// 	/* Displayed in window above */
@@ -402,12 +457,9 @@ void Main_Menu::transfer()
 	if (!file_path || count == 0)
 		return;
 
-	(void)t_id;
-	// (void)Transfer_Manager::get_instance()
-	// 	.create_host_request(
-	// 		file_path,
-	// 		t_id
-	// 	);
+	Transfer_Cmd cmd(file_path, t_id);
+
+	assert(Transfer_Manager::get_instance().send_cmd(cmd));
 
 	for (auto& c : user_list)
 		c.selected = false;

@@ -7,33 +7,34 @@
 #include <string>
 
 #include "msg.h"
+#include "util.h"
 #include "network.hpp"
 #include "connection.hpp"
 #include "file_manager.hpp"
 #include "LockFreeQueueCpp11.h"
 
 struct Active_Transfer {
-    enum Type {
-        /* Transfer created by client */
-        TRANSFER_HOST,
-        /* Transfer recv from other */
-        TRANSFER_RECV
-    };
-
     enum State {
         EMPTY,
+        CANCEL,
+        SEND_REQ,
+        GET_RESPONSE,
+        ACCEPT,
+        DENY,
         PENDING,
+        ACTIVE
     };
 
     Active_Transfer() :
         state(EMPTY),
         hdr({}),
+        accept_list{},
         local_id(0)
     {}
 
-    Type type;
     std::atomic<State> state;
     Transfer_Hdr hdr;
+    State accept_list[TRANSFER_CLIENTS_MAX];
     Transfer_ID local_id;
     std::filesystem::path file;
 };
@@ -51,17 +52,37 @@ struct Transfer_Info {
 struct Transfer_Cmd {
     enum Type {
         REQUEST,
-        RESPONSE,
+        REPLY,
         CANCEL
     };
 
+    Transfer_Cmd() = default;
+    Transfer_Cmd(
+        const char* filepath, 
+        const Client_ID to[TRANSFER_CLIENTS_MAX]
+    ) {
+        type = REQUEST;
+        safe_strcpy(
+            this->d.req.filepath,
+            filepath,
+            FILE_NAME_LEN * 2
+        );
+        (void)std::memcpy(
+            d.req.to,
+            to,
+            sizeof(d.req.to)
+        );
+    }
+
     Type type;
     Transfer_ID t_id;
-    
     union {
         bool reply;
-        Transfer_Request req;
-    } cmd;
+        struct {
+            char filepath[FILE_NAME_LEN * 2];
+            Client_ID to[TRANSFER_CLIENTS_MAX];
+        } req;
+    } d;
 };
 
 using Transfer_Vec = std::vector<Transfer_Info>;
@@ -73,22 +94,30 @@ public:
         return instance;
     }
 
-    void process_cmds();
+    /* Recv Transfers */
     bool server_request(const Transfer_Request* request);
-    // void server_accept();
 
-    inline bool client_cmd(const Transfer_Cmd& t_cmd)
+    /* Hosting Transfers */
+    void client_request_reply(const Transfer_Request* req, const bool reply);
+
+    using Transfer_Array = std::array<Active_Transfer, SIM_TRANSFERS_MAX>;
+
+    inline const Transfer_Array& get_host_transfers() const
     {
-        return cmd_queue.push(t_cmd);
+        return host_transfers;
     }
 
-    // void create_recv_request(const Transfer_Request* request);
+    inline const Transfer_Array& get_recv_transfers() const 
+    {
+        return recv_transfers;
+    }
 
-    // void request_response(const Transfer_Request* response, const bool valid);
-    // void got_request_reply(const Transfer_Request* transfer, const bool reply);
-    // void send_reply(const Transfer_ID t_id, const bool reply);
+    inline bool send_cmd(Transfer_Cmd& cmd) 
+    {
+        return cmd_queue.push(cmd);
+    }
 
-    // bool write_packet(Packet* packet);
+    bool do_work(Packet* packet);
 
     // inline void copy(Transfer_Vec& t_vec)
     // {
@@ -106,22 +135,28 @@ private:
     Transfer_Manager(const Transfer_Manager&) = delete;
     Transfer_Manager& operator=(const Transfer_Manager&) = delete;
 
-    Active_Transfer* get_transfer(const Active_Transfer::Type type);
-    // inline void push_transfer(Transfer& transfer)
-    // {
-    //     std::lock_guard<std::mutex> lock(t_lock);
-    //     transfers.push_back(transfer);
-    //     dirty.store(true, std::memory_order_release);
-    // }
+    void process_cmds();
+    void client_request(
+        const char* path, 
+        const Client_ID c_ids[TRANSFER_CLIENTS_MAX]
+    );
+    void set_request(
+        Active_Transfer& transfer,
+        const Client_ID c_id,
+        const bool reply
+    );
 
-    // void send_req(Transfer& transfer, Packet* packet);
-    // void send_reply(Transfer& transfer, Packet* packet);
+    Active_Transfer* get_transfer(Transfer_Array& t_array);
+    void send_req(Active_Transfer& transfer, Packet* packet);
+    void request_reply(const Transfer_ID t_id, const bool reply);
+
+    using Cmd_Queue = LockFreeQueueCpp11<Transfer_Cmd>;
 
     std::mutex backlog_mtx;
     Transfer_Vec backlog;
     std::atomic<bool> dirty;
     Transfer_ID client_transfer_ids;
-    LockFreeQueueCpp11<Transfer_Cmd> cmd_queue;
-    std::atomic<u32> t_count;
-    std::array<Active_Transfer, SIM_TRANSFERS_MAX> transfers;
+    Cmd_Queue cmd_queue;
+    Transfer_Array recv_transfers;
+    Transfer_Array host_transfers;
 };

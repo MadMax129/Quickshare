@@ -80,8 +80,6 @@ bool Network::tcp_connect()
                 &optlen
             );
 
-            LOGF("===> %d HERE\n", optval);
-
             if (optval == 0)
                 return true;
         }
@@ -235,7 +233,7 @@ void Network::session(const char name[PC_NAME_MAX_LEN],
         start();
     
     if (can_queue) {
-        LOG("PUSHING\n");
+        LOGF("PUSHING %s\n", name);
         Server_Msg::Session_Key session;
         safe_strcpy(session.name, name, PC_NAME_MAX_LEN);
         safe_strcpy(session.s_id, s_id, SESSION_ID_MAX_LEN);
@@ -295,7 +293,7 @@ bool Network::convert_msg()
     bool peeked = false;
 
     if (
-        // !Transfer_Manager::get_instance().write_packet(packet) &&
+        !Transfer_Manager::get_instance().do_work(packet) &&
         !(peeked = msg_queue.peek(msg))
     ) {
         return false;
@@ -401,20 +399,27 @@ void Network::analize()
             break;
 
         case P_TRANSFER_REQUEST:
-            // Transfer_Manager::get_instance()
-            //     .create_recv_request(
-            //         &rbuf.packet->d.request
-            //     );
+            Transfer_Manager::get_instance()
+                .server_request(
+                    &rbuf.packet->d.request
+                );
             break;
         
         case P_TRANSFER_VALID:
         case P_TRANSFER_INVALID:
-            
+            Transfer_Manager::get_instance()
+                .client_request_reply(
+                    &rbuf.packet->d.request,
+                    rbuf.packet->hdr.type == P_TRANSFER_VALID
+                );
+            break;
+        
+        case P_TRANSFER_CANCEL:
+            LOG("TRANSFER CANCELLED\n");
             break;
 
         case P_TRANSFER_REPLY:
         case P_TRANSFER_DATA:
-        case P_TRANSFER_CANCEL:
         case P_TRANSFER_COMPLETE:
             break;
         default:
@@ -470,9 +475,6 @@ void Network::handle(Status& active)
         check_write();
 
         const i32 n_ready = c_poll.poll(1000);
-
-        // True when server discon
-        LOGF("==>%d %d\n", c_poll.is_set(EVENT_ERROR), n_ready < 0);
 
         if (n_ready < 0 || 
             c_poll.is_set(EVENT_ERROR)

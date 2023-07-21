@@ -121,7 +121,7 @@ static bool check_recipients(Server* s, Client* c,
             return false;
         }
 
-        printf("\t#%ld\n", c_id);
+        // printf("\t#%ld\n", c_id);
     }
 
     return true;
@@ -181,7 +181,7 @@ static void packet_transfer(Server* s, Client* c)
     colored_printf(CL_BLUE,
         "Transfer Request\n"
         "\t%.*s = %lu\n"
-        "\tClient TID: %lu\n",   
+        "\tClient LOCAL_ID: %lu\n",   
         (int)sizeof(p->d.request.file_name), 
         p->d.request.file_name,
         p->d.request.file_size,
@@ -202,8 +202,7 @@ static void packet_transfer(Server* s, Client* c)
         goto error;
     }
     
-    send_transfer_response(c, p, P_TRANSFER_INVALID, t_id);
-
+    send_transfer_response(c, p, P_TRANSFER_VALID, t_id);
     echo_transfer_request(s, c, p, t_id);
     return;
 

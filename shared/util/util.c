@@ -31,6 +31,7 @@ void _colored_print(const void* color, const char* str, ...)
     SetConsoleTextAttribute(hConsole, CL_RESET);
 #elif defined(SYSTEM_UNX)
     fprintf(stdout, "%s", CL_RESET);
+    fflush(stdout);
 #endif
 	va_end(ap);
     // pthread_mutex_unlock(&log_mutex);

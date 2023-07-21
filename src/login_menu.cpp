@@ -147,7 +147,12 @@ void Login_Menu::draw_key()
 void Login_Menu::button()
 {
 	if (strnlen(key, IM_ARRAYSIZE(key) - 1) > 0) {
-		Network::get_instance().session(ctx.get_name(), key, login_state);
+		Network::get_instance()
+			.session(
+				ctx.get_name(), 
+				key, 
+				login_state
+			);
 	}
 }
 
