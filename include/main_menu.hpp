@@ -38,6 +38,8 @@ private:
     void check_net();
     void transfer();
 
+    const char* get_client_name(const Client_ID c_id);
+
     const nfdchar_t* file_path;
     User_Vec user_list;
     Transfer_Vec transfer_list;

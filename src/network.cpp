@@ -400,7 +400,7 @@ void Network::analize()
 
         case P_TRANSFER_REQUEST:
             Transfer_Manager::get_instance()
-                .server_request(
+                .create_recv_request(
                     &rbuf.packet->d.request
                 );
             break;
@@ -408,7 +408,7 @@ void Network::analize()
         case P_TRANSFER_VALID:
         case P_TRANSFER_INVALID:
             Transfer_Manager::get_instance()
-                .client_request_reply(
+                .host_request_valid(
                     &rbuf.packet->d.request,
                     rbuf.packet->hdr.type == P_TRANSFER_VALID
                 );
@@ -419,6 +419,14 @@ void Network::analize()
             break;
 
         case P_TRANSFER_REPLY:
+            Transfer_Manager::get_instance()
+                .host_request_reply(
+                    rbuf.packet->d.transfer_reply.hdr.t_id,
+                    rbuf.packet->d.transfer_reply.hdr.from,
+                    rbuf.packet->d.transfer_reply.accept
+                );
+            break;
+
         case P_TRANSFER_DATA:
         case P_TRANSFER_COMPLETE:
             break;

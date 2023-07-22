@@ -68,6 +68,10 @@ clean:
 	rm -f -r $(BUILD_DIR)
 	rm -f $(EXE)
 
+docker:
+	docker build -t qs-server ../../
+	docker run --rm -p 127.0.0.1:8080:8080 -it qs-server bash
+	
 # Build Memory Pool
 $(MEM_POOL_DIR)/mem_pool.o:
 	$(MAKE) -C $(MEM_POOL_DIR)

@@ -71,18 +71,14 @@ public:
         return true;
     }
 
-    bool peek(T& result)
+    bool peek(T& result) 
     {
-        Node *node;
         size_t head = _head.load(std::memory_order_relaxed);
-        for (;;)
-        {
-            node = &_queue[head & _capacityMask];
-            if (node->head.load(std::memory_order_relaxed) != head)
-                return false;
-            if (_head.compare_exchange_weak(head, head + 1, std::memory_order_relaxed))
-                break;
-        }
+        Node* node = &_queue[head & _capacityMask];
+
+        if (node->head.load(std::memory_order_relaxed) != head)
+            return false;
+
         result = node->data;
         return true;
     }
@@ -99,7 +95,6 @@ public:
             if (_head.compare_exchange_weak(head, head + 1, std::memory_order_relaxed))
                 break;
         }
-        // result = node->data;
         node->tail.store(head + _capacity, std::memory_order_release);
         return true;
     }

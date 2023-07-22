@@ -73,6 +73,14 @@ struct Transfer_Cmd {
             sizeof(d.req.to)
         );
     }
+    Transfer_Cmd(
+        const Transfer_ID t_id,
+        const bool reply
+    ) {
+        type = REPLY;
+        this->t_id = t_id;
+        this->d.reply = reply;
+    }
 
     Type type;
     Transfer_ID t_id;
@@ -94,11 +102,16 @@ public:
         return instance;
     }
 
-    /* Recv Transfers */
-    bool server_request(const Transfer_Request* request);
+    /* Create a RECV Request (S) */
+    bool create_recv_request(const Transfer_Request* request);
 
-    /* Hosting Transfers */
-    void client_request_reply(const Transfer_Request* req, const bool reply);
+    /* Host request confimration (S) */
+    void host_request_valid(const Transfer_Request* req, const bool reply);
+    void host_request_reply(
+        const Transfer_ID t_id, 
+        const Client_ID c_id, 
+        const bool reply
+    );
 
     using Transfer_Array = std::array<Active_Transfer, SIM_TRANSFERS_MAX>;
 
@@ -135,20 +148,30 @@ private:
     Transfer_Manager(const Transfer_Manager&) = delete;
     Transfer_Manager& operator=(const Transfer_Manager&) = delete;
 
+    // inline void set_transfer_state(const Active_Transfer::State state)
+    // {
+    // }
+
     void process_cmds();
-    void client_request(
+    void cmd_host_request(
         const char* path, 
         const Client_ID c_ids[TRANSFER_CLIENTS_MAX]
+    );
+    void cmd_recv_request_reply(
+        const Transfer_ID t_id, 
+        const bool reply
     );
     void set_request(
         Active_Transfer& transfer,
         const Client_ID c_id,
         const bool reply
     );
-
     Active_Transfer* get_transfer(Transfer_Array& t_array);
-    void send_req(Active_Transfer& transfer, Packet* packet);
-    void request_reply(const Transfer_ID t_id, const bool reply);
+    void host_cleanup(Active_Transfer& transfer);
+    void recv_cleanup();
+
+    void send_request(Active_Transfer& transfer, Packet* packet);
+    void send_recv_request_reply(Active_Transfer& transfer, Packet* packet);
 
     using Cmd_Queue = LockFreeQueueCpp11<Transfer_Cmd>;
 

@@ -285,8 +285,12 @@ void analize_packet(Server* s, Client* c)
             packet_data(s, c);
             break;
 
-        case P_TRANSFER_CANCEL:
         case P_TRANSFER_COMPLETE:
+            LOG("Complete\n");
+            // packet_complete(s, c);
+            break;
+
+        case P_TRANSFER_CANCEL:
         default:
             P_ERROR("Unknown packet type\n");
             break;
