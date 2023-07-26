@@ -42,6 +42,8 @@ struct Active_Transfer {
 struct Transfer_Info {
     enum State {
         CANCELLED,
+        DENIED,
+        REJECTED,
         COMPLETE
     };
 
@@ -104,6 +106,7 @@ public:
 
     /* Create a RECV Request (S) */
     bool create_recv_request(const Transfer_Request* request);
+    void recv_cancel();
 
     /* Host request confimration (S) */
     void host_request_valid(const Transfer_Request* req, const bool reply);
@@ -112,6 +115,7 @@ public:
         const Client_ID c_id, 
         const bool reply
     );
+    void host_cancel();
 
     using Transfer_Array = std::array<Active_Transfer, SIM_TRANSFERS_MAX>;
 
@@ -148,10 +152,6 @@ private:
     Transfer_Manager(const Transfer_Manager&) = delete;
     Transfer_Manager& operator=(const Transfer_Manager&) = delete;
 
-    // inline void set_transfer_state(const Active_Transfer::State state)
-    // {
-    // }
-
     void process_cmds();
     void cmd_host_request(
         const char* path, 
@@ -172,6 +172,9 @@ private:
 
     void send_request(Active_Transfer& transfer, Packet* packet);
     void send_recv_request_reply(Active_Transfer& transfer, Packet* packet);
+
+    bool host_transfer_work(Packet* packet);
+    bool recv_transfer_work(Packet* packet);
 
     using Cmd_Queue = LockFreeQueueCpp11<Transfer_Cmd>;
 

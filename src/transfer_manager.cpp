@@ -107,10 +107,14 @@ void Transfer_Manager::set_request(
         }
     }
 
-    bool all_reply = true;
+    bool all_reply  = true;
+    bool all_cancel = true;
     for (u32 i = 0; i < TRANSFER_CLIENTS_MAX; i++) {
         if (transfer.hdr.to[i] == 0) {
             break;
+        }
+        else if (transfer.accept_list[i] != Active_Transfer::DENY) {
+            all_cancel = false;
         }
         else if (transfer.accept_list[i] == Active_Transfer::EMPTY) {
             all_reply = false;
@@ -118,7 +122,13 @@ void Transfer_Manager::set_request(
         }
     }
 
-    if (all_reply) {
+    if (all_cancel) {
+        transfer.state.store(
+            Active_Transfer::CANCEL, 
+            std::memory_order_release
+        );
+    }
+    else if (all_reply) {
         transfer.state.store(
             Active_Transfer::ACTIVE, 
             std::memory_order_release
@@ -205,9 +215,8 @@ void Transfer_Manager::process_cmds()
     }
 }
 
-bool Transfer_Manager::do_work(Packet* packet)
+bool Transfer_Manager::host_transfer_work(Packet* packet)
 {
-    process_cmds();
     for (auto& t : host_transfers)
     {
         switch (t.state.load(std::memory_order_acquire))
@@ -216,10 +225,10 @@ bool Transfer_Manager::do_work(Packet* packet)
             case Active_Transfer::GET_RESPONSE:
             case Active_Transfer::DENY:
             case Active_Transfer::PENDING:
+            case Active_Transfer::CANCEL:
+            case Active_Transfer::ACCEPT:
                 break;
             
-            case Active_Transfer::ACCEPT:
-            case Active_Transfer::CANCEL:
             case Active_Transfer::ACTIVE:
                 break;
             
@@ -229,6 +238,11 @@ bool Transfer_Manager::do_work(Packet* packet)
         }
     }
 
+    return false;
+}
+
+bool Transfer_Manager::recv_transfer_work(Packet* packet)
+{
     for (auto& t : recv_transfers) 
     {
         switch (t.state.load(std::memory_order_acquire))
@@ -247,7 +261,15 @@ bool Transfer_Manager::do_work(Packet* packet)
                 return true;
         }
     }
+
     return false;
+}
+
+bool Transfer_Manager::do_work(Packet* packet)
+{
+    process_cmds();
+    return host_transfer_work(packet) || 
+           recv_transfer_work(packet);
 }
 
 void Transfer_Manager::host_cleanup(Active_Transfer& transfer)

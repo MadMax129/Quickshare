@@ -221,7 +221,7 @@ void Network::start()
 
 void Network::session(const char name[PC_NAME_MAX_LEN], 
                       const char s_id[SESSION_ID_MAX_LEN],
-                      bool opt)
+                      const bool opt)
 {
     const State current_state = state.get();
     const bool can_queue = 
@@ -233,63 +233,47 @@ void Network::session(const char name[PC_NAME_MAX_LEN],
         start();
     
     if (can_queue) {
-        LOGF("PUSHING %s\n", name);
-        Server_Msg::Session_Key session;
-        safe_strcpy(session.name, name, PC_NAME_MAX_LEN);
-        safe_strcpy(session.s_id, s_id, SESSION_ID_MAX_LEN);
-        session.opt = opt;
-        Server_Msg msg(Server_Msg::Type::SESSION_KEY, session);
-
+        Session msg(
+            name,
+            s_id,
+            opt
+        );
+   
         // think over TODO:
         assert(msg_queue.push(msg));
         state.set(State::CONNECTED);
     }
 }
 
-void Server_Msg::to_packet(Packet* packet)
+void Session::to_packet(Packet* packet)
 {
-    switch (type)
-    {
-        case Server_Msg::Type::SESSION_KEY: {
-            PACKET_HDR(
-                P_CLIENT_INTRO,
-                sizeof(packet->d.intro),
-                packet
-            );
+    PACKET_HDR(
+        P_CLIENT_INTRO,
+        sizeof(packet->d.intro),
+        packet
+    );
 
-            safe_strcpy(
-                packet->d.intro.id, 
-                get_data<Session_Key>().s_id, 
-                SESSION_ID_MAX_LEN
-            );
+    safe_strcpy(
+        packet->d.intro.id, 
+        s_id, 
+        SESSION_ID_MAX_LEN
+    );
 
-            safe_strcpy(
-                packet->d.intro.name, 
-                get_data<Session_Key>().name, 
-                PC_NAME_MAX_LEN
-            );
+    safe_strcpy(
+        packet->d.intro.name, 
+        name, 
+        PC_NAME_MAX_LEN
+    );
 
-            packet->d.intro.id_len = strlen(
-                get_data<Session_Key>().s_id
-            );
-
-            packet->d.intro.name_len = strlen(
-                get_data<Session_Key>().name
-            );
-
-            packet->d.intro.session = get_data<Session_Key>().opt;
-            break;
-        }
-
-        case Server_Msg::Type::TRANSFER_REQ:
-            break;
-    }
+    packet->d.intro.id_len   = strlen(s_id);
+    packet->d.intro.name_len = strlen(name);
+    packet->d.intro.session  = opt;
 }
 
 bool Network::convert_msg()
 {
     Packet* packet = wbuf.packet;
-    Server_Msg msg;
+    Session msg;
     bool peeked = false;
 
     if (
@@ -300,7 +284,6 @@ bool Network::convert_msg()
     }
 
     if (peeked) {
-        LOG("PEEEK\n");
         msg.to_packet(packet);
         msg_queue.pop();
     }
@@ -345,7 +328,7 @@ void Network::read_data()
     do {
         const int nbytes = SSL_read(
             ssl,
-            (char*)rbuf.packet + rbuf.len,
+            (char*)rbuf.packet  + rbuf.len,
             (sizeof(Packet_Hdr) + rbuf.size) - rbuf.len
         );
 
@@ -430,6 +413,7 @@ void Network::analize()
         case P_TRANSFER_DATA:
         case P_TRANSFER_COMPLETE:
             break;
+
         default:
             P_ERRORF(
                 "Unknown server pacekt type '%d'\n",
@@ -464,16 +448,12 @@ void Network::check_write()
     /* Unset WRITE */
     c_poll.get_events() &= ~EVENT_WRITE;
 
-    if (convert_msg()) {
+    if (convert_msg())
         c_poll.get_events() |= EVENT_WRITE;
-        LOG("WRITEEEE\n");
-    }
 }
 
 void Network::handle(Status& active)
 {
-    LOG("Client connected\n");
-
     c_poll.set_socket(conn.me());
     c_poll.set_events(Poll_Event::EVENT_READ | 
                       Poll_Event::EVENT_ERROR);
@@ -487,7 +467,7 @@ void Network::handle(Status& active)
         if (n_ready < 0 || 
             c_poll.is_set(EVENT_ERROR)
         ) {
-            P_ERROR("Poll error occured\n");
+            P_ERROR("Network Error\n");
             state.set(NET_ERROR);
             return;
         }

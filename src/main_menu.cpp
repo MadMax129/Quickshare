@@ -11,6 +11,7 @@
 #define TWO_MENUS_Y_MARGIN 20.0f
 #define MENUS_SIDE_MARGIN 16.0f
 #define MENU_BOTTOM_MARGIN 35.0f
+#define MAX_CHARACTERS_IN_SESSIONS 28
 
 Main_Menu::Main_Menu(Context& context) : ctx(context) {}
 
@@ -315,6 +316,14 @@ static void state_to_text(const Active_Transfer::State state)
 				ImVec4(0.0f, 1.0f, 0.0f, 1.0f), 
 				"Active"
 			);
+			break;
+		
+		case Active_Transfer::CANCEL:
+			ImGui::TextColored(
+				ImVec4(1.0f, 0.0f, 0.0f, 1.0f), 
+				"Cancelled"
+			);
+			break;
 
 		case Active_Transfer::EMPTY:
 		default:
@@ -327,52 +336,69 @@ void Main_Menu::render_session()
 	Transfer_Manager& t_manager = Transfer_Manager::get_instance();
 	auto draw_func = [&](const Transfer_Manager::Transfer_Array& t_array) 
 	{
+		char btn_name[12];
+		u32 count = 0;
 		for (const auto& t : t_array)
 		{
 			const Active_Transfer::State state = t.state.load(std::memory_order_acquire);
 			if (state == Active_Transfer::State::EMPTY)
 				continue;
 			
-			ImGui::Text("%s", t.file.filename().c_str());
+			ImGui::Text(
+				t.file.string().length() > MAX_CHARACTERS_IN_SESSIONS ? 
+					"%.*s..." : 
+					"%.*s",
+				MAX_CHARACTERS_IN_SESSIONS,
+				t.file.filename().c_str()
+			);
+			(void)std::sprintf(
+				btn_name,
+				"Cancel##%u",
+				count
+			);
+			ImGui::Button(
+				btn_name,
+				ImVec2(50, 20)
+			);
+			count++;
 			ImGui::SameLine();
-		// 	if (t.session) {
-		// 		ImGui::PushStyleColor(ImGuiCol_FrameBg, ImVec4(0.2f, 0.2f, 0.2f, 1.0f));
-		// 		ImGui::PushStyleColor(ImGuiCol_PlotHistogram, ImVec4(1.0f, 1.0f, 1.0f, 1.0f));
-		// 		ImGui::ProgressBar(
-		// 			1.0f / 100.0f, 
-		// 			ImVec2(70, 20)
-		// 		);
-		// 		ImGui::PopStyleColor(2);
-		// 	}
+			ImGui::PushStyleColor(ImGuiCol_FrameBg, ImVec4(0.2f, 0.2f, 0.2f, 1.0f));
+			ImGui::PushStyleColor(ImGuiCol_PlotHistogram, ImVec4(1.0f, 1.0f, 1.0f, 1.0f));
+			ImGui::ProgressBar(
+				88.0f / 100.0f, 
+				ImVec2(70, 20)
+			);
+			ImGui::PopStyleColor(2);
+			ImGui::SameLine();
 			state_to_text(state);
 
-			if (&t_array == &t_manager.get_host_transfers()) {
-				for (u32 i = 0; i < TRANSFER_CLIENTS_MAX; i++) {
-					if (t.hdr.to[i] == 0)
-						break;
+			// if (&t_array == &t_manager.get_host_transfers()) {
+			// 	for (u32 i = 0; i < TRANSFER_CLIENTS_MAX; i++) {
+			// 		if (t.hdr.to[i] == 0)
+			// 			break;
 
-					ImGui::Text("\t%s", get_client_name(t.hdr.to[i]));
-					ImGui::SameLine();
+			// 		ImGui::Text("  %s", get_client_name(t.hdr.to[i]));
+			// 		ImGui::SameLine();
 					
-					switch (t.accept_list[i])
-					{
-						case Active_Transfer::EMPTY:
-							ImGui::Text("Empty");
-							break;
+			// 		switch (t.accept_list[i])
+			// 		{
+			// 			case Active_Transfer::EMPTY:
+			// 				ImGui::Text("Empty");
+			// 				break;
 						
-						case Active_Transfer::ACCEPT:
-							ImGui::Text("Accept");
-							break;
+			// 			case Active_Transfer::ACCEPT:
+			// 				ImGui::Text("Accept");
+			// 				break;
 
-						case Active_Transfer::DENY:
-							ImGui::Text("Deny");
-							break;
+			// 			case Active_Transfer::DENY:
+			// 				ImGui::Text("Deny");
+			// 				break;
 						
-						default:
-						break;
-					}
-				}
-			}
+			// 			default:
+			// 				break;
+			// 		}
+			// 	}
+			// }
 		}
 	};
 

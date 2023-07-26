@@ -33,43 +33,28 @@
 #include "thread_manager.hpp"
 #include "client_poll.hpp"
 
-struct Server_Msg {
-    enum Type {
-        SESSION_KEY,
-        TRANSFER_REQ
-    };
-
-    struct Session_Key {
-        char name[PC_NAME_MAX_LEN];
-        char s_id[SESSION_ID_MAX_LEN];
-        /* 0 - Join | 1 - Create */
-        bool opt;
-    };
-
-    Server_Msg() = default;
-
-    template <typename T>
-    Server_Msg(Type type, const T& value) : 
-        type(type), 
-        data(value) {}
-
-    inline Type get_type() const {
-        return type;
-    }
-
-    template <typename T>
-    const T& get_data() const {
-        return std::get<T>(data);
+struct Session {
+    Session() = default;
+    Session(
+        const char name[PC_NAME_MAX_LEN],
+        const char s_id[SESSION_ID_MAX_LEN],
+        const bool opt
+    ) : opt(opt)
+    {
+        safe_strcpy(this->name, name, PC_NAME_MAX_LEN);
+        safe_strcpy(this->s_id, s_id, SESSION_ID_MAX_LEN);
     }
 
     void to_packet(Packet* packet);
 
 private:
-    Type type;
-    std::variant<Session_Key> data;
+    char name[PC_NAME_MAX_LEN];
+    char s_id[SESSION_ID_MAX_LEN];
+    /* 0 - Join | 1 - Create */
+    bool opt;
 };
 
-using Server_Queue = LockFreeQueueCpp11<Server_Msg>;
+using Server_Queue = LockFreeQueueCpp11<Session>;
 
 class Network {
 public:
@@ -94,7 +79,7 @@ public:
 
     void session(const char name[PC_NAME_MAX_LEN], 
                  const char s_id[SESSION_ID_MAX_LEN],
-                 bool opt);
+                 const bool opt);
 private:
     struct Packet_Buf {
         Packet* packet;
