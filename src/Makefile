@@ -48,10 +48,6 @@ SRC_INC_DIR = -I$(INCLUDES) -I$(IMGUI_DIR) \
 			  -I../shared/util -I../shared/mem_pool -I../shared
 CXXFLAGS += -O2 -Wall -std=c++17 -pedantic-errors -Werror -Wextra
 
-ifeq ($(UNAME_S), Linux)
-	LIBS += `pkg-config --libs gtk+-3.0` -lGL \
-			-lpthread
-endif
 ifeq ($(UNAME_S), Darwin)
 	CXXFLAGS += -Wextra -Wno-overlength-strings \
 				-Wno-deprecated-declarations \
@@ -62,6 +58,11 @@ endif
 LIBS += `pkg-config --static --libs glfw3` \
 		-L$(FILE_DIALOG_LIB_PATH) -lnfd \
 		-lssl -lcrypto
+
+ifeq ($(UNAME_S), Linux)
+	LIBS += `pkg-config --libs gtk+-3.0` -lGL \
+			-lpthread
+endif
 
 ifeq ($(TYPE), RELEASE)
 	LINKER += -static -s -lc -lstdc++

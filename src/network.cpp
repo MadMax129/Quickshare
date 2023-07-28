@@ -164,10 +164,14 @@ bool Network::init_conn(Status& active)
             }
 
             case TCP_CONNECT: {
-                if (tcp_connect())
+                if (tcp_connect()) {
                     conn_state = TLS_CONNECT;
-                else
+                    LOG("OKOK\n");
+                }
+                else {
+                    LOG("HERE\n");
                     sleep(1);
+                }
                 break;
             }
 
@@ -265,8 +269,6 @@ void Session::to_packet(Packet* packet)
         PC_NAME_MAX_LEN
     );
 
-    packet->d.intro.id_len   = strlen(s_id);
-    packet->d.intro.name_len = strlen(name);
     packet->d.intro.session  = opt;
 }
 

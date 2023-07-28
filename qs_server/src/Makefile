@@ -31,7 +31,7 @@ SRC_INC_DIR =         \
 DEPS = $(addprefix build/, $(SRC:.c=.d))
 
 CFLAGS += 	-O2 -Wall -Werror -Wextra                             \
-			-std=c11 -pedantic-errors -Wno-error=unused-parameter \
+			-std=gnu11 -pedantic-errors -Wno-error=unused-parameter \
 			-Wshadow -Wpointer-arith -Wcast-align -Wwrite-strings \
 			-Wcast-qual -Wswitch-enum -Wunreachable-code -Wno-newline-eof
 LIBS = -lpthread -lsqlite3 -lssl -lcrypto

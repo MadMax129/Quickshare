@@ -20,7 +20,7 @@ void client_list_init(Client_List* clist)
         BUFFER_ALLOC(clist->list[i].read_buf, sizeof(Packet));
         BUFFER_ALLOC(clist->list[i].decrypt_buf, sizeof(Packet));
         
-        /* Secure buffer */
+        /* Secure encrypt buffer */
         BUFFER_ALLOC(
             clist->list[i].secure.encrypted_buf,
             sizeof(Packet) * 2
@@ -28,15 +28,19 @@ void client_list_init(Client_List* clist)
 
         if (!B_DATA(clist->list[i].read_buf)    ||
             !B_DATA(clist->list[i].decrypt_buf) ||
-            !B_DATA(clist->list[i].secure.encrypted_buf))
+            !B_DATA(clist->list[i].secure.encrypted_buf)
+        ) {
             die("Failed packet malloc");
+        }
 
         /* Client Message Queue */
         if (!queue_init(
                 &clist->list[i].msg_queue, 
                 sizeof(Packet), 
-                MAX_CLIENTS))
+                MAX_CLIENTS / 2)
+        ) {
             die("Failed queue_init");
+        }
     }
 }
 

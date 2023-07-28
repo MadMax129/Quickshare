@@ -1,32 +1,35 @@
 #include <string.h>
 #include <assert.h>
+
 #include "util.h"
 #include "server.h"
 
-static inline void server_resposne(Client* c, int type)
-{
-    Packet* packet = enqueue(&c->msg_queue);
-    LOGF("size %d\n", c->msg_queue.count);
-    assert(packet);
-    PACKET_HDR(type, 0, packet);
-}
-
+/* 
+ * Update connecting client on all clients in their session.
+ * Also update existing client on the connecting client.
+ * 
+ * Only send if:
+ *  - state is C_COMPLETE
+ *  - in same session id
+ */
 static void send_session_users(Server* s, Client* c)
 {
     Packet* packet = NULL;
-    uint8_t count = 0;
+    int count      = 0;
 
-    for (unsigned int i = 0; i < MAX_CLIENTS; i++) {
+    for (unsigned int i = 0; i < MAX_CLIENTS; i++) 
+    {
         Client* user = &s->clients.list[i];
 
-        if (user->id != c->id         &&
+        if (
+            user->id != c->id         &&
             user->state == C_COMPLETE && 
             user->session_id == c->session_id
         ) {
             if (!packet) {
                 packet = enqueue(&c->msg_queue);
                 assert(packet);
-                memset((void*)packet, 0, sizeof(Packet));
+
                 PACKET_HDR(
                     P_SERVER_NEW_USERS,
                     sizeof(packet->d.new_users),
@@ -48,14 +51,31 @@ static void send_session_users(Server* s, Client* c)
     }
 }
 
+static inline void server_resposne(Client* c, int type)
+{
+    Packet* packet = enqueue(&c->msg_queue);
+    assert(packet);
+    PACKET_HDR(type, 0, packet);
+}
+
+/* 
+ * First message sent from client to the server signifing
+ * creating itself as a client. 
+ * 
+ * Struct d.intro
+ * - session (0 to create, 1 to join)
+ * - name[PC_MAX_LEN] (client name)
+ * - id[SESSION_ID_MAX_LEN] (session id)
+ * 
+ * Server Response:
+ * P_SERVER_OK or P_SERVER_DENY
+ */
 static void packet_intro(Server* s, Client* c)
 {
     Packet* const p = B_DATA(c->decrypt_buf);
 
     /* Make sure all data makes sense */
-    if (c->state == C_COMPLETE                      ||
-        p->d.intro.id_len >= (SESSION_ID_MAX_LEN-1) ||
-        p->d.intro.name_len >= (PC_NAME_MAX_LEN-1)  ||
+    if (c->state == C_COMPLETE ||
         p->d.intro.session > 1
     ) {
         /* Abnormal client behavior */
@@ -64,16 +84,18 @@ static void packet_intro(Server* s, Client* c)
         return;
     }
 
-    p->d.intro.name[p->d.intro.name_len + 1] = '\0';
-    p->d.intro.id[p->d.intro.id_len + 1]     = '\0';
+    p->d.intro.name[PC_NAME_MAX_LEN  - 1] = '\0';
+    p->d.intro.id[SESSION_ID_MAX_LEN - 1] = '\0';
    
-    colored_printf(CL_BLUE,
-        "Packet: Intro\n"
-        "  Name:    '%.*s'\n"
-        "  Session: %.*s\n"
-        "  Type:    %s\n",
-        p->d.intro.name_len, p->d.intro.name,
-        p->d.intro.id_len, p->d.intro.id,
+    SERVER_LOG(
+        s,
+        "********** Packet: Intro **********\n"
+        "\tName:    '%s'\n"
+        "\tSession: %s\n"
+        "\tType:    %s\n"
+        "***********************************\n",
+        p->d.intro.name,
+        p->d.intro.id,
         p->d.intro.session ? "Create" : "Join"
     );
 
@@ -100,12 +122,24 @@ static void packet_intro(Server* s, Client* c)
     send_session_users(s, c);
 }
 
-static bool check_recipients(Server* s, Client* c, 
-                             const Transfer_ID t_id, const Packet* p)
+/* 
+ * Check if recipients exist and if so append them into
+ * the table TransferClients.
+ * 
+ * Fail:
+ *  - Recipients length is 0
+ *  - Client ID is invalid
+ */
+static bool check_recipients(
+    Server* s, 
+    const Client* c, 
+    const Transfer_ID t_id, 
+    const Packet* p
+)
 {
-    /* Check that all recipients are in session */
     for (int i = 0; i < TRANSFER_CLIENTS_MAX; i++) {
         Client_ID c_id = p->d.request.hdr.to[i];
+
         if (c_id == 0)
             return i != 0;
         
@@ -120,18 +154,20 @@ static bool check_recipients(Server* s, Client* c,
         ) {
             return false;
         }
-
-        // printf("\t#%ld\n", c_id);
     }
 
     return true;
 }
 
-static void echo_transfer_request(Server* s, Client* c, 
-                                  const Packet* req, const Transfer_ID t_id)
+static void echo_transfer_request(
+    Server* s, 
+    const Client* c, 
+    const Packet* req, 
+    const Transfer_ID t_id
+)
 {
     for (int i = 0; i < TRANSFER_CLIENTS_MAX; i++) {
-        Client_ID c_id = req->d.request.hdr.to[i];
+        const Client_ID c_id = req->d.request.hdr.to[i];
 
         if (c_id == 0)
             break;
@@ -152,8 +188,12 @@ static void echo_transfer_request(Server* s, Client* c,
     }
 }
 
-static void send_transfer_response(Client* c, const Packet* req, 
-                                   const int type, const Transfer_ID t_id)
+static void send_transfer_response(
+    Client* c, 
+    const Packet* req, 
+    const int type, 
+    const Transfer_ID t_id
+)
 {
     assert(type == P_TRANSFER_INVALID || type == P_TRANSFER_VALID);
 
@@ -173,20 +213,76 @@ static void send_transfer_response(Client* c, const Packet* req,
         response->d.request.hdr.t_id = t_id;
 }
 
+static inline void debug_transfer(
+    Server* s,
+    const Packet* p, 
+    const bool valid
+)
+{
+    char buffer[124];
+    size_t capacity = sizeof(buffer);
+    char* buf_ptr = buffer;
+    int n;
+
+    n = snprintf(
+        buf_ptr,
+        capacity,
+        valid ?
+        "********** Transfer Request => VALID   **********\n" :
+        "********** Transfer Request => INVALID **********\n"
+    ); buf_ptr += n; capacity -= n;
+
+    n = sprintf(
+        buf_ptr,
+        "\tFile:     %.*s\n"
+        "\tSize:     %lu\n"
+        "\tLocal ID: %lu\n"
+        "\tUsers:\n",
+        (int)sizeof(p->d.request.file_name), 
+        p->d.request.file_name,
+        p->d.request.file_size,
+        p->d.request.client_transfer_id
+    ); buf_ptr += n; capacity -= n;
+
+    for (unsigned int i = 0; i < TRANSFER_CLIENTS_MAX; i++) {
+        const Client_ID c_id = p->d.request.hdr.to[i];
+        if (!c_id) break;
+
+        n = snprintf(
+            buf_ptr,
+            capacity,
+            "\t* %ld\n",
+            c_id
+        ); buf_ptr += n; capacity -= n;
+
+        if (n < 0 || (size_t)n >= capacity)
+            break;
+    }
+
+    SERVER_LOG(
+        s,
+        "%s*************************************************\n",
+        buffer
+    );
+}
+
+/* 
+ * First validate if transfer is valid:
+ * - Valid recipients
+ * 
+ * Struct d.request
+ * - file_name[FILE_NAME_LEN]
+ * - file_size
+ * - client_transfer_id (client internal id till response)
+ * 
+ * Server Response:
+ * P_TRANSFER_VALID or P_TRANSFER_INVALID
+ * - Return transfer_request but possibly add transfer id
+ */
 static void packet_transfer(Server* s, Client* c)
 {
     /* Validate all recipient clients */
     const Packet* const p = B_DATA(c->decrypt_buf);
-
-    colored_printf(CL_BLUE,
-        "Transfer Request\n"
-        "\t%.*s = %lu\n"
-        "\tClient LOCAL_ID: %lu\n",   
-        (int)sizeof(p->d.request.file_name), 
-        p->d.request.file_name,
-        p->d.request.file_size,
-        p->d.request.client_transfer_id    
-    );
 
     if (!db_transaction(&s->db, BEGIN_TRANSACTION)) {
         send_transfer_response(c, p, P_TRANSFER_INVALID, 0);
@@ -204,14 +300,25 @@ static void packet_transfer(Server* s, Client* c)
     
     send_transfer_response(c, p, P_TRANSFER_VALID, t_id);
     echo_transfer_request(s, c, p, t_id);
+    debug_transfer(s, p, true);
     return;
 
 error:
     send_transfer_response(c, p, P_TRANSFER_INVALID, 0);
     db_transaction(&s->db, ROLLBACK_TRANSACTION);
+    debug_transfer(s, p, false);
 }
 
-static void packet_reply(Server* s, Client* c)
+/* 
+ * Recieve reply from client.
+ * Try to update the TransferClient entry that matches:
+ *  - transfer_id
+ *  - client_id
+ * If found update its 'accepted' field.
+ * 
+ * Then get the creator to try to echo back the message.
+ */
+static void packet_reply(Server* s, const Client* c)
 {
     const Packet* const p = B_DATA(c->decrypt_buf);
 
@@ -228,40 +335,87 @@ static void packet_reply(Server* s, Client* c)
     );
 
     if (c_id != 0) {
-        Client* recp = client_find_by_id(&s->clients, c_id);
-        assert(recp);
-        Packet* response = enqueue(&recp->msg_queue);
+        Client* creator = client_find_by_id(
+            &s->clients, 
+            c_id
+        );
+        assert(creator);
+
+        Packet* response = enqueue(&creator->msg_queue);
         assert(response);
+        
         (void)memcpy(response, p, sizeof(Packet));
         response->d.transfer_reply.hdr.from = c->id;    
+
+        SERVER_LOG(
+            s,
+            "********** REPLY **********\n"
+            "%s --- %s ---> %s\n"
+            "***************************\n",
+            c->name,
+            p->d.transfer_reply.accept ? "ACCEPT" : "DENY",
+            creator->name
+        );
     }
 }
 
-static void packet_data(Server* s, Client* c)
+/* 
+ * Get all clients that accepted to the transfer.
+ * Then attempt to echo back data message to client
+ * if still active in transfer.
+ */
+static void packet_data(Server* s, const Client* c)
 {
     const Packet* const p = B_DATA(c->decrypt_buf);
 
     Client_ID recp_id = db_get_client_all_accepted(
         &s->db,
-        p->d.transfer_data.hdr.t_id
+        p->d.transfer_data.t_id
     );
-
-    // check that the data coming in is your transfer creator_id
-    // what if all clients canceled or denied
-    //  -> cancel transfer
-    //  -> dont send data
-
-    assert(recp_id != 0);
 
     while (recp_id) {
         Client* other = client_find_by_id(&s->clients, recp_id);
         if (other) {
             Packet* packet = enqueue(&other->msg_queue);
             assert(packet);
+
             (void)memcpy(packet, p, sizeof(Packet));
         }
         recp_id = db_client_all_step_accepted(&s->db);
     }
+}
+
+/*
+ * Recieve a Cancel from client can mean two things:
+ * 1 - Host of transfer wants to cancel transfer
+ * 2 - Recipient of transfer cancels recieving
+ * 
+ * If 1: cancel_transaction_creator
+ * If 2: cancel_transaction_user
+ */
+static void packet_cancel(Server* s, Client* c)
+{
+    const Packet* const p = B_DATA(c->decrypt_buf);
+
+    if (!db_transaction(&s->db, BEGIN_TRANSACTION))
+        return;
+
+    Transfer_ID t_id = db_get_transfer(&s->db, c->id);
+    
+    while (t_id) {
+        if (t_id == p->d.transfer_state.hdr.t_id) {
+            // Cancel currousponds to creator transfer
+            LOG("CANCEL BY CREATOR\n");
+        }
+
+        t_id = db_transfer_step(&s->db);
+    }
+
+
+
+    (void)db_transaction(&s->db, COMMIT_TRANSACTION);
+
+    LOG("GOT CANCEL\n");
 }
 
 void analize_packet(Server* s, Client* c)
@@ -291,6 +445,9 @@ void analize_packet(Server* s, Client* c)
             break;
 
         case P_TRANSFER_CANCEL:
+            packet_cancel(s, c);
+            break;
+        
         default:
             P_ERROR("Unknown packet type\n");
             break;

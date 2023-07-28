@@ -78,11 +78,7 @@ typedef struct __attribute__((packed)) {
             char name[PC_NAME_MAX_LEN];
             char id[SESSION_ID_MAX_LEN];
             /* 0 - Join | 1 - Create */
-            uint8_t session;
-            uint8_t name_len;
-            uint8_t id_len;
-            uint8_t  : 8;
-            uint32_t : 32;
+            uint64_t session;
         } intro;
 
         struct {
@@ -108,12 +104,12 @@ typedef struct __attribute__((packed)) {
         } transfer_state;
 
         struct {
-            Transfer_Hdr hdr;
+            Transfer_ID t_id;
             uint64_t b_size;
             char bytes[
                 PACKET_MAX_SIZE - 
                 sizeof(Packet_Hdr) - 
-                sizeof(Transfer_Hdr) - 
+                sizeof(Transfer_ID) - 
                 sizeof(uint64_t)
             ];
         } transfer_data;

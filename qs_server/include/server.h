@@ -12,11 +12,28 @@
 #include "database.h"
 
 #define MAX_EPOLL_EVENTS (MAX_CLIENTS * 2)
+#define LOG_FILE "../db/"
+
+#define SERVER_LOG(server, str, ...) \
+    do {                             \
+        fprintf(                     \
+            server->log_fd,          \
+            str,                     \
+            __VA_ARGS__              \
+        );                           \
+        fflush(server->log_fd);      \
+    } while(0)
+    
+typedef enum {
+    SERVER_OK,
+    SERVER_CLOSE
+} Server_State;
 
 typedef struct {
     int sock_fd, epoll_fd;
-    struct epoll_event event, *events;
+    struct epoll_event* events;
     struct sockaddr_in s_addr;
+    FILE* log_fd;
     Database db;
     Client_List clients;
 } Server;

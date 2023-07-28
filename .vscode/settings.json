@@ -118,7 +118,10 @@
         "locale": "cpp",
         "queue": "cpp",
         "stack": "cpp",
-        "__verbose_abort": "cpp"
+        "__verbose_abort": "cpp",
+        "mem.h": "c",
+        "pem.h": "c",
+        "signal.h": "c"
     },
     "C_Cpp.default.cppStandard": "c++17",
     "C_Cpp.default.cStandard": "c11",

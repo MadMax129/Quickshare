@@ -5,11 +5,14 @@
 #include <assert.h>
 #include <fcntl.h>
 #include <unistd.h>
+#include <signal.h>
 
 #include "util.h"
 #include "server.h"
 #include "die.h"
 #include "mem.h"
+
+extern volatile sig_atomic_t server_state;
 
 static void set_nonblocking(const int fd) {
     int flags = fcntl(fd, F_GETFL, 0);
@@ -38,7 +41,9 @@ void create_socket(Server* s, const char* ip, const short port)
 
     memset(&s->s_addr, 0, sizeof(s->s_addr));
     s->s_addr.sin_family = AF_INET;
-    s->s_addr.sin_addr.s_addr = ip ? inet_addr(ip) : htonl(INADDR_ANY);
+    s->s_addr.sin_addr.s_addr = ip ? 
+        inet_addr(ip) : 
+        htonl(INADDR_ANY);
     s->s_addr.sin_port = htons(port);
 
     if (bind(s->sock_fd, 
@@ -57,24 +62,32 @@ void setup_poll(Server* s)
     if (s->epoll_fd == -1)
         die("epoll_create()");
 
-    memset((void*)&s->event, 0, sizeof(s->event));
-    s->event.events = EPOLLIN;
-    s->event.data.fd = s->sock_fd;
+    struct epoll_event event = {
+        .events  = EPOLLIN,
+        .data.fd = s->sock_fd
+    };
 
-    if (epoll_ctl(
-        s->epoll_fd, 
-        EPOLL_CTL_ADD,
-        s->sock_fd, 
-        &s->event
-    ) == -1)
+    if (
+        epoll_ctl(
+            s->epoll_fd, 
+            EPOLL_CTL_ADD,
+            s->sock_fd, 
+            &event) == -1
+    )
         die("epoll_ctl failed");
 
-    s->events = (struct epoll_event*)
-        alloc(MAX_EPOLL_EVENTS * sizeof(struct epoll_event));
-    memset(s->events, 0, MAX_EPOLL_EVENTS * sizeof(struct epoll_event));
+    s->events = (struct epoll_event*)alloc(
+        MAX_EPOLL_EVENTS * sizeof(struct epoll_event)
+    );
 
     if (!s->events)
         die("Failed to alloc epoll events");
+    
+    memset(
+        s->events, 
+        0, 
+        MAX_EPOLL_EVENTS * sizeof(struct epoll_event)
+    );
 }
 
 bool new_client_event(Server* s, int op, int fd)
@@ -140,38 +153,47 @@ static void accept_client(Server* s)
         );
 
         if (conn == -1) {
-            if (errno == EAGAIN ||
-                errno == EWOULDBLOCK)
+            if (
+                errno == EAGAIN ||
+                errno == EWOULDBLOCK
+            ) {
                 break;
+            }
+            else {
+                return;
+            }
         }
 
         Client* client = client_init(&s->clients);
 
         set_nonblocking(conn);
 
-        if (conn == -1 || 
-            !client    || 
+        if (
+            !client || 
             !new_client_event(s, EPOLL_CTL_ADD, conn)
         ) {
-            P_ERRORF("Client rejected %s:%d\n",
-                inet_ntoa(addr.sin_addr), 
-                addr.sin_port
+            SERVER_LOG(
+                s,
+                "********** Client REJECTED **********\n"
+                "\t%s:%d\n"
+                "*************************************\n",
+                inet_ntoa(addr.sin_addr), addr.sin_port
             );
             close_client(s, conn);
             return;
         }
 
-        client->fd = conn;
-        (void)memcpy(
-            (void*)&client->addr, 
-            (void*)&addr, 
-            sizeof(addr)
-        );
-
-        LOGF("Client CONN [#%d, %d] %s:%d\n",
+        client->fd   = conn;
+        client->addr = addr;
+        SERVER_LOG(
+            s,
+            "********** Client ACCPTED **********\n"
+            "\t#   %d\n"
+            "\tFd: %d\n"
+            "\t%s:%d\n"
+            "*************************************\n",
             (int)(client - s->clients.list), conn,
-            inet_ntoa(addr.sin_addr), 
-            addr.sin_port
+            inet_ntoa(addr.sin_addr), addr.sin_port
         );
     }
 }
@@ -205,7 +227,8 @@ static void check_for_write(Server* s)
 
 void server_loop(Server* s)
 {
-    for (;;) {
+    while (server_state == SERVER_OK) 
+    {
         check_for_write(s);
         const int n_events = epoll_wait(
             s->epoll_fd, 
@@ -218,8 +241,10 @@ void server_loop(Server* s)
         send packet_intro kick client out if too long*/
 
         /* epoll_wait() Failed */
-        if (n_events == -1)
+        if (n_events == -1) {
+            P_ERROR("epoll_wait failed\n");
             break;
+        }
 
         for (int i = 0; i < n_events; i++) {
             const struct epoll_event* e = &s->events[i];

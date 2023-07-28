@@ -63,7 +63,6 @@ static int decrypt_data(Server* s, Client* c)
         );
 
         if (n > 0) {
-            LOGF("HERE >>>>>>>>>>>>>>>>>>>%d\n", n);
             buf->len += n;
             
             /* Read size of packet */

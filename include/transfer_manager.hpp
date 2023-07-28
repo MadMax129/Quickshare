@@ -75,6 +75,7 @@ struct Transfer_Cmd {
             sizeof(d.req.to)
         );
     }
+
     Transfer_Cmd(
         const Transfer_ID t_id,
         const bool reply
@@ -82,6 +83,13 @@ struct Transfer_Cmd {
         type = REPLY;
         this->t_id = t_id;
         this->d.reply = reply;
+    }
+
+    Transfer_Cmd(
+        const Transfer_ID t_id
+    ) {
+        type = CANCEL;
+        this->t_id = t_id;
     }
 
     Type type;
@@ -115,7 +123,6 @@ public:
         const Client_ID c_id, 
         const bool reply
     );
-    void host_cancel();
 
     using Transfer_Array = std::array<Active_Transfer, SIM_TRANSFERS_MAX>;
 
@@ -152,6 +159,7 @@ private:
     Transfer_Manager(const Transfer_Manager&) = delete;
     Transfer_Manager& operator=(const Transfer_Manager&) = delete;
 
+    void zero_transfer(Active_Transfer& transfer);
     void process_cmds();
     void cmd_host_request(
         const char* path, 
@@ -161,15 +169,15 @@ private:
         const Transfer_ID t_id, 
         const bool reply
     );
+    void cmd_cancel(const Transfer_ID t_id);
     void set_request(
         Active_Transfer& transfer,
         const Client_ID c_id,
         const bool reply
     );
     Active_Transfer* get_transfer(Transfer_Array& t_array);
-    void host_cleanup(Active_Transfer& transfer);
-    void recv_cleanup();
 
+    void send_cancel(Active_Transfer& transfer, Packet* packet);
     void send_request(Active_Transfer& transfer, Packet* packet);
     void send_recv_request_reply(Active_Transfer& transfer, Packet* packet);
 
