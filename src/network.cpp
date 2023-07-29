@@ -400,7 +400,10 @@ void Network::analize()
             break;
         
         case P_TRANSFER_CANCEL:
-            LOG("TRANSFER CANCELLED\n");
+            Transfer_Manager::get_instance()
+                .recv_cancel(
+                    &rbuf.packet->d.transfer_state.hdr
+                );
             break;
 
         case P_TRANSFER_REPLY:

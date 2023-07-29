@@ -44,6 +44,12 @@ void server_loop(Server* s);
 
 bool new_client_event(Server* s, int op, int fd);
 void send_single_user(Client* recp, Client* c1, int type);
+void send_transfer_state(
+    Client* c, 
+    const Client_ID from, 
+    const Transfer_ID t_id, 
+    const int type
+);
 
 void write_data(Server* s, int fd);
 void read_data(Server* s, int fd);

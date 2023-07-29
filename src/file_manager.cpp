@@ -16,41 +16,35 @@ File_Manager::File_Manager() :
     file_size(0)
 {}
 
-i64 File_Manager::get_file_size(FILE* file_fd) const
+i64 File_Manager::get_file_size() const
 {
-    assert(file_fd);
-
     if (fseek(file_fd, 0, SEEK_END) != 0)
         return -1;
 
     return ftell(file_fd);
 }
 
+bool File_Manager::read_file(const char* path)
+{
+    type = READ_FILE;
 
-// File_Manager::Session* File_Manager::read_file(const char* path)
-// {
-//     Session* const session = get_session(read_transfers);
+    file_fd = std::fopen(path, "rb");
+    i64 file_size;
 
-//     if (!session)
-//         return NULL;
+    if (!file_fd ||
+        (file_size = get_file_size()) == -1
+    ) {
+        return false;
+    }
 
-//     session->file_fd = std::fopen(path, "rb");
-//     i64 file_size;
-
-//     if (!session->file_fd ||
-//         (file_size = get_file_size(session->file_fd)) == -1
-//     ) {
-//         return NULL;
-//     }
-
-//     session->file_size = file_size;
-//     session->buf_len = 0;
+    file_size = file_size;
+    buf_len = 0;
     
-//     session->progress.store(0, std::memory_order_relaxed);
-//     session->state.store(WORKING, std::memory_order_release);
+    state = WORKING;
+    progress.store(0, std::memory_order_relaxed);
     
-//     return session;
-// }
+    return true;
+}
 
 // File_Manager::Session* File_Manager::write_file(const char* filename)
 // {
@@ -80,7 +74,7 @@ i64 File_Manager::get_file_size(FILE* file_fd) const
 
 //     LOGF("PATH %s\n", download_path.c_str());
 
-//     session->progress.store(0, std::memory_order_relaxed);
+//     progress.store(0, std::memory_order_relaxed);
 //     session->state.store(WORKING, std::memory_order_release);
 
 //     // session.file_fd = std::fopen(download_path.c_str(), "wb");
@@ -110,62 +104,57 @@ i64 File_Manager::get_file_size(FILE* file_fd) const
 //     return NULL;
 // }
 
-// bool File_Manager::read_from_file(Packet* packet)
-// {   
-//     Session* session = get_work();
+File_Manager::State File_Manager::read_from_file(Packet* packet)
+{
+    (void)packet;
+    switch (state)
+    {
+        case ERROR:
+        case WORKING: {
+            // if (buf_len == 0) {
+            //     buf_len = std::fread(
+            //         buf, 
+            //         1, 
+            //         1024 * 12, 
+            //         file_fd
+            //     );
 
-//     if (!session)
-//         return false; 
+            //     assert(buf_len);
+            // }
 
-//     const State session_state = session->state.load(std::memory_order_acquire);
+            // printf("==>%s\n", buf);
 
-//     switch (session_state)
-//     {
-//         case WORKING: {
-//             if (session->buf_len == 0) {
-//                 session->buf_len = std::fread(
-//                     session->buf, 
-//                     1, 
-//                     1024 * 12, 
-//                     session->file_fd
-//                 );
+            // assert(buf_len <= sizeof(packet->d.transfer_data.bytes));
+            // assert(buf_len == file_size);
 
-//                 assert(session->buf_len);
-//             }
+            // PACKET_HDR(
+            //     P_TRANSFER_DATA,
+            //     sizeof(packet->d.transfer_data),
+            //     packet
+            // );
 
-//             printf("==>%s\n", session->buf);
+            // packet->d.transfer_data.b_size = buf_len;
+            // (void)std::memcpy(
+            //     packet->d.transfer_data.bytes,
+            //     buf,
+            //     buf_len
+            // );
 
-//             assert(session->buf_len <= sizeof(packet->d.transfer_data.bytes));
-//             assert(session->buf_len == session->file_size);
+            // state.store(COMPLETE, std::memory_order_release);
 
-//             PACKET_HDR(
-//                 P_TRANSFER_DATA,
-//                 sizeof(packet->d.transfer_data),
-//                 packet
-//             );
-
-//             packet->d.transfer_data.b_size = session->buf_len;
-//             (void)std::memcpy(
-//                 packet->d.transfer_data.bytes,
-//                 session->buf,
-//                 session->buf_len
-//             );
-
-//             session->state.store(COMPLETE, std::memory_order_release);
-
-//             break;
-//         }
+            break;
+        }
         
-//         case COMPLETE:
-//             LOG("COMPLETE\n");
-//             break;
+        case COMPLETE:
+            LOG("COMPLETE\n");
+            break;
 
-//         case EMPTY:
-//             return false;
-//     }
+        case EMPTY:
+            break;
+    }
 
-//     return true;
-// }
+    return state;
+}
 
 // bool File_Manager::write_to_file(Packet* packet)
 // {

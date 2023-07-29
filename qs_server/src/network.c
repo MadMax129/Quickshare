@@ -139,6 +139,25 @@ void send_single_user(Client* recp, Client* c1, int type)
     }
 }
 
+void send_transfer_state(
+    Client* c, 
+    const Client_ID from, 
+    const Transfer_ID t_id, 
+    const int type
+)
+{
+    Packet* packet = enqueue(&c->msg_queue);
+    assert(packet);
+    
+    PACKET_HDR(
+        type,
+        sizeof(packet->d.transfer_state),
+        packet
+    );
+    packet->d.transfer_state.hdr.t_id = t_id;
+    packet->d.transfer_state.hdr.from = from;
+}
+
 static void accept_client(Server* s)
 {
     for (;;) 

@@ -23,7 +23,6 @@ typedef enum {
     TRANSFER_CLIENT_GET_ALL,
     TRANSFER_CLIENT_GET_ALL_ACCEPTED,
     TRANSFER_CLIENT_DEL_ALL,
-    TRANSFER_CLEANUP,
     BEGIN_TRANSACTION,
     COMMIT_TRANSACTION,
     ROLLBACK_TRANSACTION,
@@ -47,8 +46,8 @@ void db_init(Database* db);
 bool db_transaction(Database* db, DB_Stmt_Type type);
 
 /* Session */
-Session_ID db_create_session(Database* db, char* name);
-Session_ID db_get_session(Database* db, char* name);
+Session_ID db_create_session(Database* db, const char* name);
+Session_ID db_get_session(Database* db, const char* name);
 
 /* Transfers */
 Transfer_ID db_create_transfer(Database* db, Client_ID c_id);

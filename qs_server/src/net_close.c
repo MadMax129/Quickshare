@@ -24,20 +24,6 @@ static void send_user_disconnect(Server* s, Client* c)
     }
 }
 
-static void send_transfer_info(Client* c, Client_ID from, 
-                               Transfer_ID t_id, int type)
-{
-    Packet* packet = enqueue(&c->msg_queue);
-    assert(packet);
-    PACKET_HDR(
-        type,
-        sizeof(packet->d.transfer_state),
-        packet
-    );
-    packet->d.transfer_state.hdr.t_id = t_id;
-    packet->d.transfer_state.hdr.from = from;
-}
-
 static void cancel_transaction_creator(Server* s, Client* c, Transfer_ID t_id)
 {
     /* Client is a transfer creator
@@ -50,7 +36,7 @@ static void cancel_transaction_creator(Server* s, Client* c, Transfer_ID t_id)
         while (t_client_id) {
             Client* recipient = client_find_by_id(&s->clients, t_client_id);
             if (recipient) {
-                send_transfer_info(
+                send_transfer_state(
                     recipient,
                     c->id,
                     t_id, 
@@ -79,7 +65,7 @@ static void cancel_transaction_user(Server* s, Client* c)
         );
 
         if (creator) {
-            send_transfer_info(
+            send_transfer_state(
                 creator,
                 c->id,
                 info.t_id,

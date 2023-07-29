@@ -11,8 +11,14 @@
 
 class File_Manager {
 public:
+    enum Type {
+        READ_FILE,
+        WRITE_FILE
+    };
+
     enum State {
         EMPTY,
+        ERROR,
         WORKING,
         COMPLETE
     };  
@@ -21,13 +27,21 @@ public:
 
     bool read_file(const char* path);
     bool write_file(const char* filename);
-    
-    bool read_from_file(Packet* packet);
-    bool write_to_file(Packet* packet);
+
+    inline State do_work(Packet* packet)
+    {
+        return type == READ_FILE ?
+            read_from_file(packet) : 
+            write_to_file(packet);
+    }
 
 private:
-    i64 get_file_size(FILE* file_fd) const;
-    std::atomic<State> state;
+    State read_from_file(Packet* packet);
+    State write_to_file(Packet* packet);
+    i64 get_file_size() const;
+
+    Type type;
+    State state;
     std::atomic<u32> progress;
     FILE* file_fd;
     char* buf;

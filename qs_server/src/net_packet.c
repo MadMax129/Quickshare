@@ -385,13 +385,87 @@ static void packet_data(Server* s, const Client* c)
     }
 }
 
+static bool cancel_as_creator(
+    Server* s, 
+    const Client* c, 
+    const Transfer_ID target
+)
+{
+    Transfer_ID t_id = db_get_transfer(&s->db, c->id);
+    
+    while (t_id) {
+        if (t_id == target) {
+            LOG("CREATORR|\n");
+            Client_ID t_client_id = db_get_client_all(
+                &s->db, 
+                t_id
+            );
+
+            while (t_client_id) {
+                Client* recipient = client_find_by_id(
+                    &s->clients, 
+                    t_client_id
+                );
+
+                if (recipient) {
+                    send_transfer_state(
+                        recipient,
+                        c->id,
+                        t_id, 
+                        P_TRANSFER_CANCEL
+                    );
+                }
+                t_client_id = db_client_all_step(&s->db);
+            }
+            db_cleanup_transfer(&s->db, t_id);
+            return true;
+        }
+        t_id = db_transfer_step(&s->db);
+    }
+    return false;
+}
+
+static bool cancel_as_recipient(
+    Server* s, 
+    const Client* c,
+    const Transfer_ID target
+)
+{
+    Transfer_Info info = db_get_creator(
+        &s->db, 
+        c->id
+    );
+
+    while (info.creator) {
+        if (info.t_id == target) {
+            Client* creator = client_find_by_id(
+                &s->clients, 
+                info.creator
+            );
+
+            if (creator) {
+                send_transfer_state(
+                    creator,
+                    c->id,
+                    info.t_id,
+                    P_TRANSFER_CANCEL
+                );
+            }
+            db_client_delete(&s->db, c->id);
+            return true;
+        }
+        info = db_creator_step(&s->db);
+    }
+    return false;
+}
+
 /*
  * Recieve a Cancel from client can mean two things:
  * 1 - Host of transfer wants to cancel transfer
  * 2 - Recipient of transfer cancels recieving
  * 
- * If 1: cancel_transaction_creator
- * If 2: cancel_transaction_user
+ * If 1: cancel_as_creator
+ * If 2: cancel_as_recipient
  */
 static void packet_cancel(Server* s, Client* c)
 {
@@ -399,23 +473,20 @@ static void packet_cancel(Server* s, Client* c)
 
     if (!db_transaction(&s->db, BEGIN_TRANSACTION))
         return;
-
-    Transfer_ID t_id = db_get_transfer(&s->db, c->id);
     
-    while (t_id) {
-        if (t_id == p->d.transfer_state.hdr.t_id) {
-            // Cancel currousponds to creator transfer
-            LOG("CANCEL BY CREATOR\n");
-        }
+    const Transfer_ID t_id = p->d.transfer_state.hdr.t_id;
 
-        t_id = db_transfer_step(&s->db);
+    if (
+        !cancel_as_creator(s, c, t_id) && 
+        !cancel_as_recipient(s, c, t_id)
+    ) {
+        P_ERRORF(
+            "Failed to CANCEL transfer '%ld'\n", 
+            t_id
+        );
     }
 
-
-
     (void)db_transaction(&s->db, COMMIT_TRANSACTION);
-
-    LOG("GOT CANCEL\n");
 }
 
 void analize_packet(Server* s, Client* c)

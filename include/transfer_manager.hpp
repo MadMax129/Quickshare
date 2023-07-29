@@ -32,6 +32,15 @@ struct Active_Transfer {
         local_id(0)
     {}
 
+    inline bool can_cancel() const {
+        const State state = this->state.load(
+            std::memory_order_acquire
+        );
+        return state == ACTIVE  || 
+               state == PENDING ||
+               state == GET_RESPONSE; 
+    }
+
     std::atomic<State> state;
     Transfer_Hdr hdr;
     State accept_list[TRANSFER_CLIENTS_MAX];
@@ -114,7 +123,7 @@ public:
 
     /* Create a RECV Request (S) */
     bool create_recv_request(const Transfer_Request* request);
-    void recv_cancel();
+    void recv_cancel(const Transfer_Hdr* hdr);
 
     /* Host request confimration (S) */
     void host_request_valid(const Transfer_Request* req, const bool reply);

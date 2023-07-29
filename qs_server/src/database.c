@@ -38,9 +38,6 @@ static const char* sqlite_stmts_text[] = {
         "select * from TransferClients where transfer_id=? and accepted == 1",
     [TRANSFER_CLIENT_DEL_ALL] =
         "delete from TransferClients where transfer_id=?",
-    [TRANSFER_CLEANUP] =
-        "begin transaction; delete from TransferClients where transfer_id=?;"
-        "delete from Transfers where transfer_id=?; commit",
     [BEGIN_TRANSACTION] = 
         "begin transaction;",
     [COMMIT_TRANSACTION] =
@@ -135,11 +132,9 @@ static inline void try_clean(Database* db)
     }
 }
 
-Session_ID db_create_session(Database* db, char* name)
+Session_ID db_create_session(Database* db, const char* name)
 {
     const DB_Stmt_Type type = SESSION_STMT_CREATE;
-
-    try_clean(db);
 
     sqlite3_reset(db->stmts[type]);
 
@@ -163,11 +158,10 @@ Session_ID db_create_session(Database* db, char* name)
     return sqlite3_last_insert_rowid(db->sql);
 }
 
-Session_ID db_get_session(Database* db, char* name)
+Session_ID db_get_session(Database* db, const char* name)
 {
     const DB_Stmt_Type type = SESSION_STMT_GET;
-    try_clean(db);
-
+    
     sqlite3_reset(db->stmts[type]);
 
     sqlite3_bind_text(
@@ -201,15 +195,13 @@ void db_cleanup_transfer(Database* db, Transfer_ID t_id)
         t_id
     );
 
-    (void)sqlite3_step(db->stmts[TRANSFER_STMT_DEL]);
     (void)sqlite3_step(db->stmts[TRANSFER_CLIENT_DEL_ALL]);
+    (void)sqlite3_step(db->stmts[TRANSFER_STMT_DEL]);
 }
 
 Transfer_ID db_create_transfer(Database* db, Client_ID c_id)
 {
     const DB_Stmt_Type type = TRANSFER_STMT_CREATE;
-
-    try_clean(db);
 
     sqlite3_reset(db->stmts[type]);
 

@@ -159,6 +159,34 @@ bool Transfer_Manager::create_recv_request(const Transfer_Request* request)
     return true;
 }
 
+void Transfer_Manager::recv_cancel(const Transfer_Hdr* hdr)
+{
+    auto search = [&] (Transfer_Array& t_array)
+    {
+        return std::find_if(
+            t_array.begin(),
+            t_array.end(),
+            [&] (const Active_Transfer& t) {
+                return t.can_cancel() &&
+                       hdr->t_id == t.hdr.t_id;
+            }
+        );
+    };
+
+    auto t1 = search(recv_transfers);
+    auto t2 = search(host_transfers);
+
+    if (t1 != recv_transfers.end()) {
+        zero_transfer(*t1);
+    }
+    else if (t2 != host_transfers.end()) {
+        set_request(*t2, hdr->from, false);
+    }
+    else {
+        P_ERRORF("Error recv cancel '%ld'\n", hdr->t_id);
+    }
+}
+
 void Transfer_Manager::host_request_reply(
     const Transfer_ID t_id, 
     const Client_ID c_id, 
@@ -200,17 +228,14 @@ void Transfer_Manager::cmd_recv_request_reply(
 
 void Transfer_Manager::cmd_cancel(const Transfer_ID t_id)
 {
-    LOGF("CANCELING %lu\n", t_id);
     auto search = [&] (Transfer_Array& t_array)
     {
         return std::find_if(
             t_array.begin(),
             t_array.end(),
             [&] (const Active_Transfer& t) {
-                const auto state = t.state.load(std::memory_order_acquire);
-                return (state == Active_Transfer::PENDING || 
-                        state == Active_Transfer::ACTIVE) &&
-                    t_id == t.hdr.t_id;
+                return t.can_cancel() &&
+                       t_id == t.hdr.t_id;
             }
         );
     };
@@ -299,7 +324,7 @@ bool Transfer_Manager::recv_transfer_work(Packet* packet)
 
             case Active_Transfer::CANCEL:
                 send_cancel(t, packet);
-                break;
+                return true;
 
             case Active_Transfer::ACCEPT:
             case Active_Transfer::DENY:
@@ -337,8 +362,12 @@ void Transfer_Manager::zero_transfer(Active_Transfer& transfer)
     transfer.local_id = 0;
 }
 
-void Transfer_Manager::send_cancel(Active_Transfer& transfer, Packet* packet)
+void Transfer_Manager::send_cancel(
+    Active_Transfer& transfer, 
+    Packet* packet
+)
 {
+    LOG("HEREEE\n");
     PACKET_HDR(
         P_TRANSFER_CANCEL,
         sizeof(packet->d.transfer_state),
@@ -354,7 +383,10 @@ void Transfer_Manager::send_cancel(Active_Transfer& transfer, Packet* packet)
     zero_transfer(transfer);
 }
 
-void Transfer_Manager::send_request(Active_Transfer& transfer, Packet* packet)
+void Transfer_Manager::send_request(
+    Active_Transfer& transfer, 
+    Packet* packet
+)
 {
     PACKET_HDR(
         P_TRANSFER_REQUEST,
@@ -376,7 +408,10 @@ void Transfer_Manager::send_request(Active_Transfer& transfer, Packet* packet)
     );
 }
 
-void Transfer_Manager::send_recv_request_reply(Active_Transfer& transfer, Packet* packet)
+void Transfer_Manager::send_recv_request_reply(
+    Active_Transfer& transfer, 
+    Packet* packet
+)
 {
     PACKET_HDR(
         P_TRANSFER_REPLY,
