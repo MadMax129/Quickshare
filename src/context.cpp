@@ -27,11 +27,7 @@ Context::Context() : f_menu(*this), l_menu(*this),
                      error("") 
 {
     app_state.set(LOGIN);
-    // get_pc_name(pc_name);
-    (void)get_pc_name;
-    srand(time(NULL));
-    pc_name[0] = (char) (rand() % (126 - 32 + 1) + 32);
-    pc_name[1] = '\n';
+    get_pc_name(pc_name);
 }
 
 void Context::init_style()
