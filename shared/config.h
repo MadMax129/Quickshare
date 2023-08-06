@@ -33,7 +33,7 @@ typedef time_t Client_ID;
 typedef long Transfer_ID;
 
 #if !defined(QS_SERVER_IP) && !defined(QS_SERVER_PORT)
-#   define QS_SERVER_IP   "127.0.0.1"
+#   define QS_SERVER_IP   "192.168.1.37"
 #   define QS_SERVER_PORT 8080
 #endif
 

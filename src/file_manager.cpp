@@ -85,8 +85,13 @@ bool File_Manager::write_file(const char* filename, const u64 f_size)
                     env_name                     + 
                     std::string("\\Downloads\\") + 
                     filename;
-#elif defined(SYSTEM_UNX)
+#elif defined(SYSTEM_LINUX_64)
     download_path = std::string("/home/")      + 
+                    env_name                   + 
+                    std::string("/Downloads/") + 
+                    filename;
+#elif defined(SYSTEM_MAC_64)
+    download_path = std::string("/Users/")      + 
                     env_name                   + 
                     std::string("/Downloads/") + 
                     filename;
