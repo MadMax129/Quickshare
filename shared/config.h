@@ -14,6 +14,9 @@
 #define TRANSFER_CLIENTS_MAX 6
 #define TRANSFER_QUEUE_MAX 6
 
+/* File Manager */
+#define FILE_BUFFER_SIZE (1024 * 3)
+
 /* Mem Pool */
 #define MEM_POOL_SIZE (1024 * 1024)
 

@@ -384,10 +384,11 @@ void Network::analize()
             break;
 
         case P_TRANSFER_REQUEST:
-            Transfer_Manager::get_instance()
+            assert(Transfer_Manager::get_instance()
                 .create_recv_request(
                     &rbuf.packet->d.request
-                );
+                ));
+            // handel if failed
             break;
         
         case P_TRANSFER_VALID:
@@ -416,7 +417,17 @@ void Network::analize()
             break;
 
         case P_TRANSFER_DATA:
+            Transfer_Manager::get_instance()
+                .recv_data(
+                    &rbuf.packet->d.transfer_data
+                );
+            break;
+
         case P_TRANSFER_COMPLETE:
+            Transfer_Manager::get_instance()
+                .recv_complete(
+                    rbuf.packet->d.transfer_state.hdr.t_id
+                );
             break;
 
         default:
@@ -453,7 +464,7 @@ void Network::check_write()
     /* Unset WRITE */
     c_poll.get_events() &= ~EVENT_WRITE;
 
-    if (convert_msg())
+    if (wbuf.len == 0 && convert_msg())
         c_poll.get_events() |= EVENT_WRITE;
 }
 

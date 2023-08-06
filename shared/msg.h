@@ -67,6 +67,17 @@ typedef struct __attribute__((packed)) {
 } Transfer_Request;
 
 typedef struct __attribute__((packed)) {
+    Transfer_ID t_id;
+    uint64_t b_size;
+    char bytes[
+        PACKET_MAX_SIZE - 
+        sizeof(Packet_Hdr) - 
+        sizeof(Transfer_ID) - 
+        sizeof(uint64_t)
+    ];
+} Transfer_Data;
+
+typedef struct __attribute__((packed)) {
     Packet_Hdr hdr;
     union {
         char data[
@@ -93,6 +104,7 @@ typedef struct __attribute__((packed)) {
         } del_user;
 
         Transfer_Request request;
+        Transfer_Data transfer_data;
 
         struct {
             Transfer_Hdr hdr;
@@ -103,16 +115,6 @@ typedef struct __attribute__((packed)) {
             Transfer_Hdr hdr;
         } transfer_state;
 
-        struct {
-            Transfer_ID t_id;
-            uint64_t b_size;
-            char bytes[
-                PACKET_MAX_SIZE - 
-                sizeof(Packet_Hdr) - 
-                sizeof(Transfer_ID) - 
-                sizeof(uint64_t)
-            ];
-        } transfer_data;
     } d;
 } Packet;
 

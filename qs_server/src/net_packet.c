@@ -300,7 +300,7 @@ static void packet_transfer(Server* s, Client* c)
     
     send_transfer_response(c, p, P_TRANSFER_VALID, t_id);
     echo_transfer_request(s, c, p, t_id);
-    debug_transfer(s, p, true);
+    // debug_transfer(s, p, true);
     return;
 
 error:
@@ -378,7 +378,6 @@ static void packet_data(Server* s, const Client* c)
         if (other) {
             Packet* packet = enqueue(&other->msg_queue);
             assert(packet);
-
             (void)memcpy(packet, p, sizeof(Packet));
         }
         recp_id = db_client_all_step_accepted(&s->db);
@@ -395,7 +394,7 @@ static bool cancel_as_creator(
     
     while (t_id) {
         if (t_id == target) {
-            LOG("CREATORR|\n");
+
             Client_ID t_client_id = db_get_client_all(
                 &s->db, 
                 t_id
@@ -489,6 +488,42 @@ static void packet_cancel(Server* s, Client* c)
     (void)db_transaction(&s->db, COMMIT_TRANSACTION);
 }
 
+static void packet_complete(Server* s, Client* c)
+{
+    const Packet* const p = B_DATA(c->decrypt_buf);
+
+    Transfer_ID creator_t_id = db_get_transfer(
+        &s->db,
+        c->id
+    );
+
+    while (creator_t_id) {
+        if (creator_t_id == p->d.transfer_data.t_id) {            
+            Client_ID recp_id = db_get_client_all_accepted(
+                &s->db,
+                creator_t_id
+            );
+
+            while (recp_id) {
+                Client* other = client_find_by_id(
+                    &s->clients, 
+                    recp_id
+                );
+
+                if (other) {
+                    Packet* packet = enqueue(&other->msg_queue);
+                    assert(packet);
+                    (void)memcpy(packet, p, sizeof(Packet));
+                }
+                recp_id = db_client_all_step_accepted(&s->db);
+            }
+            db_cleanup_transfer(&s->db, creator_t_id);
+            break;
+        }
+        creator_t_id = db_transfer_step(&s->db);
+    }
+}
+
 void analize_packet(Server* s, Client* c)
 {
     const Packet* const p = (Packet*)B_DATA(c->decrypt_buf);
@@ -511,8 +546,7 @@ void analize_packet(Server* s, Client* c)
             break;
 
         case P_TRANSFER_COMPLETE:
-            LOG("Complete\n");
-            // packet_complete(s, c);
+            packet_complete(s, c);
             break;
 
         case P_TRANSFER_CANCEL:

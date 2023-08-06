@@ -46,6 +46,8 @@ struct Active_Transfer {
     State accept_list[TRANSFER_CLIENTS_MAX];
     Transfer_ID local_id;
     std::filesystem::path file;
+    i64 file_size;
+    File_Manager f_manager;
 };
 
 struct Transfer_Info {
@@ -55,6 +57,14 @@ struct Transfer_Info {
         REJECTED,
         COMPLETE
     };
+
+    Transfer_Info(
+        const State state,
+        const std::filesystem::path file
+    ) : 
+    state(state),
+    file(file)
+    {}
 
     State state;
     std::filesystem::path file;
@@ -73,10 +83,13 @@ struct Transfer_Cmd {
         const Client_ID to[TRANSFER_CLIENTS_MAX]
     ) {
         type = REQUEST;
-        safe_strcpy(
+        (void)std::memcpy(
             this->d.req.filepath,
             filepath,
-            FILE_NAME_LEN * 2
+            std::min(
+                strlen(filepath) + 1,
+                sizeof(this->d.req.filepath)
+            )
         );
         (void)std::memcpy(
             d.req.to,
@@ -124,6 +137,8 @@ public:
     /* Create a RECV Request (S) */
     bool create_recv_request(const Transfer_Request* request);
     void recv_cancel(const Transfer_Hdr* hdr);
+    void recv_data(const Transfer_Data* t_data);
+    void recv_complete(const Transfer_ID t_id);
 
     /* Host request confimration (S) */
     void host_request_valid(const Transfer_Request* req, const bool reply);
@@ -152,21 +167,30 @@ public:
 
     bool do_work(Packet* packet);
 
-    // inline void copy(Transfer_Vec& t_vec)
-    // {
-    //     if (dirty.load(std::memory_order_acquire)) {
-    //         if (t_lock.try_lock()) {
-    //             t_vec = transfers;
-    //             dirty.store(false, std::memory_order_release);
-    //             t_lock.unlock();
-    //         }
-    //     }
-    // }
+    inline void copy(Transfer_Vec& t_vec)
+    {
+        if (dirty.load(std::memory_order_acquire)) {
+            if (backlog_mtx.try_lock()) {
+                t_vec = backlog;
+                dirty.store(false, std::memory_order_release);
+                backlog_mtx.unlock();
+            }
+        }
+    }
 
 private:
     Transfer_Manager();
     Transfer_Manager(const Transfer_Manager&) = delete;
     Transfer_Manager& operator=(const Transfer_Manager&) = delete;
+
+    inline void push_backlog(
+        const Transfer_Info::State state,
+        const std::filesystem::path file 
+    ) 
+    {
+        backlog.emplace_back(state, file);
+        dirty.store(true, std::memory_order_release);
+    }
 
     void zero_transfer(Active_Transfer& transfer);
     void process_cmds();
@@ -185,10 +209,15 @@ private:
         const bool reply
     );
     Active_Transfer* get_transfer(Transfer_Array& t_array);
+    void handle_transfer_data(
+        Active_Transfer& transfer,
+        const Transfer_Data* t_data
+    );
 
     void send_cancel(Active_Transfer& transfer, Packet* packet);
     void send_request(Active_Transfer& transfer, Packet* packet);
     void send_recv_request_reply(Active_Transfer& transfer, Packet* packet);
+    void send_data(Active_Transfer& transfer, Packet* packet);
 
     bool host_transfer_work(Packet* packet);
     bool recv_transfer_work(Packet* packet);

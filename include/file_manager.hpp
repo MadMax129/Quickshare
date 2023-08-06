@@ -21,23 +21,30 @@ public:
         ERROR,
         WORKING,
         COMPLETE
-    };  
+    }; 
     
     File_Manager();
 
-    bool read_file(const char* path);
-    bool write_file(const char* filename);
+    void init_read();
+    void init_write();
 
-    inline State do_work(Packet* packet)
+    bool read_file(const char* path, i64& f_size);
+    bool write_file(
+        const char* filename, 
+        const u64 f_size
+    );
+    void close();
+
+    inline u32 get_progress() const 
     {
-        return type == READ_FILE ?
-            read_from_file(packet) : 
-            write_to_file(packet);
+        return progress.load(std::memory_order_relaxed);
     }
 
+    State read_work(Packet* packet);
+    State write_work(const Transfer_Data* t_data);
+
 private:
-    State read_from_file(Packet* packet);
-    State write_to_file(Packet* packet);
+    bool read_from_file(Packet* packet);
     i64 get_file_size() const;
 
     Type type;
@@ -46,5 +53,6 @@ private:
     FILE* file_fd;
     char* buf;
     u64 buf_len,
-        file_size;   
+        buf_cnt,
+        file_size;
 };

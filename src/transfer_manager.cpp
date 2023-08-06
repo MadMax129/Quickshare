@@ -6,10 +6,14 @@
 Transfer_Manager::Transfer_Manager() : 
     dirty(false),
     client_transfer_ids(1),
-    cmd_queue(TRANSFER_QUEUE_MAX),
-    recv_transfers{},
-    host_transfers{}
-{}
+    cmd_queue(TRANSFER_QUEUE_MAX)
+{
+    for (Active_Transfer& t : host_transfers)
+        t.f_manager.init_read();
+
+    for (Active_Transfer& t : recv_transfers)
+        t.f_manager.init_write();
+}
 
 Active_Transfer* Transfer_Manager::get_transfer(Transfer_Array& t_array)
 {
@@ -37,13 +41,13 @@ void Transfer_Manager::cmd_host_request(
         host_transfers
     );
 
-    if (!transfer)
+    if (!transfer || 
+        !transfer->f_manager.read_file(path, transfer->file_size)
+    ) {
+        P_ERROR("FAILED TO HOST TRANSFER\n");
         return;
+    }
     
-    // transfer.session = f_manager.read_file(path);
-    // if (!transfer.session)
-    //     return false;
-
     transfer->local_id = client_transfer_ids++;
     (void)std::memcpy(
         transfer->hdr.to,
@@ -109,16 +113,12 @@ void Transfer_Manager::set_request(
     bool all_reply  = true;
     bool all_cancel = true;
     for (u32 i = 0; i < TRANSFER_CLIENTS_MAX; i++) {
-        if (transfer.hdr.to[i] == 0) {
+        if (transfer.hdr.to[i] == 0)
             break;
-        }
-        else if (transfer.accept_list[i] != Active_Transfer::DENY) {
+        if (transfer.accept_list[i] != Active_Transfer::DENY)
             all_cancel = false;
-        }
-        else if (transfer.accept_list[i] == Active_Transfer::EMPTY) {
+        if (transfer.accept_list[i] == Active_Transfer::EMPTY)
             all_reply = false;
-            break;
-        }
     }
 
     if (all_cancel) {
@@ -135,14 +135,23 @@ void Transfer_Manager::set_request(
     }
 }
 
-bool Transfer_Manager::create_recv_request(const Transfer_Request* request)
+bool Transfer_Manager::create_recv_request(
+    const Transfer_Request* request
+)
 {
     Active_Transfer* const transfer = get_transfer(
         recv_transfers
     );
 
-    if (!transfer)
+    if (
+        !transfer ||
+        !transfer->f_manager.write_file(
+            request->file_name, 
+            request->file_size
+        )
+    ) {
         return false;
+    }
 
     (void)std::memcpy(
         &transfer->hdr,
@@ -154,7 +163,6 @@ bool Transfer_Manager::create_recv_request(const Transfer_Request* request)
         Active_Transfer::State::GET_RESPONSE,
         std::memory_order_release
     );
-    // transfer.session = f_manager.write_file(request->file_name);
 
     return true;
 }
@@ -178,12 +186,16 @@ void Transfer_Manager::recv_cancel(const Transfer_Hdr* hdr)
 
     if (t1 != recv_transfers.end()) {
         zero_transfer(*t1);
+        push_backlog(Transfer_Info::CANCELLED, t1->file);
     }
     else if (t2 != host_transfers.end()) {
         set_request(*t2, hdr->from, false);
     }
     else {
-        P_ERRORF("Error recv cancel '%ld'\n", hdr->t_id);
+        P_ERRORF(
+            "ERROR CANCEL T_ID: %ld\n", 
+            hdr->t_id
+        );
     }
 }
 
@@ -246,7 +258,7 @@ void Transfer_Manager::cmd_cancel(const Transfer_ID t_id)
     if (t1 == recv_transfers.end() &&
         t2 == host_transfers.end()
     ) {
-        P_ERROR("No transfer to cancel\n");
+        P_ERRORF("CANCEL REQ '%ld' INVALID\n", t_id);
         return;
     }
 
@@ -294,7 +306,8 @@ bool Transfer_Manager::host_transfer_work(Packet* packet)
                 break;
             
             case Active_Transfer::ACTIVE:
-                break;
+                send_data(t, packet);
+                return true;
 
             case Active_Transfer::CANCEL:
                 send_cancel(t, packet);
@@ -318,8 +331,8 @@ bool Transfer_Manager::recv_transfer_work(Packet* packet)
             case Active_Transfer::EMPTY:
             case Active_Transfer::GET_RESPONSE:
             case Active_Transfer::PENDING:
-            case Active_Transfer::ACTIVE:
             case Active_Transfer::SEND_REQ:
+            case Active_Transfer::ACTIVE:
                 break;
 
             case Active_Transfer::CANCEL:
@@ -343,6 +356,56 @@ bool Transfer_Manager::do_work(Packet* packet)
            recv_transfer_work(packet);
 }
 
+void Transfer_Manager::recv_data(const Transfer_Data* t_data)
+{
+    for (auto& t : recv_transfers) {
+        if (
+            t.state.load(std::memory_order_acquire) == 
+                Active_Transfer::ACTIVE && 
+            t_data->t_id == t.hdr.t_id
+        ) {
+            handle_transfer_data(t, t_data);
+            break;
+        }
+    }
+}
+
+void Transfer_Manager::recv_complete(const Transfer_ID t_id)
+{
+    for (auto& t : recv_transfers) {
+        if (
+            t.state.load(std::memory_order_acquire) == 
+                Active_Transfer::ACTIVE && 
+            t_id == t.hdr.t_id
+        ) {
+            t.f_manager.close();
+            zero_transfer(t);
+            push_backlog(Transfer_Info::COMPLETE, t.file);
+            break;
+        }
+    }
+}
+
+void Transfer_Manager::handle_transfer_data(
+    Active_Transfer& transfer,
+    const Transfer_Data* t_data
+)
+{
+    const File_Manager::State state = 
+        transfer.f_manager.write_work(t_data);
+
+    switch (state)
+    {
+        case File_Manager::WORKING:
+        case File_Manager::COMPLETE:
+            break;
+
+        case File_Manager::EMPTY:
+        case File_Manager::ERROR:
+            break;
+    }
+}
+
 void Transfer_Manager::zero_transfer(Active_Transfer& transfer)
 {
     transfer.state.store(
@@ -362,12 +425,49 @@ void Transfer_Manager::zero_transfer(Active_Transfer& transfer)
     transfer.local_id = 0;
 }
 
+void Transfer_Manager::send_data(
+    Active_Transfer& transfer, 
+    Packet* packet
+)
+{
+    const File_Manager::State state =  
+        transfer.f_manager.read_work(packet);
+    
+    switch (state)
+    {
+        case File_Manager::WORKING: {
+            packet->d.transfer_data.t_id = transfer.hdr.t_id;
+            break;
+        }
+
+        case File_Manager::COMPLETE: {
+            LOG("SEND TRANSFER COMPLETE\n");
+            PACKET_HDR(
+                P_TRANSFER_COMPLETE,
+                sizeof(packet->d.transfer_state),
+                packet
+            );
+            packet->d.transfer_state.hdr.t_id = transfer.hdr.t_id;
+            transfer.f_manager.close();
+            zero_transfer(transfer);
+            push_backlog(Transfer_Info::COMPLETE, transfer.file);
+            break;
+        }
+
+        case File_Manager::ERROR:
+        case File_Manager::EMPTY: {
+            send_cancel(transfer, packet);
+            break;
+        }
+            
+    }
+}
+
 void Transfer_Manager::send_cancel(
     Active_Transfer& transfer, 
     Packet* packet
 )
 {
-    LOG("HEREEE\n");
     PACKET_HDR(
         P_TRANSFER_CANCEL,
         sizeof(packet->d.transfer_state),
@@ -381,6 +481,7 @@ void Transfer_Manager::send_cancel(
     );
 
     zero_transfer(transfer);
+    push_backlog(Transfer_Info::CANCELLED, transfer.file);
 }
 
 void Transfer_Manager::send_request(
@@ -398,9 +499,21 @@ void Transfer_Manager::send_request(
     (void)std::memcpy(
         packet->d.request.file_name,
         transfer.file.filename().c_str(),
-        transfer.file.filename().string().length()
+        std::min(
+            transfer.file.filename().string().length() + 1,
+            sizeof(packet->d.request.file_name)
+        )
     );
-    packet->d.request.file_size = 0;
+
+    if (
+        (transfer.file.filename().string().length() + 1) >= 
+        sizeof(packet->d.request.file_name)
+    ) {
+        packet->d.request.file_name[
+            sizeof(packet->d.request.file_name) - 1
+        ] = '\0';
+    }
+    packet->d.request.file_size = transfer.file_size;
     packet->d.request.hdr = transfer.hdr;
     transfer.state.store(
         Active_Transfer::State::GET_RESPONSE,
@@ -424,11 +537,16 @@ void Transfer_Manager::send_recv_request_reply(
             Active_Transfer::ACCEPT ?
             1 : 0;
 
-    packet->d.transfer_reply.hdr.t_id = transfer.hdr.t_id; 
-    transfer.state.store(
-        packet->d.transfer_reply.accept ? 
-            Active_Transfer::State::ACTIVE : 
-            Active_Transfer::State::CANCEL,
-        std::memory_order_release
-    );
+    packet->d.transfer_reply.hdr.t_id = transfer.hdr.t_id;
+
+    if (packet->d.transfer_reply.accept) {
+        transfer.state.store(
+            Active_Transfer::State::ACTIVE, 
+            std::memory_order_release
+        );
+    }
+    else {
+        zero_transfer(transfer);
+        push_backlog(Transfer_Info::DENIED, transfer.file);
+    }
 }

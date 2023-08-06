@@ -8,20 +8,10 @@ class Context;
 
 class Main_Menu {
 public:
-    enum Transfer_Type {
-        T_ERROR,
-        T_SENT,
-        T_RECV
-    };
-
     Main_Menu(Context& context);
     void draw();
 
-private:
-    void add_event(Transfer_Type type, 
-                   const char *desc,
-                   const char *fname);
-    
+private:    
     void draw_menus();
     void draw_request();
     void render_request();
@@ -31,6 +21,7 @@ private:
     void draw_users();
     void render_users();
     void draw_path();
+    void render_backlog();
     
     const nfdchar_t* open_file();
     

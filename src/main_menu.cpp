@@ -55,7 +55,7 @@ void Main_Menu::draw()
 void Main_Menu::copy_data()
 {
 	User_List::get_instance().copy(user_list);
-	// Transfer_Manager::get_instance().copy(transfer_list);
+	Transfer_Manager::get_instance().copy(transfer_list);
 }
 
 void Main_Menu::check_net()
@@ -111,56 +111,14 @@ void Main_Menu::draw_request()
 	SHIFT_VERTICAL(REQUEST_MARGIN);
 	ImGui::Text(text);
 
-	// Sizing strech Prop FLAG???
-
 	/* Center align request box */
 	ImGui::SetCursorPosX((ImGui::GetWindowSize().x / 2.0f) - 
 						 (req_size.x / 2.0f));
 
-	// constexpr ImGuiTableFlags flags = ImGuiTableFlags_ScrollY      | 
-	// 								  ImGuiTableFlags_RowBg        | 
-	// 								  ImGuiTableFlags_BordersOuter | 
-	// 								  ImGuiTableFlags_BordersV;
-	
-	// ! TABLE SHOULD FIT USER_NAME_LEN CHaracters on left most colum
-
 	if (ImGui::BeginListBox("##Requests", req_size)) {
 		render_request();
-
-			// ImGui::Text("DESKTOP-2WG534"); ImGui::SameLine(150);
-			// ImGui::Text("'test_file.txt'"); ImGui::SameLine();
-			// ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.0884, 0.680, 0.128, 1.0f));
-			// ImGui::SmallButton("Accept");
-			// ImGui::PopStyleColor();
-			// ImGui::SameLine();
-			// ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.910, 0.246, 0.246, 1.0f));
-			// ImGui::SmallButton("Deny");
-			// ImGui::PopStyleColor();
-
-		// }
-
 		ImGui::EndListBox();
 	}
-	// if (ImGui::BeginTable("Requests", 4, flags, req_size)) { 
-	// 	for (int row = 0; row < 2; row++)
-	// 	{
-	// 		ImGui::TableNextRow();
-			
-	// 		ImGui::TableSetColumnIndex(0);
-	// 		ImGui::Text("DESKTOP-2WG534");
-	// 		ImGui::TableSetColumnIndex(1);
-	// 		ImGui::Text("test.txt");
-	// 		ImGui::TableSetColumnIndex(2);
-	// 		ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.0884, 0.680, 0.128, 1.0f));
-	// 		ImGui::SmallButton("Accept");
-	// 		ImGui::PopStyleColor();
-	// 		ImGui::TableSetColumnIndex(3);
-	// 		ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.910, 0.246, 0.246, 1.0f));
-	// 		ImGui::SmallButton("Deny");
-	// 		ImGui::PopStyleColor();
-	// 	}
-	// 	ImGui::EndTable();
-	// }
 }
 
 const char* Main_Menu::get_client_name(const Client_ID c_id)
@@ -248,15 +206,37 @@ void Main_Menu::draw_backlog()
 
 	if (ImGui::BeginListBox("##Backlog", backlog_size))
 	{
-		// for (int i = 0; i < 100; i++) {
-			// Transfer_Type t = (Transfer_Type)(rand() % 3);
-			add_event(T_RECV, "Ftle size: 2000 bytes Sets the list box size based on the number of items that you want to make visible Size default to hold ~7.25 items. We add +25% worth of item height to allow the user to see at a glance if there are more items up/down, without looking at the scrollbar. We don't add this extra bit if items_count <= height_in_items. It is slightly dodgy, because it means a dynamic list of items will make the widget resize occasionally when it crosses that size.", "tsb.png");
-			add_event(T_ERROR, "File size: 2000 bytes", "pic.png");
-		// }
+		render_backlog();
 		ImGui::EndListBox();
 	}
 	ImGui::PopStyleColor();
 	ImGui::PopStyleVar();
+}
+
+void Main_Menu::render_backlog()
+{
+	for (const auto& t : transfer_list) {
+		switch (t.state)
+		{
+			case Transfer_Info::CANCELLED:
+				ImGui::Text("[ Cancelled ] ");
+				break;
+			
+			case Transfer_Info::COMPLETE:
+				ImGui::Text("[ Complete ] ");
+				break;
+
+			case Transfer_Info::DENIED:
+				ImGui::Text("[ Denied ] ");
+				break;
+
+			case Transfer_Info::REJECTED:
+				ImGui::Text("[ Rejected ] ");
+				break;
+		}
+		ImGui::SameLine();
+		ImGui::Text("%s\n", t.file.filename().string().c_str());
+	}
 }
 
 void Main_Menu::draw_session()
@@ -333,12 +313,12 @@ static void state_to_text(const Active_Transfer::State state)
 
 static void progress_bar(const Active_Transfer& transfer)
 {
-	(void)transfer;
 	ImGui::PushStyleColor(ImGuiCol_FrameBg, ImVec4(0.2f, 0.2f, 0.2f, 1.0f));
 	ImGui::PushStyleColor(ImGuiCol_PlotHistogram, ImVec4(1.0f, 1.0f, 1.0f, 1.0f));
 	ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.0f, 0.0f, 0.0f, 1.0f));
+
 	ImGui::ProgressBar(
-		88.0f / 100.0f, 
+		(float)transfer.f_manager.get_progress() / 100.0f, 
 		ImVec2(70, 20)
 	);
 	ImGui::PopStyleColor(3);
@@ -486,51 +466,6 @@ void Main_Menu::transfer()
 
 	for (auto& c : user_list)
 		c.selected = false;
-}
-
-void Main_Menu::add_event(Transfer_Type type, const char *desc, const char *fname)
-{
-	// static bool selectable = false;
-
-	ImGui::Text("(?)");
-	// ImGui::Selectable("(?)", &selectable);
-	// if (selectable)
-	// {
-	// 	// ImGui::SetNextWindowFocus
-	// 	ImGui::Begin("dfs", &selectable);
-	// 		ImGui::End();
-	// }
-	// if (ImGui::BeginPop)
-
-	if (ImGui::IsItemHovered())
-	{
-		ImGui::BeginTooltip();
-		ImGui::PushTextWrapPos(ImGui::GetWindowSize().x);
-		ImGui::Text("%s", desc);
-		ImGui::PopTextWrapPos();
-		ImGui::EndTooltip();
-	}
-
-	ImGui::SameLine(0, 5);
-
-	switch(type)
-	{
-		case T_RECV:
-			ImGui::TextColored(ImVec4(0.0178f, 0.716f, 0.890f, 1.0f), "Recieved");   
-			break;
-
-		case T_SENT:
-			ImGui::TextColored(ImVec4(0.0178f, 0.890f, 0.105f, 1.0f), "Sent");
-			break;
-
-		case T_ERROR:
-			ImGui::TextColored(ImVec4(0.9f, 0.290f, 0.105f, 1.0f), "Error");
-			break;
-
-	}
-
-	ImGui::SameLine(0,5);
-	ImGui::TextWrapped("'%s'", fname);
 }
 
 const nfdchar_t* Main_Menu::open_file()
