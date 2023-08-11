@@ -54,6 +54,7 @@ void Transfer_Manager::cmd_host_request(
         c_ids, 
         sizeof(transfer->hdr.to)
     );
+    transfer->past_send = std::chrono::high_resolution_clock::now();
     transfer->file = path;
     transfer->state.store(
         Active_Transfer::State::SEND_REQ, 
@@ -292,7 +293,8 @@ void Transfer_Manager::process_cmds()
     }
 }
 
-bool Transfer_Manager::host_transfer_work(Packet* packet)
+Transfer_Manager::Work_State 
+Transfer_Manager::host_transfer_work(Packet* packet)
 {
     for (auto& t : host_transfers)
     {
@@ -303,26 +305,27 @@ bool Transfer_Manager::host_transfer_work(Packet* packet)
             case Active_Transfer::DENY:
             case Active_Transfer::PENDING:
             case Active_Transfer::ACCEPT:
+            default:
                 break;
             
             case Active_Transfer::ACTIVE:
-                send_data(t, packet);
-                return true;
+                return send_data(t, packet);
 
             case Active_Transfer::CANCEL:
                 send_cancel(t, packet);
-                return true;
+                return HAS_WORK;
             
             case Active_Transfer::SEND_REQ:
                 send_request(t, packet);
-                return true;
+                return HAS_WORK;
         }
     }
 
-    return false;
+    return NO_WORK;
 }
 
-bool Transfer_Manager::recv_transfer_work(Packet* packet)
+Transfer_Manager::Work_State 
+Transfer_Manager::recv_transfer_work(Packet* packet)
 {
     for (auto& t : recv_transfers) 
     {
@@ -337,23 +340,27 @@ bool Transfer_Manager::recv_transfer_work(Packet* packet)
 
             case Active_Transfer::CANCEL:
                 send_cancel(t, packet);
-                return true;
+                return HAS_WORK;
 
             case Active_Transfer::ACCEPT:
             case Active_Transfer::DENY:
                 send_recv_request_reply(t, packet);
-                return true;
+                return HAS_WORK;
         }
     }
 
-    return false;
+    return NO_WORK;
 }
 
-bool Transfer_Manager::do_work(Packet* packet)
+Transfer_Manager::Work_State Transfer_Manager::do_work(Packet* packet)
 {
     process_cmds();
-    return host_transfer_work(packet) || 
-           recv_transfer_work(packet);
+
+    const Work_State host = host_transfer_work(packet);
+    
+    return host != NO_WORK ? 
+        host : 
+        recv_transfer_work(packet);
 }
 
 void Transfer_Manager::recv_data(const Transfer_Data* t_data)
@@ -425,11 +432,23 @@ void Transfer_Manager::zero_transfer(Active_Transfer& transfer)
     transfer.local_id = 0;
 }
 
-void Transfer_Manager::send_data(
+Transfer_Manager::Work_State 
+Transfer_Manager::send_data(
     Active_Transfer& transfer, 
     Packet* packet
 )
 {
+    const std::chrono::milliseconds elapsed_duration = 
+        std::chrono::duration_cast<std::chrono::milliseconds>(
+            std::chrono::high_resolution_clock::now() -
+            transfer.past_send
+        );
+    
+    const i64 elapsed_time = elapsed_duration.count();
+
+    if (elapsed_time < 1)
+        return WAIT_WORK;
+
     const File_Manager::State state =  
         transfer.f_manager.read_work(packet);
     
@@ -458,9 +477,12 @@ void Transfer_Manager::send_data(
         case File_Manager::EMPTY: {
             send_cancel(transfer, packet);
             break;
-        }
-            
+        }   
     }
+
+    transfer.past_send = std::chrono::high_resolution_clock::now();
+
+    return HAS_WORK;
 }
 
 void Transfer_Manager::send_cancel(

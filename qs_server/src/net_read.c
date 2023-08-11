@@ -89,7 +89,7 @@ static bool decode_packet(Server* s, Packet* packet, size_t len, Client* c)
     {
         n = BIO_write(c->secure.r_bio, packet_bytes, len);
 
-        printf("BIO full write %d == %ld\n", n, len);
+        // printf("BIO full write %d == %ld\n", n, len);
 
         if (n <= 0)
             return false;
