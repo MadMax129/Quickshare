@@ -1,0 +1,14 @@
+Quickshare Server:
+    # Handle Slow Downs
+    * Cache x bytes of incoming file
+    * Each client has a count to file and only delete cache once all 
+        receving clients have gotten all the data
+    
+    * Hold a queue of waiting to connect clients
+    
+    # Database (Redis or RocksDB?)
+    * Redo SQLite3 database
+        * Sqlite3 uses a UUID or hash to as key for clients
+        * Sqlite3 stores client metadata and its key references a server hashtable
+        * Server hashtable stores client state, timestamps, fd, etc...
+    
