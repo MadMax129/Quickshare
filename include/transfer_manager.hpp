@@ -45,6 +45,7 @@ struct Active_Transfer {
     Transfer_Hdr hdr;
     State accept_list[TRANSFER_CLIENTS_MAX];
     Transfer_ID local_id;
+    std::chrono::high_resolution_clock::time_point past_send;
     std::filesystem::path file;
     i64 file_size;
     File_Manager f_manager;
@@ -129,6 +130,12 @@ using Transfer_Vec = std::vector<Transfer_Info>;
 
 class Transfer_Manager {
 public:
+    enum Work_State {
+        HAS_WORK,
+        NO_WORK,
+        WAIT_WORK
+    };
+
     static Transfer_Manager& get_instance() {
         static Transfer_Manager instance;
         return instance;
@@ -165,7 +172,7 @@ public:
         return cmd_queue.push(cmd);
     }
 
-    bool do_work(Packet* packet);
+    Work_State do_work(Packet* packet);
 
     inline void copy(Transfer_Vec& t_vec)
     {
@@ -217,10 +224,10 @@ private:
     void send_cancel(Active_Transfer& transfer, Packet* packet);
     void send_request(Active_Transfer& transfer, Packet* packet);
     void send_recv_request_reply(Active_Transfer& transfer, Packet* packet);
-    void send_data(Active_Transfer& transfer, Packet* packet);
+    Work_State send_data(Active_Transfer& transfer, Packet* packet);
 
-    bool host_transfer_work(Packet* packet);
-    bool recv_transfer_work(Packet* packet);
+    Work_State host_transfer_work(Packet* packet);
+    Work_State recv_transfer_work(Packet* packet);
 
     using Cmd_Queue = LockFreeQueueCpp11<Transfer_Cmd>;
 

@@ -166,10 +166,8 @@ bool Network::init_conn(Status& active)
             case TCP_CONNECT: {
                 if (tcp_connect()) {
                     conn_state = TLS_CONNECT;
-                    LOG("OKOK\n");
                 }
                 else {
-                    LOG("HERE\n");
                     sleep(1);
                 }
                 break;
@@ -276,18 +274,23 @@ bool Network::convert_msg()
 {
     Packet* packet = wbuf.packet;
     Session msg;
-    bool peeked = false;
 
-    if (
-        !Transfer_Manager::get_instance().do_work(packet) &&
-        !(peeked = msg_queue.peek(msg))
-    ) {
-        return false;
+    const Transfer_Manager::Work_State t_work = 
+        Transfer_Manager::get_instance().do_work(packet);
+
+    if (t_work == Transfer_Manager::NO_WORK) {
+        if (msg_queue.peek(msg)) {
+            msg.to_packet(packet);
+            msg_queue.pop();
+        }
+        else {
+            return false;
+        }
     }
-
-    if (peeked) {
-        msg.to_packet(packet);
-        msg_queue.pop();
+    else if (t_work == Transfer_Manager::WAIT_WORK) {
+        wbuf.len  = 0;
+        wbuf.size = 0;
+        return true;
     }
 
     wbuf.len  = 0;
@@ -462,6 +465,7 @@ void Network::update_users()
 void Network::check_write()
 {
     /* Unset WRITE */
+    // double check logic
     c_poll.get_events() &= ~EVENT_WRITE;
 
     if (wbuf.len == 0 && convert_msg())
@@ -478,7 +482,7 @@ void Network::handle(Status& active)
     {
         check_write();
 
-        const i32 n_ready = c_poll.poll(1000);
+        const i32 n_ready = c_poll.poll(20);
 
         if (n_ready < 0 || 
             c_poll.is_set(EVENT_ERROR)

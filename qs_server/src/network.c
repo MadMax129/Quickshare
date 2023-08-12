@@ -90,7 +90,7 @@ void setup_poll(Server* s)
     );
 }
 
-bool new_client_event(Server* s, int op, int fd)
+bool new_client_event(Server* s, const int op, const int fd)
 {
     struct epoll_event ev;
     ev.events = EPOLLIN  | EPOLLRDHUP | 
@@ -100,7 +100,11 @@ bool new_client_event(Server* s, int op, int fd)
 	return epoll_ctl(s->epoll_fd, op, fd, &ev) != -1;
 }
 
-void send_single_user(Client* recp, Client* c1, int type)
+void send_single_user(
+    Client* recp, 
+    const Client* c1, 
+    const int type
+)
 {
     assert(
         type == P_SERVER_NEW_USERS ||
@@ -217,7 +221,7 @@ static void accept_client(Server* s)
     }
 }
 
-static void check_for_write(Server* s)
+static void check_for_write(const Server* s)
 {
     for (unsigned int i = 0; i < MAX_CLIENTS; i++) {
         if (s->clients.list[i].state == C_EMPTY)
@@ -232,9 +236,11 @@ static void check_for_write(Server* s)
         if (
             !queue_empty(&s->clients.list[i].msg_queue) ||
             B_LEN(s->clients.list[i].secure.encrypted_buf) > 0
-        )
+        ) {
             ev.events |= EPOLLOUT;
-        
+            LOGF("OUT %d\n", i);
+        }
+
         epoll_ctl(
             s->epoll_fd, 
             EPOLL_CTL_MOD, 
@@ -265,6 +271,8 @@ void server_loop(Server* s)
             break;
         }
 
+        LOGF("===>EVE %d\n", n_events);
+
         for (int i = 0; i < n_events; i++) {
             const struct epoll_event* e = &s->events[i];
 
@@ -274,14 +282,18 @@ void server_loop(Server* s)
             }
             else {
                 /* Error */
-                if (e->events & (EPOLLERR | EPOLLHUP | EPOLLRDHUP)) {
+                if (e->events & (EPOLLERR | 
+                                 EPOLLHUP | 
+                                 EPOLLRDHUP)
+                ) {
                     close_client(s, e->data.fd);
                     continue;
                 }
-
                 /* Recv data */
-                if (e->events & EPOLLIN)
+                if (e->events & EPOLLIN) {
+                    LOG("DATA READ\n");
                     read_data(s, e->data.fd);
+                }
 
                 /* Write data */
                 if (e->events & EPOLLOUT)

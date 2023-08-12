@@ -24,9 +24,10 @@ static Write_Result write_bytes(Client* c)
             buf->len
         );
 
-        if (n == -1          && 
+        if (
+            n == -1          && 
             (errno == EAGAIN || 
-             errno == EWOULDBLOCK)
+            errno == EWOULDBLOCK)
         ) {
             return WRITE_BLOCK;
         }
@@ -50,6 +51,7 @@ static Write_Result write_bytes(Client* c)
 
 static bool encrypt(Packet* p, Client* c)
 {
+    // TODO: RETHINK SIZE
     char buf[64];
     size_t size = sizeof(Packet_Hdr) + p->hdr.size; 
     const char* data  = (const char*)p;
@@ -58,7 +60,7 @@ static bool encrypt(Packet* p, Client* c)
     while (size > 0) {
         int n = SSL_write(c->secure.ssl, data, size);
 
-        printf("SSL_write %d %ld %lu\n", n, sizeof(Packet), size);
+        // printf("SSL_write %d %ld %lu\n", n, sizeof(Packet), size);
 
         state = get_sslstate(&c->secure, n);
 
@@ -87,13 +89,21 @@ static bool encrypt(Packet* p, Client* c)
 void write_data(Server* s, int fd)
 {
     Client* const client = client_find(&s->clients, fd);
+
+    if (!client) return;
     assert(client);
 
     Queue* const q = &client->msg_queue;
 
     Write_Result w_state = WRITE_OK;
 
-    // TODO: RETHINK LOOP
+    LOGF("SW %d\n", q->count);
+
+    /* 
+    
+    TRY with WRITE EVENT always set
+    
+    */
     do {
         /* Write encrypted bytes */
         if (B_LEN(client->secure.encrypted_buf) > 0) {
@@ -101,6 +111,7 @@ void write_data(Server* s, int fd)
             if (w_state == WRITE_ERROR) {
                 P_ERROR("Failed to write data\n");
                 close_client(s, fd);
+                break;
             }
         }
 
@@ -113,5 +124,8 @@ void write_data(Server* s, int fd)
                 close_client(s, fd);
             }
         }
-    } while (!queue_empty(q) && w_state != WRITE_BLOCK);
+    } while (
+        w_state != WRITE_BLOCK && 
+        B_LEN(client->secure.encrypted_buf) > 0
+    );
 }

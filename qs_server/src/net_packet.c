@@ -377,6 +377,7 @@ static void packet_data(Server* s, const Client* c)
         Client* other = client_find_by_id(&s->clients, recp_id);
         if (other) {
             Packet* packet = enqueue(&other->msg_queue);
+            LOGF("SD %d S %lu\n",other->msg_queue.count, p->d.transfer_data.b_size);
             assert(packet);
             (void)memcpy(packet, p, sizeof(Packet));
         }

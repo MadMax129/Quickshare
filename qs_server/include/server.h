@@ -43,7 +43,11 @@ void setup_poll(Server* s);
 void server_loop(Server* s);
 
 bool new_client_event(Server* s, int op, int fd);
-void send_single_user(Client* recp, Client* c1, int type);
+void send_single_user(
+    Client* recp, 
+    const Client* c1, 
+    const int type
+);
 void send_transfer_state(
     Client* c, 
     const Client_ID from, 
