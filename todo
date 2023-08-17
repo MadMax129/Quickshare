@@ -12,3 +12,34 @@ Quickshare Server:
         * Sqlite3 stores client metadata and its key references a server hashtable
         * Server hashtable stores client state, timestamps, fd, etc...
     
+
+Server:
+[ Main Thread ] 
+    * 'accept' new clients
+    * Queue (SPSC) to handle creation:
+        - Add to internal hashmap which stores:
+        1. fd
+        2. time connected
+        3. hash key
+        4. connection state
+        5. UUID of client (used in database)
+
+    * 'epoll' Thread
+    1. Peek/Read from new clients queue 
+    2. Wait for events from clients
+        - Decode read until read full packet
+        - Pass packet to SPSC queue to analize msg
+        - Iterate hashmap and check client write msg queues 
+            - MAYBE instead hold queues by session??
+
+Session Manager:
+    - hashmap with key of session ID
+    - Stores:
+        - Write msg queue local to all users
+        
+
+uint32_t ip = addr.sin_addr.s_addr;
+uint16_t port = addr.sin_port;
+
+uint64_t key = ((uint64_t)ip << 32) | port;
+
